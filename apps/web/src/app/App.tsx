@@ -283,7 +283,7 @@ function Dashboard({ onNav, daily, stakeholders, issues, proposals, csr, grievan
   ];
   const catData = useMemo(() => {
     const c: Record<string, number> = {};
-    daily.forEach(d => { c[d.sub] = (c[d.sub] || 0) + 1; });
+    daily.forEach(d => { const subName = d.sub_category?.name || String(d.sub_category_id); c[subName] = (c[subName] || 0) + 1; });
     return Object.entries(c).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [daily]);
   const pieData = useMemo(() => [
@@ -378,9 +378,9 @@ function Dashboard({ onNav, daily, stakeholders, issues, proposals, csr, grievan
                 <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0 mt-0.5"><Calendar size={13} className="text-blue-600" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-foreground truncate">{a.activity}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">{formatDate(a.date)} · {a.pic}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">{formatDate(a.activity_date)} · {a.pic?.name || String(a.pic_id)}</div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-500 rounded shrink-0">{a.sub}</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-500 rounded shrink-0">{a.sub_category?.name || String(a.sub_category_id)}</span>
               </div>
             ))}
           </div>
