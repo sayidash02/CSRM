@@ -70,11 +70,52 @@ export const deleteDailyActivity = async (req: Request, res: Response): Promise<
   try {
     const { id } = req.params;
     const result = await prisma.daily_activities.update({
-      where: { id: BigInt(id as string) },
+      where: { id: BigInt(id) },
       data: { is_deleted: true }
     });
     res.status(200).json({ data: { ...result, id: result.id.toString() } });
   } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const updateDailyActivity = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
+
+    if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
+
+    const pic = await prisma.pics.findUnique({ where: { id: pic_id } });
+    if (!pic) {
+      res.status(400).json({ error: 'Invalid pic_id' });
+      return;
+    }
+
+    const result = await prisma.daily_activities.update({
+      where: { id: BigInt(id) },
+      data: {
+        activity_date: new Date(activity_date),
+        activity,
+        institution_group,
+        address,
+        focus,
+        location,
+        cost,
+        description_result,
+        document_link,
+        pic_id,
+        category_id,
+        sub_category_id
+      }
+    });
+
+    res.status(200).json({ data: { ...result, id: result.id.toString(), pic_id: result.pic_id.toString(), category_id: result.category_id.toString(), sub_category_id: result.sub_category_id.toString(), cost: result.cost?.toString() } });
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

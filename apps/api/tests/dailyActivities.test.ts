@@ -73,3 +73,32 @@ describe('DELETE /api/daily-activities/:id', () => {
     expect(listAfter.body.data.length).toBe(0);
   });
 });
+
+describe('PUT /api/daily-activities/:id', () => {
+  it('Should update an existing activity', async () => {
+    // create one first because the previous test deleted it
+    const payload = {
+      activity_date: '2026-07-25',
+      activity: 'Kunjungan Lapangan',
+      pic_id: 1,
+      category_id: 1,
+      sub_category_id: 1
+    };
+    const createRes = await request(app).post('/api/daily-activities').send(payload);
+    const id = createRes.body.data.id;
+    
+    const updatePayload = {
+      activity_date: '2026-07-26',
+      activity: 'Kunjungan Lapangan Updated',
+      pic_id: 1,
+      category_id: 1,
+      sub_category_id: 1,
+      cost: 500000
+    };
+    
+    const res = await request(app).put(`/api/daily-activities/${id}`).send(updatePayload);
+    expect(res.status).toBe(200);
+    expect(res.body.data.activity).toBe('Kunjungan Lapangan Updated');
+    expect(res.body.data.cost).toBe('500000');
+  });
+});

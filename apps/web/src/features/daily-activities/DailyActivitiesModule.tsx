@@ -124,7 +124,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function DailyForm({ initial, onClose, onSave }: { initial?: DailyActivity; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void }) {
+function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] } }) {
   const [f, setF] = useState({
     activity_date: initial?.activity_date ?? "",
     activity: initial?.activity ?? "",
@@ -158,9 +158,9 @@ function DailyForm({ initial, onClose, onSave }: { initial?: DailyActivity; onCl
         <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi kegiatan" className={inputCls} /></Field>
         <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><input type="number" value={f.cost} onChange={e => set("cost", e.target.value)} placeholder="0" className={`${inputCls} font-mono`} /></Field>
-        <Field label="Category" required><select value={f.category_id} onChange={e => set("category_id", e.target.value)} className={inputCls}><option value="">Pilih Category</option><option value="1">Stakeholder Engagement</option><option value="2">Paper Work</option></select></Field>
-        <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option><option value="1">Issue</option><option value="2">Internal Meeting</option><option value="3">Donasi</option><option value="4">Project CSR</option><option value="5">Data Processing (Olah Data)</option><option value="6">Issue & Grievance</option><option value="7">Kehumasan</option></select></Field>
-        <Field label="PIC" required><select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={inputCls}><option value="">Pilih PIC</option><option value="1">Ziya Ramadhani</option><option value="2">Adji Pratama</option><option value="3">Ziya & Adji</option></select></Field>
+        <Field label="Category" required><select value={f.category_id} onChange={e => set("category_id", e.target.value)} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+        <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
+        <Field label="PIC" required><select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={inputCls}><option value="">Pilih PIC</option>{refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
         <div className="col-span-3"><Field label="Keterangan & Hasil"><textarea rows={2} value={f.description_result} onChange={e => set("description_result", e.target.value)} placeholder="Uraian kegiatan dan hasil yang dicapai" className={`${inputCls} resize-none`} /></Field></div>
         <div className="col-span-3"><Field label="Link Dokumen (SharePoint)" hint="Upload dokumen ke SharePoint terlebih dahulu, lalu paste link-nya di sini."><input type="text" value={f.document_link || ""} onChange={e => set("document_link", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field></div>
       </div>
@@ -171,10 +171,21 @@ function DailyForm({ initial, onClose, onSave }: { initial?: DailyActivity; onCl
 
 export default function DailyActivitiesModule({ onExport }: { onExport: (l: string) => void }) {
   const [items, setItems] = useState<DailyActivity[]>([]);
+  const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   
   useEffect(() => {
     fetchData();
+    fetchReferences();
   }, []);
+
+  const fetchReferences = async () => {
+    try {
+      const res = await apiClient.get('/references');
+      setReferences(res.data.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -196,7 +207,8 @@ export default function DailyActivitiesModule({ onExport }: { onExport: (l: stri
 
   const handleEdit = async (id: string | number, d: Omit<DailyActivity, "id">) => {
     try {
-      console.log('Edit not implemented in Phase 0 backend yet');
+      await apiClient.put(`/daily-activities/${id}`, d);
+      fetchData();
     } catch (e) {
       console.error(e);
     }
@@ -256,8 +268,8 @@ export default function DailyActivitiesModule({ onExport }: { onExport: (l: stri
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} kegiatan</div>
       </div>
-      {showForm && <DailyForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
-      {editing && <DailyForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
+      {showForm && <DailyForm refs={references} onClose={() => setShowForm(false)} onSave={handleAdd} />}
+      {editing && <DailyForm refs={references} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
       {toDelete && <DeleteConfirm label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );
