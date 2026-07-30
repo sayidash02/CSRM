@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Calendar, Search, Plus, Download } from "lucide-react";
 
 // Types
@@ -168,14 +169,54 @@ function DailyForm({ initial, onClose, onSave }: { initial?: DailyActivity; onCl
   );
 }
 
-export default function DailyActivitiesModule({ items, onAdd, onEdit, onDelete, onExport }: { items: DailyActivity[]; onAdd: (d: Omit<DailyActivity, "id">) => void; onEdit: (id: string | number, d: Omit<DailyActivity, "id">) => void; onDelete: (id: string | number) => void; onExport: (l: string) => void }) {
+export default function DailyActivitiesModule({ onExport }: { onExport: (l: string) => void }) {
+  const [items, setItems] = useState<DailyActivity[]>([]);
+  
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const res = await apiClient.get('/daily-activities');
+      setItems(res.data.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAdd = async (d: Omit<DailyActivity, "id">) => {
+    try {
+      await apiClient.post('/daily-activities', d);
+      fetchData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleEdit = async (id: string | number, d: Omit<DailyActivity, "id">) => {
+    try {
+      console.log('Edit not implemented in Phase 0 backend yet');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDelete = async (id: string | number) => {
+    try {
+      await apiClient.delete(`/daily-activities/${id}`);
+      fetchData();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const { q, setQ, filtered } = useSearch(items, ["activity", "institution_group", "location"]);
   const [catFilter, setCatFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
   
-  // Adjusted filter for demo purposes (we might just filter by category_id or omit)
   const displayed = filtered;
 
   return (
@@ -215,9 +256,9 @@ export default function DailyActivitiesModule({ items, onAdd, onEdit, onDelete, 
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} kegiatan</div>
       </div>
-      {showForm && <DailyForm onClose={() => setShowForm(false)} onSave={onAdd} />}
-      {editing && <DailyForm initial={editing} onClose={() => setEditing(null)} onSave={d => { onEdit(editing.id, d); setEditing(null); }} />}
-      {toDelete && <DeleteConfirm label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { onDelete(toDelete.id); setToDelete(null); }} />}
+      {showForm && <DailyForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
+      {editing && <DailyForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
+      {toDelete && <DeleteConfirm label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );
 }

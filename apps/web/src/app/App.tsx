@@ -1080,7 +1080,7 @@ export default function App() {
       <Sidebar active={activeModule} onNav={setActiveModule} counts={counts} unsyncedCount={unsyncedCount} onSync={() => setShowSync(true)} />
       <main className="flex-1 flex flex-col overflow-hidden">
         {activeModule === "dashboard" && <Dashboard onNav={setActiveModule} daily={daily} stakeholders={stakeholders} issues={issues} proposals={proposals} csr={csr} grievances={grievances} syncHistory={syncHistory} />}
-        {activeModule === "daily" && <DailyActivitiesModule items={daily} onAdd={makeAdder(setDaily, daily, "Kegiatan")} onEdit={makeEditor(setDaily, "Kegiatan")} onDelete={makeDeleter(setDaily)} onExport={handleExport} />}
+        {activeModule === "daily" && <DailyActivitiesModule onExport={handleExport} />}
         {activeModule === "stakeholder" && <StakeholderModule items={stakeholders} onAdd={makeAdder(setStakeholders, stakeholders, "Stakeholder")} onEdit={makeEditor(setStakeholders, "Stakeholder")} onDelete={makeDeleter(setStakeholders)} onExport={handleExport} />}
         {activeModule === "topissues" && <TopIssuesModule items={issues} onAdd={makeAdder(setIssues, issues, "Isu")} onEdit={makeEditor(setIssues, "Isu")} onDelete={makeDeleter(setIssues)} onExport={handleExport} />}
         {activeModule === "proposals" && <ProposalsModule items={proposals} onAdd={makeAdder(setProposals, proposals, "Proposal")} onEdit={makeEditor(setProposals, "Proposal")} onDelete={makeDeleter(setProposals)} onExport={handleExport} />}
