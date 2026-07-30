@@ -70,7 +70,7 @@ export const deleteDailyActivity = async (req: Request, res: Response): Promise<
   try {
     const { id } = req.params;
     const result = await prisma.daily_activities.update({
-      where: { id: BigInt(id) },
+      where: { id: BigInt(id as string) },
       data: { is_deleted: true }
     });
     res.status(200).json({ data: { ...result, id: result.id.toString() } });
