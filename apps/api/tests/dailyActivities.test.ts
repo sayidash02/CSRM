@@ -51,3 +51,25 @@ describe('POST /api/daily-activities', () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe('GET /api/daily-activities', () => {
+  it('Should return list of activities not deleted', async () => {
+    const res = await request(app).get('/api/daily-activities');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
+});
+
+describe('DELETE /api/daily-activities/:id', () => {
+  it('Should soft delete an activity', async () => {
+    const list = await request(app).get('/api/daily-activities');
+    const id = list.body.data[0].id;
+    
+    const res = await request(app).delete(`/api/daily-activities/${id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.is_deleted).toBe(true);
+
+    const listAfter = await request(app).get('/api/daily-activities');
+    expect(listAfter.body.data.length).toBe(0);
+  });
+});

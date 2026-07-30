@@ -41,3 +41,40 @@ export const createDailyActivity = async (req: Request, res: Response): Promise<
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const getDailyActivities = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const activities = await prisma.daily_activities.findMany({
+      where: { is_deleted: false },
+      include: { pic: true, category: true, sub_category: true }
+    });
+    
+    const serialized = activities.map(a => ({
+      ...a,
+      id: a.id.toString(),
+      pic_id: a.pic_id?.toString(),
+      category_id: a.category_id?.toString(),
+      sub_category_id: a.sub_category_id?.toString(),
+      pic: a.pic ? { ...a.pic, id: a.pic.id.toString() } : null,
+      category: a.category ? { ...a.category, id: a.category.id.toString() } : null,
+      sub_category: a.sub_category ? { ...a.sub_category, id: a.sub_category.id.toString() } : null
+    }));
+    res.status(200).json({ data: serialized });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const deleteDailyActivity = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await prisma.daily_activities.update({
+      where: { id: BigInt(id) },
+      data: { is_deleted: true }
+    });
+    res.status(200).json({ data: { ...result, id: result.id.toString() } });
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

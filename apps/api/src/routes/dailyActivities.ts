@@ -1,7 +1,9 @@
 import { Router } from 'express';
-import { createDailyActivity } from '../controllers/DailyActivitiesController';
+import { createDailyActivity, getDailyActivities, deleteDailyActivity } from '../controllers/DailyActivitiesController';
 
 const router = Router();
 router.post('/', createDailyActivity);
+router.get('/', getDailyActivities);
+router.delete('/:id', deleteDailyActivity);
 
 export default router;
