@@ -1,0 +1,59 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model pics {
+  id               BigInt             @id @default(autoincrement())
+  name             String             @unique @db.VarChar(100)
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now())
+  daily_activities daily_activities[]
+}
+
+model categories {
+  id               BigInt             @id @default(autoincrement())
+  name             String             @unique @db.VarChar(50)
+  sub_categories   sub_categories[]
+  daily_activities daily_activities[]
+}
+
+model sub_categories {
+  id               BigInt             @id @default(autoincrement())
+  category_id      BigInt
+  name             String             @db.VarChar(100)
+  category         categories         @relation(fields: [category_id], references: [id])
+  daily_activities daily_activities[]
+
+  @@unique([category_id, name])
+}
+
+model daily_activities {
+  id                 BigInt         @id @default(autoincrement())
+  activity_date      DateTime       @db.Date
+  activity           String         @db.VarChar(255)
+  institution_group  String?        @db.VarChar(255)
+  address            String?        @db.VarChar(255)
+  focus              String?        @db.VarChar(255)
+  location           String?        @db.VarChar(255)
+  cost               Decimal?       @db.Decimal(15,2)
+  description_result String?        @db.Text
+  document_link      String?        @db.VarChar(500)
+  pic_id             BigInt
+  category_id        BigInt
+  sub_category_id    BigInt
+  is_deleted         Boolean        @default(false)
+  created_at         DateTime       @default(now())
+  updated_at         DateTime       @updatedAt
+
+  pic           pics           @relation(fields: [pic_id], references: [id])
+  category      categories     @relation(fields: [category_id], references: [id])
+  sub_category  sub_categories @relation(fields: [sub_category_id], references: [id])
+
+  @@index([activity_date])
+  @@index([is_deleted])
+}
