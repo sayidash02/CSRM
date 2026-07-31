@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   LayoutDashboard, Calendar, Users, AlertTriangle, FileText,
   Leaf, MessageSquareWarning, TreePine, RefreshCw, Upload,
@@ -623,12 +623,12 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden">
         {activeModule === "dashboard" && <Dashboard onNav={setActiveModule} daily={daily} stakeholders={stakeholders} issues={issues} proposals={proposals} csr={csr} grievances={grievances} syncHistory={syncHistory} />}
         {activeModule === "daily" && <DailyActivitiesModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "stakeholder" && <StakeholdersModule showToast={showToast} />}
+        {activeModule === "stakeholder" && <StakeholdersModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "topissues" && <TopIssuesModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "proposals" && <ProposalsModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "csr" && <CsrProjectsModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "grievance" && <GrievanceModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "lrp" && <LrpModule showToast={showToast} />}
+        {activeModule === "lrp" && <LrpModule onExport={handleExport} showToast={showToast} />}
       </main>
       {showSync && <SyncModal onClose={() => setShowSync(false)} totalUnsynced={unsyncedCount} onSuccess={handleSyncSuccess} />}
       {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}

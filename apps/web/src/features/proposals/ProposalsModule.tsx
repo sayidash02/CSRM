@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 export interface Proposal {
   id: string | number;
@@ -153,8 +154,22 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo }: { initial?: Propo
         <Field label="Alamat"><input type="text" value={f.address || ''} onChange={e => set("address", e.target.value)} placeholder="Alamat lengkap" className={inputCls} /></Field>
         <Field label="Keterangan Proposal"><textarea rows={3} value={f.proposal_description || ''} onChange={e => set("proposal_description", e.target.value)} placeholder="Ringkasan isi proposal" className={`${inputCls} resize-none`} /></Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="File Proposal (URL)"><input type="text" value={f.proposal_file || ''} onChange={e => set("proposal_file", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
-          <Field label="File Assessment (URL)"><input type="text" value={f.assessment_file || ''} onChange={e => set("assessment_file", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
+          <Field label="File Proposal">
+            <FileInput 
+              value={f.proposal_file || null} 
+              onChange={url => set("proposal_file", url)}
+              activityDate={f.date_received}
+              picName={f.institution}
+            />
+          </Field>
+          <Field label="File Assessment">
+            <FileInput 
+              value={f.assessment_file || null} 
+              onChange={url => set("assessment_file", url)}
+              activityDate={f.date_received}
+              picName={f.institution}
+            />
+          </Field>
         </div>
         <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Under Review</option><option>Approved</option><option>Declined</option></select></Field>
       </div>
@@ -163,7 +178,7 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo }: { initial?: Propo
   );
 }
 
-export default function ProposalsModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function ProposalsModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Proposal[]>([]);
   
   useEffect(() => {

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Calendar, Search, Plus, Download } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 // Types
 export interface DailyActivity {
@@ -162,14 +163,23 @@ function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
         <Field label="PIC" required><select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={inputCls}><option value="">Pilih PIC</option>{refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
         <div className="col-span-3"><Field label="Keterangan & Hasil"><textarea rows={2} value={f.description_result} onChange={e => set("description_result", e.target.value)} placeholder="Uraian kegiatan dan hasil yang dicapai" className={`${inputCls} resize-none`} /></Field></div>
-        <div className="col-span-3"><Field label="Link Dokumen (SharePoint)" hint="Upload dokumen ke SharePoint terlebih dahulu, lalu paste link-nya di sini."><input type="text" value={f.document_link || ""} onChange={e => set("document_link", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field></div>
+        <div className="col-span-3">
+          <Field label="Dokumen Lampiran" hint="Pilih file dokumen (maks 5MB). Pastikan Tanggal dan PIC sudah terisi.">
+            <FileInput 
+              value={f.document_link || null} 
+              onChange={url => set("document_link", url)}
+              activityDate={f.activity_date}
+              picName={refs.pics.find(p => String(p.id) === String(f.pic_id))?.name}
+            />
+          </Field>
+        </div>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Kegiatan"} isEdit={!!initial} />
     </Modal>
   );
 }
 
-export default function DailyActivitiesModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function DailyActivitiesModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<DailyActivity[]>([]);
   const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   

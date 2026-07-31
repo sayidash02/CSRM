@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, ChevronDown, FileText } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 export interface TopIssue {
   id: number | string;
@@ -136,8 +137,20 @@ function TopIssueForm({ initial, onClose, onSave }: { initial?: TopIssue; onClos
         <Field label="Follow Up"><textarea rows={2} value={f.follow_up} onChange={e => set("follow_up", e.target.value)} placeholder="Tindakan yang sudah / sedang dilakukan" className={`${inputCls} resize-none`} /></Field>
         <Field label="Next Plan"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut berikutnya" className={`${inputCls} resize-none`} /></Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Main Document (URL)"><input type="text" value={f.main_document || ""} onChange={e => set("main_document", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
-          <Field label="Supporting Document (URL)"><input type="text" value={f.supporting_document || ""} onChange={e => set("supporting_document", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
+          <Field label="Main Document">
+            <FileInput 
+              value={f.main_document || null} 
+              onChange={url => set("main_document", url)}
+              picName="Top Issue"
+            />
+          </Field>
+          <Field label="Supporting Document">
+            <FileInput 
+              value={f.supporting_document || null} 
+              onChange={url => set("supporting_document", url)}
+              picName="Top Issue"
+            />
+          </Field>
         </div>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Isu"} isEdit={!!initial} />
@@ -145,7 +158,7 @@ function TopIssueForm({ initial, onClose, onSave }: { initial?: TopIssue; onClos
   );
 }
 
-export default function TopIssuesModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function TopIssuesModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<TopIssue[]>([]);
   
   useEffect(() => {
