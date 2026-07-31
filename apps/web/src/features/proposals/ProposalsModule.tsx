@@ -178,7 +178,7 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo }: { initial?: Propo
   );
 }
 
-export default function ProposalsModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function ProposalsModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Proposal[]>([]);
   
   useEffect(() => {

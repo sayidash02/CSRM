@@ -1,5 +1,5 @@
 import { apiClient } from "../lib/apiClient";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   LayoutDashboard, Calendar, Users, AlertTriangle, FileText,
   Leaf, MessageSquareWarning, TreePine, RefreshCw, Upload,

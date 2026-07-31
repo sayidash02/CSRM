@@ -201,7 +201,7 @@ function CsrForm({ initial, onClose, onSave }: { initial?: CsrProject; onClose: 
   );
 }
 
-export default function CsrProjectsModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function CsrProjectsModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<CsrProject[]>([]);
   
   useEffect(() => {

@@ -158,7 +158,7 @@ function TopIssueForm({ initial, onClose, onSave }: { initial?: TopIssue; onClos
   );
 }
 
-export default function TopIssuesModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function TopIssuesModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<TopIssue[]>([]);
   
   useEffect(() => {

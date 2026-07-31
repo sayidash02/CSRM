@@ -206,7 +206,7 @@ function GrievanceForm({ initial, onClose, onSave, nextRegNo }: { initial?: Grie
   );
 }
 
-export default function GrievanceModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function GrievanceModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Grievance[]>([]);
   
   useEffect(() => {
