@@ -33,8 +33,9 @@ project, dimuat otomatis di setiap sesi — tidak perlu ditempel ulang.
    jelas ke user, logging terstruktur, toast notification di aksi
    penting.
 5. Test ditulis SEIRING kode ditulis (idealnya test-first), bukan
-   ditumpuk di akhir. Unit test untuk business logic murni, integration
-   test untuk CRUD dengan test database terpisah dari production.
+   ditumpuk di akhir. 
+   - Unit test untuk business logic murni.
+   - Integration test WAJIB menggunakan test database terpisah (`.env.test`). Jangan pernah menjalankan tes integratif yang bersifat destruktif terhadap database lokal development/production. Gunakan skrip seperti `dotenv -e .env.test -- jest --runInBand`.
 6. Kalau butuh detail API library yang tidak yakin (Prisma/Knex,
    exceljs, Microsoft Graph SDK, MSAL), cari dokumentasi terkini dulu —
    jangan menebak signature function dari ingatan.
@@ -66,7 +67,8 @@ benar-benar butuh, terutama:
 - Jangan hard-delete data — semua modul pakai soft-delete (is_deleted).
 
 ## Technical Gotchas & Workflows
-- **Prisma & BigInt**: Database menggunakan `BigInt` (mis. untuk ID). Karena `JSON.stringify` bawaan Node tidak mendukung BigInt, pastikan selalu menggunakan *global patch* (`(BigInt.prototype as any).toJSON = function() { return this.toString(); }`) di Express app, atau serialisasi secara manual sebelum di-return.
+- **Prisma & BigInt**: Database menggunakan `BigInt` (mis. untuk ID). Pastikan selalu menggunakan *global patch* (`(BigInt.prototype as any).toJSON = function() { return this.toString(); }`) di awal Express app. JANGAN melakukan konversi `.toString()` manual di dalam setiap route/controller jika global patch sudah diimplementasikan.
+- **Prisma Error Interception**: Tangkap error Prisma (seperti `PrismaClientValidationError` atau kode `P2002`) dalam blok `catch` controller dan ubah menjadi response HTTP `400 Bad Request` atau `409 Conflict`. Jangan biarkan error validasi Prisma lolos sebagai `500 Internal Server Error`.
 - **PNPM di Windows**: Jangan batasi `supportedArchitectures` di `pnpm-workspace.yaml` hanya pada `linux`. Karena *host* pengembangan menggunakan Windows, pembatasan ini akan menyebabkan *binary* `esbuild` dan `rollup` Vite gagal diunduh, membuat build frontend gagal.
 - **Verification Before Completion**: Jangan pernah mengklaim suatu task/fase "selesai" sebelum menjalankan perintah verifikasi riil (seperti `npm run build`, `tsc --noEmit`, atau test runner) dan mendapatkan **Exit code 0**. Buktikan dengan output aslinya.
 - **Code Review**: Selesaikan semua poin bermasalah (*Important issues*) dari Code Reviewer sebelum beralih ke fase/fitur selanjutnya.
