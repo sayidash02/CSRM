@@ -13,6 +13,8 @@ import lrpRouter from './routes/lrp';
   return this.toString();
 };
 
+import uploadRouter from './routes/upload';
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -25,5 +27,6 @@ app.use('/api/proposals', proposalsRouter);
 app.use('/api/csr-projects', csrProjectsRouter);
 app.use('/api/grievance', grievanceRouter);
 app.use('/api/lrp', lrpRouter);
+app.use('/api/upload', uploadRouter);
 
 export default app;
