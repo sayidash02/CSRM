@@ -57,3 +57,120 @@ model daily_activities {
   @@index([activity_date])
   @@index([is_deleted])
 }
+
+model stakeholder_engagement {
+  id              BigInt   @id @default(autoincrement())
+  stakeholder     String   @db.VarChar(255)
+  date_venue      String?  @db.VarChar(255)
+  concern_issue   String?  @db.Text
+  document_link   String?  @db.VarChar(500)
+  is_deleted      Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([is_deleted])
+}
+
+model top_issues {
+  id                  BigInt   @id @default(autoincrement())
+  period              String   @db.VarChar(50)
+  issue               String   @db.VarChar(255)
+  description         String?  @db.Text
+  follow_up           String?  @db.Text
+  main_document       String?  @db.VarChar(500)
+  supporting_document String?  @db.VarChar(500)
+  next_plan           String?  @db.Text
+  is_deleted          Boolean  @default(false)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  @@index([is_deleted])
+}
+
+model proposals {
+  id                   BigInt   @id @default(autoincrement())
+  registration_no      String   @unique @db.VarChar(50)
+  date_received        DateTime @db.Date
+  institution          String   @db.VarChar(255)
+  address              String?  @db.VarChar(255)
+  proposal_description String?  @db.Text
+  proposal_file        String?  @db.VarChar(500)
+  assessment_file      String?  @db.VarChar(500)
+  status               String   @default("Under Review") @db.VarChar(20)
+  is_deleted           Boolean  @default(false)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  @@index([status])
+  @@index([is_deleted])
+}
+
+model csr_projects {
+  id                   BigInt   @id @default(autoincrement())
+  project_year         Int      @db.Year
+  program              String   @db.VarChar(255)
+  activity             String?  @db.VarChar(255)
+  type_of_activity     String?  @db.VarChar(100)
+  location             String?  @db.VarChar(255)
+  target_beneficiaries String?  @db.VarChar(255)
+  objective            String?  @db.Text
+  status               String   @default("Planning") @db.VarChar(20)
+  budget               Decimal? @db.Decimal(15, 2)
+  implementation_period String? @db.VarChar(100)
+  documentation_image  String?  @db.VarChar(500)
+  document             String?  @db.VarChar(500)
+  is_deleted           Boolean  @default(false)
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  @@index([project_year])
+  @@index([status])
+  @@index([is_deleted])
+}
+
+model grievance {
+  id                BigInt   @id @default(autoincrement())
+  register_no       String   @unique @db.VarChar(50)
+  log_date          DateTime @db.Date
+  complainant_name  String   @db.VarChar(255)
+  address           String?  @db.VarChar(255)
+  phone             String?  @db.VarChar(30)
+  category          String?  @db.VarChar(100)
+  significance      String   @db.VarChar(20)
+  description       String?  @db.Text
+  location          String?  @db.VarChar(255)
+  investigation     String?  @db.Text
+  resolution        String?  @db.Text
+  feedback          String?  @db.Text
+  status            String   @default("Open") @db.VarChar(20)
+  completion_date   DateTime? @db.Date
+  remarks           String?  @db.Text
+  supporting_files  String?  @db.VarChar(500)
+  is_deleted        Boolean  @default(false)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+
+  @@index([status])
+  @@index([significance])
+  @@index([is_deleted])
+}
+
+model lrp {
+  id              BigInt   @id @default(autoincrement())
+  program         String   @db.VarChar(255)
+  sharepoint_link String   @db.VarChar(500)
+  is_deleted      Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@index([is_deleted])
+}
+
+model sync_log {
+  id            BigInt   @id @default(autoincrement())
+  synced_at     DateTime @db.Timestamp(0)
+  status        String   @db.VarChar(20)
+  error_message String?  @db.Text
+  file_url      String?  @db.VarChar(500)
+  triggered_by  String?  @db.VarChar(100)
+}
