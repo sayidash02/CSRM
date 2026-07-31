@@ -1,10 +1,10 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
 }
 
 model pics {
@@ -18,16 +18,16 @@ model pics {
 model categories {
   id               BigInt             @id @default(autoincrement())
   name             String             @unique @db.VarChar(50)
-  sub_categories   sub_categories[]
   daily_activities daily_activities[]
+  sub_categories   sub_categories[]
 }
 
 model sub_categories {
   id               BigInt             @id @default(autoincrement())
   category_id      BigInt
   name             String             @db.VarChar(100)
-  category         categories         @relation(fields: [category_id], references: [id])
   daily_activities daily_activities[]
+  category         categories         @relation(fields: [category_id], references: [id])
 
   @@unique([category_id, name])
 }
@@ -40,33 +40,35 @@ model daily_activities {
   address            String?        @db.VarChar(255)
   focus              String?        @db.VarChar(255)
   location           String?        @db.VarChar(255)
-  cost               Decimal?       @db.Decimal(15,2)
   description_result String?        @db.Text
-  document_link      String?        @db.VarChar(500)
   pic_id             BigInt
   category_id        BigInt
   sub_category_id    BigInt
   is_deleted         Boolean        @default(false)
   created_at         DateTime       @default(now())
   updated_at         DateTime       @updatedAt
-
-  pic           pics           @relation(fields: [pic_id], references: [id])
-  category      categories     @relation(fields: [category_id], references: [id])
-  sub_category  sub_categories @relation(fields: [sub_category_id], references: [id])
+  cost               Decimal?       @db.Decimal(15, 2)
+  document_link      String?        @db.VarChar(500)
+  category           categories     @relation(fields: [category_id], references: [id])
+  pic                pics           @relation(fields: [pic_id], references: [id])
+  sub_category       sub_categories @relation(fields: [sub_category_id], references: [id])
 
   @@index([activity_date])
   @@index([is_deleted])
+  @@index([category_id], map: "daily_activities_category_id_fkey")
+  @@index([pic_id], map: "daily_activities_pic_id_fkey")
+  @@index([sub_category_id], map: "daily_activities_sub_category_id_fkey")
 }
 
 model stakeholder_engagement {
-  id              BigInt   @id @default(autoincrement())
-  stakeholder     String   @db.VarChar(255)
-  date_venue      String?  @db.VarChar(255)
-  concern_issue   String?  @db.Text
-  document_link   String?  @db.VarChar(500)
-  is_deleted      Boolean  @default(false)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id            BigInt   @id @default(autoincrement())
+  stakeholder   String   @db.VarChar(255)
+  date_venue    String?  @db.VarChar(255)
+  concern_issue String?  @db.Text
+  document_link String?  @db.VarChar(500)
+  is_deleted    Boolean  @default(false)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
 
   @@index([is_deleted])
 }
@@ -77,12 +79,12 @@ model top_issues {
   issue               String   @db.VarChar(255)
   description         String?  @db.Text
   follow_up           String?  @db.Text
-  main_document       String?  @db.VarChar(500)
-  supporting_document String?  @db.VarChar(500)
   next_plan           String?  @db.Text
   is_deleted          Boolean  @default(false)
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
+  main_document       String?  @db.VarChar(500)
+  supporting_document String?  @db.VarChar(500)
 
   @@index([is_deleted])
 }
@@ -106,22 +108,22 @@ model proposals {
 }
 
 model csr_projects {
-  id                   BigInt   @id @default(autoincrement())
-  project_year         Int      @db.Year
-  program              String   @db.VarChar(255)
-  activity             String?  @db.VarChar(255)
-  type_of_activity     String?  @db.VarChar(100)
-  location             String?  @db.VarChar(255)
-  target_beneficiaries String?  @db.VarChar(255)
-  objective            String?  @db.Text
-  status               String   @default("Planning") @db.VarChar(20)
-  budget               Decimal? @db.Decimal(15, 2)
-  implementation_period String? @db.VarChar(100)
-  documentation_image  String?  @db.VarChar(500)
-  document             String?  @db.VarChar(500)
-  is_deleted           Boolean  @default(false)
-  created_at           DateTime @default(now())
-  updated_at           DateTime @updatedAt
+  id                    BigInt   @id @default(autoincrement())
+  project_year          Int      @db.Year
+  program               String   @db.VarChar(255)
+  activity              String?  @db.VarChar(255)
+  type_of_activity      String?  @db.VarChar(100)
+  location              String?  @db.VarChar(255)
+  target_beneficiaries  String?  @db.VarChar(255)
+  objective             String?  @db.Text
+  status                String   @default("Planning") @db.VarChar(20)
+  budget                Decimal? @db.Decimal(15, 2)
+  implementation_period String?  @db.VarChar(100)
+  documentation_image   String?  @db.VarChar(500)
+  document              String?  @db.VarChar(500)
+  is_deleted            Boolean  @default(false)
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 
   @@index([project_year])
   @@index([status])
@@ -129,26 +131,26 @@ model csr_projects {
 }
 
 model grievance {
-  id                BigInt   @id @default(autoincrement())
-  register_no       String   @unique @db.VarChar(50)
-  log_date          DateTime @db.Date
-  complainant_name  String   @db.VarChar(255)
-  address           String?  @db.VarChar(255)
-  phone             String?  @db.VarChar(30)
-  category          String?  @db.VarChar(100)
-  significance      String   @db.VarChar(20)
-  description       String?  @db.Text
-  location          String?  @db.VarChar(255)
-  investigation     String?  @db.Text
-  resolution        String?  @db.Text
-  feedback          String?  @db.Text
-  status            String   @default("Open") @db.VarChar(20)
-  completion_date   DateTime? @db.Date
-  remarks           String?  @db.Text
-  supporting_files  String?  @db.VarChar(500)
-  is_deleted        Boolean  @default(false)
-  created_at        DateTime @default(now())
-  updated_at        DateTime @updatedAt
+  id               BigInt    @id @default(autoincrement())
+  register_no      String    @unique @db.VarChar(50)
+  log_date         DateTime  @db.Date
+  complainant_name String    @db.VarChar(255)
+  address          String?   @db.VarChar(255)
+  phone            String?   @db.VarChar(30)
+  category         String?   @db.VarChar(100)
+  significance     String    @db.VarChar(20)
+  description      String?   @db.Text
+  location         String?   @db.VarChar(255)
+  investigation    String?   @db.Text
+  resolution       String?   @db.Text
+  feedback         String?   @db.Text
+  status           String    @default("Open") @db.VarChar(20)
+  completion_date  DateTime? @db.Date
+  remarks          String?   @db.Text
+  supporting_files String?   @db.VarChar(500)
+  is_deleted       Boolean   @default(false)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
 
   @@index([status])
   @@index([significance])

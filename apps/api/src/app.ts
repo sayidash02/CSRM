@@ -28,5 +28,7 @@ app.use('/api/csr-projects', csrProjectsRouter);
 app.use('/api/grievance', grievanceRouter);
 app.use('/api/lrp', lrpRouter);
 app.use('/api/upload', uploadRouter);
+import syncRouter from './routes/sync';
+app.use('/api/sync', syncRouter);
 
 export default app;

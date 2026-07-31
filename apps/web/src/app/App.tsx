@@ -444,18 +444,20 @@ const SHEETS = ["Daily Activities","Stakeholder Engagement","Top Issues","Propos
 function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void; totalUnsynced: number; onSuccess: () => void }) {
   const [state, setState] = useState<SyncState>("confirm");
   const [progress, setProgress] = useState(0);
-  const [currentSheet, setCurrentSheet] = useState("");
 
-  const handleStart = useCallback(() => {
+  const handleStart = useCallback(async () => {
     setState("loading");
-    setProgress(0);
-    SHEETS.forEach((sheet, i) => {
-      setTimeout(() => {
-        setCurrentSheet(sheet);
-        setProgress(Math.round(((i + 1) / SHEETS.length) * 100));
-        if (i === SHEETS.length - 1) setTimeout(() => { setState("success"); onSuccess(); }, 500);
-      }, i * 400);
-    });
+    setProgress(10);
+    const interval = setInterval(() => setProgress(p => Math.min(p + 10, 90)), 500);
+    try {
+      await apiClient.post('/sync');
+      clearInterval(interval);
+      setProgress(100);
+      setTimeout(() => { setState("success"); onSuccess(); }, 500);
+    } catch (e) {
+      clearInterval(interval);
+      setState("error");
+    }
   }, [onSuccess]);
 
   return (
@@ -483,7 +485,7 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
           <div className="p-6 space-y-5">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full border-blue-100 border-t-blue-500 animate-spin shrink-0" style={{ borderWidth: 3, borderStyle: "solid" }} />
-              <div><div className="text-sm font-medium text-foreground">Sedang memproses…</div><div className="text-xs text-muted-foreground font-mono mt-0.5">{currentSheet}</div></div>
+              <div><div className="text-sm font-medium text-foreground">Sedang memproses…</div><div className="text-xs text-muted-foreground font-mono mt-0.5">Berkomunikasi dengan server</div></div>
             </div>
             <div>
               <div className="flex justify-between text-xs text-muted-foreground mb-1.5 font-mono"><span>Progress</span><span>{progress}%</span></div>
@@ -491,8 +493,8 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
             </div>
             <div className="space-y-1.5">
               {SHEETS.map((s, i) => {
-                const done = progress >= Math.round(((i + 1) / SHEETS.length) * 100);
-                const active = currentSheet === s && !done;
+                const done = progress === 100;
+                const active = progress > 0 && progress < 100;
                 return (
                   <div key={s} className={`flex items-center gap-2 text-xs transition-colors ${done ? "text-emerald-600" : active ? "text-blue-600" : "text-muted-foreground"}`}>
                     {done ? <Check size={11} /> : active ? <RefreshCw size={11} className="animate-spin" /> : <div className="w-2.5 h-2.5 rounded-full border border-current opacity-30" />}
@@ -541,8 +543,29 @@ export default function App() {
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
   const [showSync, setShowSync] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
-  const [unsyncedCount, setUnsyncedCount] = useState(3);
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [syncHistory, setSyncHistory] = useState<SyncLog[]>(SEED_SYNC);
+
+  const fetchSyncStatus = useCallback(() => {
+    apiClient.get('/sync/status').then(res => {
+      setUnsyncedCount(res.data.data.unsynced_count);
+      if (res.data.data.last_sync) {
+        setSyncHistory(prev => {
+          const l = res.data.data.last_sync;
+          const dt = new Date(l.synced_at);
+          const ts = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")} ${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}:${String(dt.getSeconds()).padStart(2,"0")}`;
+          if (!prev.find(x => x.id === Number(l.id))) {
+            return [{ id: Number(l.id), syncedAt: ts, status: l.status }, ...prev];
+          }
+          return prev;
+        });
+      }
+    }).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    fetchSyncStatus();
+  }, [fetchSyncStatus]);
 
   const [daily, setDaily] = useState<DailyActivity[]>([]);
   const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
@@ -609,11 +632,8 @@ export default function App() {
   }
 
   const handleSyncSuccess = useCallback(() => {
-    const now = new Date();
-    const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}:${String(now.getSeconds()).padStart(2,"0")}`;
-    setSyncHistory(prev => [{ id: nextId(prev), syncedAt: ts, status: "SUCCESS" }, ...prev]);
-    setUnsyncedCount(0);
-  }, []);
+    fetchSyncStatus();
+  }, [fetchSyncStatus]);
 
   const counts = { daily: daily.length, stakeholder: stakeholders.length, topissues: issues.length, proposals: proposals.length, csr: csr.length, grievance: grievances.length, lrp: lrp.length };
 
