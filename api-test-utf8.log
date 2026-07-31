@@ -1,0 +1,200 @@
+﻿node.exe : PASS tests/upload.test.ts (15.771 s)
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PASS tests/upload.test.ts (15.771 s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  ÔùÅ Console
+
+    console.log
+      [MockSharePoint] Uploading 20260731_System_test.pdf (13 bytes) to 0. Testing/2026/Juli/Week 4
+
+      at MockSharePointClient.uploadFile (src/services/sharepoint/MockSharePointClient.ts:5:13)
+
+    console.log
+      [MockSharePoint] Uploading 20260805_Ziya_test.pdf (13 bytes) to 0. Testing/2026/Agustus/Week 1
+
+      at MockSharePointClient.uploadFile (src/services/sharepoint/MockSharePointClient.ts:5:13)
+
+PASS tests/sync.test.ts (5.673 s)
+PASS tests/DocumentUploadService.test.ts
+  ÔùÅ Console
+
+    console.log
+      [MockSharePoint] Uploading 20260805_Ziya_test.pdf (1024 bytes) to 0. Testing/2026/Agustus/Week 1
+
+      at MockSharePointClient.uploadFile (src/services/sharepoint/MockSharePointClient.ts:5:13)
+
+    console.log
+      [MockSharePoint] Uploading 20260805_Ziya___Adji_my_file.pdf (1024 bytes) to 0. Testing/2026/Agustus/Week 1
+
+      at MockSharePointClient.uploadFile (src/services/sharepoint/MockSharePointClient.ts:5:13)
+
+    console.log
+      [MockSharePoint] Uploading 20260825_Sasha_report.docx (1024 bytes) to 0. Testing/2026/Agustus/Week 4
+
+      at MockSharePointClient.uploadFile (src/services/sharepoint/MockSharePointClient.ts:5:13)
+
+PASS tests/proposals.test.ts
+  ÔùÅ Console
+
+    console.error
+      PrismaClientKnownRequestError: 
+      Invalid `prisma.proposals.create()` invocation in
+      C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\src\controllers\ProposalsController.ts:24:43
+      
+        21   return;
+        22 }
+        23 
+      ÔåÆ 24 const result = await prisma.proposals.create(
+      Unique constraint failed on the constraint: `proposals_registration_no_key`
+          at $n.handleRequestError (C:\Users\sasha\OneDrive\Documents\Prototype modern user 
+interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:7315)
+          at $n.handleAndLogRequestError (C:\Users\sasha\OneDrive\Documents\Prototype modern user 
+interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:6623)
+          at $n.request (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:6307)
+          at l (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:130:9633)
+          at createProposal (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\src\controllers\ProposalsController.ts:24:20) {
+        code: 'P2002',
+        clientVersion: '5.22.0',
+        meta: { modelName: 'proposals', target: 'proposals_registration_no_key' }
+      }
+
+    [0m [90m 37 |[39m     res[33m.[39mstatus([35m201[39m)[33m.[39mjson({ data[33m:[39m { [33m...[39mresult[33m,[39m id[33m:[39m result[33m.[39mid[33m.[39mtoString() } })[33m;[39m
+     [90m 38 |[39m   } [36mcatch[39m (error[33m:[39m any) {
+    [31m[1m>[22m[39m[90m 39 |[39m     console[33m.[39merror(error)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 40 |[39m     [36mif[39m (error[33m.[39mcode [33m===[39m [32m'P2002'[39m) {
+     [90m 41 |[39m        res[33m.[39mstatus([35m409[39m)[33m.[39mjson({ error[33m:[39m [32m'Registration number already exists'[39m })[33m;[39m
+     [90m 42 |[39m        [36mreturn[39m[33m;[39m[0m
+
+      at createProposal (src/controllers/ProposalsController.ts:39:13)
+
+PASS tests/csrProjects.test.ts
+  ÔùÅ Console
+
+    console.error
+      PrismaClientValidationError: 
+      Invalid `prisma.csr_projects.create()` invocation in
+      C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\src\controllers\CsrProjectsController.ts:28:46
+      
+        25   return;
+        26 }
+        27 
+      ÔåÆ 28 const result = await prisma.csr_projects.create({
+             data: {
+               program: "Program A",
+               activity: undefined,
+               type_of_activity: undefined,
+               location: undefined,
+               target_beneficiaries: undefined,
+               objective: undefined,
+               status: "Planning",
+               budget: undefined,
+               implementation_period: undefined,
+               documentation_image: undefined,
+               document: undefined,
+           +   project_year: Int
+             }
+           })
+      
+      Argument `project_year` is missing.
+          at wn (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:29:1363)
+          at $n.handleRequestError (C:\Users\sasha\OneDrive\Documents\Prototype modern user 
+interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:6958)
+          at $n.handleAndLogRequestError (C:\Users\sasha\OneDrive\Documents\Prototype modern user 
+interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:6623)
+          at $n.request (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:6307)
+          at l (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:130:9633)
+          at createCsrProject (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\src\controllers\CsrProjectsController.ts:28:20) {
+        clientVersion: '5.22.0'
+      }
+
+    [0m [90m 45 |[39m     res[33m.[39mstatus([35m201[39m)[33m.[39mjson({ data[33m:[39m { [33m...[39mresult[33m,[39m id[33m:[39m result[33m.[39mid[33m.[39mtoString()[33m,[39m 
+budget[33m:[39m result[33m.[39mbudget[33m?[39m[33m.[39mtoString() } })[33m;[39m
+     [90m 46 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 47 |[39m     console[33m.[39merror(error)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 48 |[39m     res[33m.[39mstatus([35m500[39m)[33m.[39mjson({ error[33m:[39m [32m'Internal server error'[39m })[33m;[39m
+     [90m 49 |[39m   }
+     [90m 50 |[39m }[33m;[39m[0m
+
+      at createCsrProject (src/controllers/CsrProjectsController.ts:47:13)
+
+PASS tests/dailyActivities.test.ts
+PASS tests/stakeholders.test.ts
+PASS tests/topIssues.test.ts
+PASS tests/grievance.test.ts
+  ÔùÅ Console
+
+    console.error
+      PrismaClientKnownRequestError: 
+      Invalid `prisma.grievance.create()` invocation in
+      C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\src\controllers\GrievanceController.ts:32:43
+      
+        29   return;
+        30 }
+        31 
+      ÔåÆ 32 const result = await prisma.grievance.create(
+      Unique constraint failed on the constraint: `grievance_register_no_key`
+          at $n.handleRequestError (C:\Users\sasha\OneDrive\Documents\Prototype modern user 
+interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:7315)
+          at $n.handleAndLogRequestError (C:\Users\sasha\OneDrive\Documents\Prototype modern user 
+interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:6623)
+          at $n.request (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:121:6307)
+          at l (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\node_modules\.pnpm\@prisma+client@5.22.0_prisma@5.22.0\node_modules\@prisma\client\runtime\library.js:130:9633)
+          at createGrievance (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\src\controllers\GrievanceController.ts:32:20) {
+        code: 'P2002',
+        clientVersion: '5.22.0',
+        meta: { modelName: 'grievance', target: 'grievance_register_no_key' }
+      }
+
+    [0m [90m 53 |[39m     res[33m.[39mstatus([35m201[39m)[33m.[39mjson({ data[33m:[39m { [33m...[39mresult[33m,[39m id[33m:[39m result[33m.[39mid[33m.[39mtoString() } })[33m;[39m
+     [90m 54 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 55 |[39m     console[33m.[39merror(error)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 56 |[39m     [36mif[39m ((error [36mas[39m any)[33m.[39mcode [33m===[39m [32m'P2002'[39m) {
+     [90m 57 |[39m       res[33m.[39mstatus([35m409[39m)[33m.[39mjson({ error[33m:[39m [32m'Duplicate register_no'[39m })[33m;[39m
+     [90m 58 |[39m       [36mreturn[39m[33m;[39m[0m
+
+      at createGrievance (src/controllers/GrievanceController.ts:55:13)
+
+PASS tests/lrp.test.ts
+  ÔùÅ Console
+
+    console.error
+      Error: DB Error
+          at Object.<anonymous> (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\tests\lrp.test.ts:58:58)
+          at Promise.finally.completed (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:1561:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:1501:10)
+          at _callCircusTest (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:1011:40)
+          at _runTest (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:951:3)
+          at C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:853:7
+          at _runTestsForDescribeBlock (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:866:11)
+          at _runTestsForDescribeBlock (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:861:11)
+          at _runTestsForDescribeBlock (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:861:11)
+          at run (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:765:3)
+          at runAndTransformResultsToJestFormat (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\jestAdapterInit.js:1993:21)
+          at jestAdapter (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-circus\build\runner.js:111:19)
+          at runTestInternal (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-runner\build\index.js:276:16)
+          at runTest (C:\Users\sasha\OneDrive\Documents\Prototype modern user interface\apps\api\node_modules\jest-runner\build\index.js:344:7)
+
+    [0m [90m 22 |[39m     res[33m.[39mstatus([35m201[39m)[33m.[39mjson({ data[33m:[39m { [33m...[39mresult[33m,[39m id[33m:[39m result[33m.[39mid[33m.[39mtoString() } })[33m;[39m
+     [90m 23 |[39m   } [36mcatch[39m (error) {
+    [31m[1m>[22m[39m[90m 24 |[39m     console[33m.[39merror(error)[33m;[39m
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 25 |[39m     res[33m.[39mstatus([35m500[39m)[33m.[39mjson({ error[33m:[39m [32m'Internal server error'[39m })[33m;[39m
+     [90m 26 |[39m   }
+     [90m 27 |[39m }[33m;[39m[0m
+
+      at createLrp (src/controllers/LrpController.ts:24:13)
+      at Object.<anonymous> (tests/lrp.test.ts:60:7)
+
+
+Test Suites: 10 passed, 10 total
+Tests:       51 passed, 51 total
+Snapshots:   0 total
+Time:        30.319 s
+Ran all test suites.

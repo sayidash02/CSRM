@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Global mock is used from setup.ts
+
 
 beforeAll(async () => {
   await prisma.sync_log.deleteMany();
