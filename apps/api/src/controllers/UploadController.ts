@@ -31,16 +31,11 @@ export const uploadDocument = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (!activity_date || !pic_name) {
-      res.status(400).json({ error: 'activity_date and pic_name are required' });
-      return;
-    }
-
-    const activityDate = new Date(activity_date);
+    let activityDate = activity_date ? new Date(activity_date) : new Date();
     if (isNaN(activityDate.getTime())) {
-      res.status(400).json({ error: 'Invalid activity_date format' });
-      return;
+      activityDate = new Date();
     }
+    const finalPicName = pic_name || "System";
 
     const fileUrl = await uploadService.processAndUpload(
       file.buffer,
@@ -48,7 +43,7 @@ export const uploadDocument = async (req: Request, res: Response): Promise<void>
       file.mimetype,
       file.size,
       activityDate,
-      pic_name
+      finalPicName
     );
 
     res.status(200).json({ data: { url: fileUrl } });

@@ -11,14 +11,14 @@ describe('POST /api/upload', () => {
     expect(res.body.error).toBe('No file uploaded');
   });
 
-  it('Should reject if activity_date or pic_name is missing', async () => {
+  it('Should accept if activity_date or pic_name is missing (using defaults)', async () => {
     const buffer = Buffer.from('dummy content');
     const res = await request(app)
       .post('/api/upload')
       .attach('file', buffer, 'test.pdf');
     
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe('activity_date and pic_name are required');
+    expect(res.status).toBe(200);
+    expect(res.body.data.url).toContain('mocksharepoint');
   });
 
   it('Should accept valid upload and return mock URL', async () => {

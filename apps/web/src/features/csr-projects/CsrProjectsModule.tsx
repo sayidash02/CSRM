@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 export interface CsrProject {
   id: number | string;
@@ -179,8 +180,20 @@ function CsrForm({ initial, onClose, onSave }: { initial?: CsrProject; onClose: 
           <Field label="Budget (Rp)"><input type="number" value={f.budget} onChange={e => set("budget", e.target.value)} placeholder="0" className={`${inputCls} font-mono`} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Link Dokumen (SharePoint)"><input type="text" value={f.document} onChange={e => set("document", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
-          <Field label="Link Gambar Dokumentasi"><input type="text" value={f.documentation_image} onChange={e => set("documentation_image", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
+          <Field label="Dokumen">
+            <FileInput 
+              value={f.document || null} 
+              onChange={url => set("document", url)}
+              picName="CSR Project"
+            />
+          </Field>
+          <Field label="Gambar Dokumentasi">
+            <FileInput 
+              value={f.documentation_image || null} 
+              onChange={url => set("documentation_image", url)}
+              picName="CSR Project"
+            />
+          </Field>
         </div>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />

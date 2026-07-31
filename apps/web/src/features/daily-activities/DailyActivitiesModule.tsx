@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Calendar, Search, Plus, Download } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 // Types
 export interface DailyActivity {
@@ -163,46 +164,13 @@ function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity
         <Field label="PIC" required><select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={inputCls}><option value="">Pilih PIC</option>{refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
         <div className="col-span-3"><Field label="Keterangan & Hasil"><textarea rows={2} value={f.description_result} onChange={e => set("description_result", e.target.value)} placeholder="Uraian kegiatan dan hasil yang dicapai" className={`${inputCls} resize-none`} /></Field></div>
         <div className="col-span-3">
-          <Field label="Dokumen Lampiran" hint="Pilih file dokumen (maks 5MB, pdf/docx/dll). Pastikan Tanggal dan PIC sudah terisi.">
-            {f.document_link ? (
-              <div className="flex items-center gap-2 mt-1">
-                <a href={f.document_link} target="_blank" rel="noreferrer" className="text-sm text-blue-600 flex items-center gap-1 hover:underline"><ExternalLink size={14} /> Lihat Dokumen</a>
-                <button type="button" onClick={() => set("document_link", "")} className="text-xs text-red-500 hover:underline">Hapus</button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <input 
-                  type="file" 
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    if (!f.activity_date || !f.pic_id) {
-                      alert("Silakan isi Tanggal Kegiatan dan PIC terlebih dahulu.");
-                      e.target.value = "";
-                      return;
-                    }
-                    const picName = refs.pics.find(p => String(p.id) === String(f.pic_id))?.name || "Unknown";
-                    
-                    const fd = new FormData();
-                    fd.append("file", file);
-                    fd.append("activity_date", f.activity_date);
-                    fd.append("pic_name", picName);
-
-                    try {
-                      e.target.disabled = true;
-                      const res = await apiClient.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                      set("document_link", res.data.data.url);
-                    } catch (err: any) {
-                      alert("Upload gagal: " + (err.response?.data?.error || err.message));
-                    } finally {
-                      e.target.disabled = false;
-                      e.target.value = "";
-                    }
-                  }} 
-                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" 
-                />
-              </div>
-            )}
+          <Field label="Dokumen Lampiran" hint="Pilih file dokumen (maks 5MB). Pastikan Tanggal dan PIC sudah terisi.">
+            <FileInput 
+              value={f.document_link || null} 
+              onChange={url => set("document_link", url)}
+              activityDate={f.activity_date}
+              picName={refs.pics.find(p => String(p.id) === String(f.pic_id))?.name}
+            />
           </Field>
         </div>
       </div>

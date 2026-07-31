@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 export interface Stakeholder {
   id: string;
@@ -128,14 +129,21 @@ function StakeholderForm({ initial, onClose, onSave }: { initial?: Stakeholder; 
         <Field label="Nama Stakeholder" required><input type="text" value={f.stakeholder} onChange={e => set("stakeholder", e.target.value)} placeholder="Nama institusi / individu" className={inputCls} /></Field>
         <Field label="Tanggal & Tempat" hint="Contoh: 14 Juli 2026 — Kantor Dinas Sosial Bogor"><input type="text" value={f.date_venue} onChange={e => set("date_venue", e.target.value)} placeholder="14 Juli 2026 — Kantor Dinas…" className={inputCls} /></Field>
         <Field label="Concern / Isu yang Dibahas"><textarea rows={3} value={f.concern_issue} onChange={e => set("concern_issue", e.target.value)} placeholder="Topik atau isu yang dibahas dalam pertemuan" className={`${inputCls} resize-none`} /></Field>
-        <Field label="Link Dokumen (SharePoint)"><input type="text" value={f.document_link} onChange={e => set("document_link", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
+        <Field label="Dokumen">
+          <FileInput 
+            value={f.document_link || null} 
+            onChange={url => set("document_link", url)}
+            activityDate={f.date_venue}
+            picName={f.stakeholder}
+          />
+        </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan"} isEdit={!!initial} />
     </Modal>
   );
 }
 
-export default function StakeholdersModule() {
+export default function StakeholdersModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Stakeholder[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -194,7 +202,7 @@ export default function StakeholdersModule() {
   };
 
   const handleExport = () => {
-    alert("Exporting to Excel (UI Mock)");
+    onExport("Stakeholders", items);
   };
 
   return (

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, AlertTriangle } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 export interface LrpProgram {
   id: string | number;
@@ -108,8 +109,12 @@ function LrpForm({ initial, onClose, onSave }: { initial?: LrpProgram; onClose: 
     <Modal title={initial ? "Edit Program LRP" : "Tambah Program LRP"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
         <Field label="Nama Program" required><input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama / judul program LRP" className={inputCls} /></Field>
-        <Field label="SharePoint Link" required hint="Link ke folder atau file di SharePoint (docx, pdf, gambar, dst). Dokumen harus sudah diupload ke SharePoint terlebih dahulu.">
-          <input type="text" value={f.sharepoint_link} onChange={e => set("sharepoint_link", e.target.value)} placeholder="https://sharepoint/lrp/…" className={`${inputCls} font-mono`} />
+        <Field label="SharePoint Link" required hint="Upload file dokumen atau gambar untuk program LRP.">
+          <FileInput 
+            value={f.sharepoint_link || null} 
+            onChange={url => set("sharepoint_link", url)}
+            picName="LRP Program"
+          />
         </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
@@ -117,7 +122,7 @@ function LrpForm({ initial, onClose, onSave }: { initial?: LrpProgram; onClose: 
   );
 }
 
-export default function LrpModule({ onExport }: { onExport?: (l: string) => void }) {
+export default function LrpModule({ onExport, showToast }: { onExport?: (l: string) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<LrpProgram[]>([]);
   const { q, setQ, filtered } = useSearch(items, ["program", "sharepoint_link"]);
   const [showForm, setShowForm] = useState(false);
@@ -126,7 +131,7 @@ export default function LrpModule({ onExport }: { onExport?: (l: string) => void
 
   const fetchData = async () => {
     try {
-      const res = await apiClient.get('/api/lrp');
+      const res = await apiClient.get('/lrp');
       setItems(res.data.data);
     } catch (e) {
       console.error(e);
@@ -137,28 +142,34 @@ export default function LrpModule({ onExport }: { onExport?: (l: string) => void
 
   const onAdd = async (d: Omit<LrpProgram, "id">) => {
     try {
-      const res = await apiClient.post('/api/lrp', d);
+      const res = await apiClient.post('/lrp', d);
       setItems([...items, res.data.data]);
+      showToast?.("Data berhasil ditambahkan", "success");
     } catch (e) {
       console.error(e);
+      showToast?.("Gagal menyimpan data", "error");
     }
   };
 
   const onEdit = async (id: string | number, d: Omit<LrpProgram, "id">) => {
     try {
-      const res = await apiClient.put(`/api/lrp/${id}`, d);
+      const res = await apiClient.put(`/lrp/${id}`, d);
       setItems(items.map(i => i.id === id ? res.data.data : i));
+      showToast?.("Data berhasil diperbarui", "success");
     } catch (e) {
       console.error(e);
+      showToast?.("Gagal memperbarui data", "error");
     }
   };
 
   const onDelete = async (id: string | number) => {
     try {
-      await apiClient.delete(`/api/lrp/${id}`);
+      await apiClient.delete(`/lrp/${id}`);
       setItems(items.filter(i => i.id !== id));
+      showToast?.("Data berhasil dihapus", "success");
     } catch (e) {
       console.error(e);
+      showToast?.("Gagal menghapus data", "error");
     }
   };
 
@@ -168,7 +179,7 @@ export default function LrpModule({ onExport }: { onExport?: (l: string) => void
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3">
           <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-700 leading-relaxed">Modul ini belum memiliki sheet Excel berjalan — akan masuk ke sheet baru saat Export &amp; Sync berikutnya. Dokumen harus diupload ke SharePoint terlebih dahulu, lalu paste link-nya di sini.</p>
+          <p className="text-xs text-amber-700 leading-relaxed">Modul ini belum memiliki sheet Excel berjalan — akan masuk ke sheet baru saat Export &amp; Sync berikutnya.</p>
         </div>
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <table className="w-full text-sm">

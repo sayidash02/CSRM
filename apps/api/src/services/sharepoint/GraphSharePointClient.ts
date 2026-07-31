@@ -59,18 +59,25 @@ export class GraphSharePointClient implements ISharePointClient {
 
       // 2. Upload the file in chunks using OneDriveLargeFileUploadTask
       const options: OneDriveLargeFileUploadOptions = {
+        fileName: fileName,
         rangeSize: 327680, // 320 KB chunk size (must be a multiple of 320 KB)
       };
 
-      // Wrap the buffer in an object with a slice method that returns an ArrayBuffer or Buffer
-      // LargeFileUploadTask expects a FileObject (which can be a Buffer in Node)
-      const fileObject = fileBuffer;
+      // LargeFileUploadTask expects a FileObject
+      const fileObject = {
+        content: fileBuffer,
+        name: fileName,
+        size: fileSize,
+        sliceFile(range: any): Buffer {
+          return this.content.subarray(range.minValue, range.maxValue + 1);
+        }
+      };
 
-      const uploadTask = new OneDriveLargeFileUploadTask(this.graphClient, fileObject, uploadSession);
+      const uploadTask = new OneDriveLargeFileUploadTask(this.graphClient, fileObject, uploadSession, options);
       const uploadResult = await uploadTask.upload();
 
       // Return the web URL of the uploaded file
-      return uploadResult.responseBody.webUrl;
+      return (uploadResult.responseBody as any).webUrl;
     } catch (error) {
       console.error('Error uploading file to SharePoint:', error);
       throw new Error('Failed to upload file to SharePoint');

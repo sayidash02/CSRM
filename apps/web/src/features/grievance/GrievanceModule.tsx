@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { FileInput } from '../../components/ui/FileInput';
 
 export interface Grievance {
   id: number | string;
@@ -191,7 +192,14 @@ function GrievanceForm({ initial, onClose, onSave, nextRegNo }: { initial?: Grie
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Open</option><option>On Progress</option><option>Resolved</option><option>Closed</option></select></Field>
           <Field label="Tanggal Selesai"><input type="date" value={f.completion_date} onChange={e => set("completion_date", e.target.value)} className={inputCls} /></Field>
         </div>
-        <Field label="Link Dokumen Pendukung"><input type="text" value={f.supporting_files} onChange={e => set("supporting_files", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field>
+        <Field label="Dokumen Pendukung">
+          <FileInput 
+            value={f.supporting_files || null} 
+            onChange={url => set("supporting_files", url)}
+            activityDate={f.log_date}
+            picName={f.complainant_name}
+          />
+        </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Pengaduan"} isEdit={!!initial} />
     </Modal>
