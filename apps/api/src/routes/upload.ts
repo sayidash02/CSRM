@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { uploadDocument } from '../controllers/UploadController';
 
@@ -11,6 +11,18 @@ const upload = multer({
   }
 });
 
-router.post('/', upload.single('file'), uploadDocument);
+router.post('/', (req: Request, res: Response, next: NextFunction) => {
+  upload.single('file')(req, res, (err: any) => {
+    if (err) {
+      if (err instanceof multer.MulterError) {
+        res.status(400).json({ error: `File upload error: ${err.message}` });
+        return;
+      }
+      res.status(500).json({ error: 'Unknown file upload error' });
+      return;
+    }
+    next();
+  });
+}, uploadDocument);
 
 export default router;

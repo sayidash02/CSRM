@@ -43,10 +43,24 @@ export class DocumentUploadService {
       throw new Error(`File extension not allowed: .${ext}`);
     }
 
-    // Basic MIME type validation
-    if (!mimeType || mimeType === 'application/octet-stream') {
-      // Sometimes octet-stream is sent, we rely on extension in those cases,
-      // but ideally we check explicitly. Let's pass if extension is valid for simplicity.
+    const ALLOWED_MIME_TYPES = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'image/jpeg',
+      'image/png',
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/x-rar-compressed',
+      'application/octet-stream' // Fallback for some clients
+    ];
+
+    if (mimeType && !ALLOWED_MIME_TYPES.includes(mimeType)) {
+      throw new Error(`MIME type not allowed: ${mimeType}`);
     }
   }
 
