@@ -162,14 +162,56 @@ function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
         <Field label="PIC" required><select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={inputCls}><option value="">Pilih PIC</option>{refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
         <div className="col-span-3"><Field label="Keterangan & Hasil"><textarea rows={2} value={f.description_result} onChange={e => set("description_result", e.target.value)} placeholder="Uraian kegiatan dan hasil yang dicapai" className={`${inputCls} resize-none`} /></Field></div>
-        <div className="col-span-3"><Field label="Link Dokumen (SharePoint)" hint="Upload dokumen ke SharePoint terlebih dahulu, lalu paste link-nya di sini."><input type="text" value={f.document_link || ""} onChange={e => set("document_link", e.target.value)} placeholder="https://sharepoint/…" className={inputCls} /></Field></div>
+        <div className="col-span-3">
+          <Field label="Dokumen Lampiran" hint="Pilih file dokumen (maks 5MB, pdf/docx/dll). Pastikan Tanggal dan PIC sudah terisi.">
+            {f.document_link ? (
+              <div className="flex items-center gap-2 mt-1">
+                <a href={f.document_link} target="_blank" rel="noreferrer" className="text-sm text-blue-600 flex items-center gap-1 hover:underline"><ExternalLink size={14} /> Lihat Dokumen</a>
+                <button type="button" onClick={() => set("document_link", "")} className="text-xs text-red-500 hover:underline">Hapus</button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="file" 
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!f.activity_date || !f.pic_id) {
+                      alert("Silakan isi Tanggal Kegiatan dan PIC terlebih dahulu.");
+                      e.target.value = "";
+                      return;
+                    }
+                    const picName = refs.pics.find(p => String(p.id) === String(f.pic_id))?.name || "Unknown";
+                    
+                    const fd = new FormData();
+                    fd.append("file", file);
+                    fd.append("activity_date", f.activity_date);
+                    fd.append("pic_name", picName);
+
+                    try {
+                      e.target.disabled = true;
+                      const res = await apiClient.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                      set("document_link", res.data.data.url);
+                    } catch (err: any) {
+                      alert("Upload gagal: " + (err.response?.data?.error || err.message));
+                    } finally {
+                      e.target.disabled = false;
+                      e.target.value = "";
+                    }
+                  }} 
+                  className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" 
+                />
+              </div>
+            )}
+          </Field>
+        </div>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Kegiatan"} isEdit={!!initial} />
     </Modal>
   );
 }
 
-export default function DailyActivitiesModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function DailyActivitiesModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<DailyActivity[]>([]);
   const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   
@@ -278,5 +320,3 @@ export default function DailyActivitiesModule({ onExport }: { onExport: (l: stri
       {editing && <DailyForm refs={references} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
       {toDelete && <DeleteConfirm label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
-  );
-}
