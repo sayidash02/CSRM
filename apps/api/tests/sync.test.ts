@@ -4,16 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Mock GraphSharePointClient
-jest.mock('../src/services/sharepoint/GraphSharePointClient', () => {
-  return {
-    GraphSharePointClient: jest.fn().mockImplementation(() => {
-      return {
-        uploadFile: jest.fn().mockResolvedValue('https://mock-sharepoint.com/mock-file.xlsx')
-      };
-    })
-  };
-});
+// Global mock is used from setup.ts
 
 beforeAll(async () => {
   await prisma.sync_log.deleteMany();
