@@ -7,7 +7,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "jest",
+    "test": "dotenv -e .env.test -- jest --runInBand",
     "dev": "nodemon src/server.ts"
   },
   "keywords": [],
@@ -26,6 +26,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
     "@types/supertest": "^7.2.1",
+    "dotenv-cli": "^11.0.0",
     "jest": "^30.4.2",
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",

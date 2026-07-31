@@ -1,3 +1,4 @@
+import { apiClient } from "../lib/apiClient";
 import { useState, useMemo, useCallback } from "react";
 import {
   LayoutDashboard, Calendar, Users, AlertTriangle, FileText,
@@ -543,13 +544,35 @@ export default function App() {
   const [unsyncedCount, setUnsyncedCount] = useState(3);
   const [syncHistory, setSyncHistory] = useState<SyncLog[]>(SEED_SYNC);
 
-  const [daily, setDaily] = useState<DailyActivity[]>(SEED_DAILY);
-  const [stakeholders, setStakeholders] = useState<Stakeholder[]>(SEED_STAKEHOLDERS);
-  const [issues, setIssues] = useState<TopIssue[]>(SEED_ISSUES);
-  const [proposals, setProposals] = useState<Proposal[]>(SEED_PROPOSALS);
-  const [csr, setCsr] = useState<CsrProject[]>(SEED_CSR);
-  const [grievances, setGrievances] = useState<Grievance[]>(SEED_GRIEVANCES);
-  const [lrp, setLrp] = useState<LrpProgram[]>(SEED_LRP);
+  const [daily, setDaily] = useState<DailyActivity[]>([]);
+  const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
+  const [issues, setIssues] = useState<TopIssue[]>([]);
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [csr, setCsr] = useState<CsrProject[]>([]);
+  const [grievances, setGrievances] = useState<Grievance[]>([]);
+  const [lrp, setLrp] = useState<LrpProgram[]>([]);
+
+  useEffect(() => {
+    if (activeModule === "dashboard") {
+      Promise.all([
+        apiClient.get('/daily-activities').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/stakeholders').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/top-issues').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/proposals').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/csr-projects').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/grievance').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/lrp').catch(() => ({ data: { data: [] } }))
+      ]).then(([d, s, i, p, c, g, l]) => {
+        setDaily(d.data.data || []);
+        setStakeholders(s.data.data || []);
+        setIssues(i.data.data || []);
+        setProposals(p.data.data || []);
+        setCsr(c.data.data || []);
+        setGrievances(g.data.data || []);
+        setLrp(l.data.data || []);
+      });
+    }
+  }, [activeModule]);
 
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type });
@@ -599,13 +622,13 @@ export default function App() {
       <Sidebar active={activeModule} onNav={setActiveModule} counts={counts} unsyncedCount={unsyncedCount} onSync={() => setShowSync(true)} />
       <main className="flex-1 flex flex-col overflow-hidden">
         {activeModule === "dashboard" && <Dashboard onNav={setActiveModule} daily={daily} stakeholders={stakeholders} issues={issues} proposals={proposals} csr={csr} grievances={grievances} syncHistory={syncHistory} />}
-        {activeModule === "daily" && <DailyActivitiesModule onExport={handleExport} />}
-        {activeModule === "stakeholder" && <StakeholdersModule />}
-        {activeModule === "topissues" && <TopIssuesModule onExport={handleExport} />}
-        {activeModule === "proposals" && <ProposalsModule onExport={handleExport} />}
-        {activeModule === "csr" && <CsrProjectsModule onExport={handleExport} />}
-        {activeModule === "grievance" && <GrievanceModule onExport={handleExport} />}
-        {activeModule === "lrp" && <LrpModule />}
+        {activeModule === "daily" && <DailyActivitiesModule onExport={handleExport} showToast={showToast} />}
+        {activeModule === "stakeholder" && <StakeholdersModule showToast={showToast} />}
+        {activeModule === "topissues" && <TopIssuesModule onExport={handleExport} showToast={showToast} />}
+        {activeModule === "proposals" && <ProposalsModule onExport={handleExport} showToast={showToast} />}
+        {activeModule === "csr" && <CsrProjectsModule onExport={handleExport} showToast={showToast} />}
+        {activeModule === "grievance" && <GrievanceModule onExport={handleExport} showToast={showToast} />}
+        {activeModule === "lrp" && <LrpModule showToast={showToast} />}
       </main>
       {showSync && <SyncModal onClose={() => setShowSync(false)} totalUnsynced={unsyncedCount} onSuccess={handleSyncSuccess} />}
       {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}

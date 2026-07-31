@@ -163,7 +163,7 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo }: { initial?: Propo
   );
 }
 
-export default function ProposalsModule({ onExport }: { onExport: (l: string) => void }) {
+export default function ProposalsModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Proposal[]>([]);
   
   useEffect(() => {
@@ -183,8 +183,10 @@ export default function ProposalsModule({ onExport }: { onExport: (l: string) =>
     try {
       await apiClient.post('/proposals', d);
       fetchData();
+      showToast("Data berhasil ditambahkan", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menyimpan data", "error");
     }
   };
 
@@ -192,8 +194,10 @@ export default function ProposalsModule({ onExport }: { onExport: (l: string) =>
     try {
       await apiClient.put(`/proposals/${id}`, d);
       fetchData();
+      showToast("Data berhasil diperbarui", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal memperbarui data", "error");
     }
   };
 
@@ -201,8 +205,10 @@ export default function ProposalsModule({ onExport }: { onExport: (l: string) =>
     try {
       await apiClient.delete(`/proposals/${id}`);
       fetchData();
+      showToast("Data berhasil dihapus", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menghapus data", "error");
     }
   };
 
@@ -217,7 +223,7 @@ export default function ProposalsModule({ onExport }: { onExport: (l: string) =>
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Proposals" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Proposals")}>
+      <TopBar title="Proposals" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Proposals", items)}>
         <div className="flex gap-1">
           {["All","Under Review","Approved","Declined"].map(s => (
             <button key={s} onClick={() => setStatusFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>

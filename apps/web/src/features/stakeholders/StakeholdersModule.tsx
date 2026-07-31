@@ -164,8 +164,10 @@ export default function StakeholdersModule() {
     try {
       await apiClient.post('/stakeholders', d);
       fetchData();
+      showToast("Data berhasil ditambahkan", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menyimpan data", "error");
     }
   };
 
@@ -173,8 +175,10 @@ export default function StakeholdersModule() {
     try {
       await apiClient.put(`/stakeholders/${id}`, d);
       fetchData();
+      showToast("Data berhasil diperbarui", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal memperbarui data", "error");
     }
   };
 
@@ -182,8 +186,10 @@ export default function StakeholdersModule() {
     try {
       await apiClient.delete(`/stakeholders/${id}`);
       fetchData();
+      showToast("Data berhasil dihapus", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menghapus data", "error");
     }
   };
 

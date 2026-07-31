@@ -188,7 +188,7 @@ function CsrForm({ initial, onClose, onSave }: { initial?: CsrProject; onClose: 
   );
 }
 
-export default function CsrProjectsModule({ onExport }: { onExport: (l: string) => void }) {
+export default function CsrProjectsModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<CsrProject[]>([]);
   
   useEffect(() => {
@@ -208,8 +208,10 @@ export default function CsrProjectsModule({ onExport }: { onExport: (l: string) 
     try {
       await apiClient.post('/csr-projects', d);
       fetchData();
+      showToast("Data berhasil ditambahkan", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menyimpan data", "error");
     }
   };
 
@@ -217,8 +219,10 @@ export default function CsrProjectsModule({ onExport }: { onExport: (l: string) 
     try {
       await apiClient.put(`/csr-projects/${id}`, d);
       fetchData();
+      showToast("Data berhasil diperbarui", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal memperbarui data", "error");
     }
   };
 
@@ -226,8 +230,10 @@ export default function CsrProjectsModule({ onExport }: { onExport: (l: string) 
     try {
       await apiClient.delete(`/csr-projects/${id}`);
       fetchData();
+      showToast("Data berhasil dihapus", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menghapus data", "error");
     }
   };
 
@@ -241,7 +247,7 @@ export default function CsrProjectsModule({ onExport }: { onExport: (l: string) 
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="CSR Projects" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("CSR Projects")}>
+      <TopBar title="CSR Projects" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("CSR Projects", items)}>
         <div className="flex gap-1">
           {["All","Planning","On Going","Completed","Cancelled"].map(s => (
             <button key={s} onClick={() => setStatusFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>{s === "All" ? "Semua" : s}</button>

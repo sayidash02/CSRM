@@ -169,7 +169,7 @@ function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity
   );
 }
 
-export default function DailyActivitiesModule({ onExport }: { onExport: (l: string) => void }) {
+export default function DailyActivitiesModule({ onExport }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<DailyActivity[]>([]);
   const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   
@@ -200,8 +200,10 @@ export default function DailyActivitiesModule({ onExport }: { onExport: (l: stri
     try {
       await apiClient.post('/daily-activities', d);
       fetchData();
+      showToast("Data berhasil ditambahkan", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menyimpan data", "error");
     }
   };
 
@@ -209,8 +211,10 @@ export default function DailyActivitiesModule({ onExport }: { onExport: (l: stri
     try {
       await apiClient.put(`/daily-activities/${id}`, d);
       fetchData();
+      showToast("Data berhasil diperbarui", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal memperbarui data", "error");
     }
   };
 
@@ -218,8 +222,10 @@ export default function DailyActivitiesModule({ onExport }: { onExport: (l: stri
     try {
       await apiClient.delete(`/daily-activities/${id}`);
       fetchData();
+      showToast("Data berhasil dihapus", "success");
     } catch (e) {
       console.error(e);
+      showToast("Gagal menghapus data", "error");
     }
   };
 
@@ -233,7 +239,7 @@ export default function DailyActivitiesModule({ onExport }: { onExport: (l: stri
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Daily Activities Juli 2026")}>
+      <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Daily Activities Juli 2026", items)}>
       </TopBar>
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-card rounded-xl border border-border overflow-hidden">
