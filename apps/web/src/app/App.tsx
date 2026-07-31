@@ -560,7 +560,10 @@ export default function App() {
           return prev;
         });
       }
-    }).catch(console.error);
+    }).catch((err) => {
+      console.error(err);
+      setToast({ message: "Gagal memuat status sinkronisasi", type: "error" });
+    });
   }, []);
 
   useEffect(() => {

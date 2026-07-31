@@ -1,14 +1,48 @@
-import { PrismaClient } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { ISharePointClient } from './sharepoint/ISharePointClient';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export class SyncService {
-  private sharePointClient: ISharePointClient;
+  constructor(private sharePointClient: ISharePointClient) {}
 
-  constructor(sharePointClient: ISharePointClient) {
-    this.sharePointClient = sharePointClient;
+  public async getSyncStatus(isSyncing: boolean) {
+    const lastSync = await prisma.sync_log.findFirst({
+      where: { status: 'SUCCESS' },
+      orderBy: { synced_at: 'desc' }
+    });
+
+    let unsyncedCount = 0;
+
+    if (lastSync) {
+      const lastSyncDate = lastSync.synced_at;
+      const counts = await Promise.all([
+        prisma.daily_activities.count({ where: { updated_at: { gt: lastSyncDate } } }),
+        prisma.stakeholder_engagement.count({ where: { updated_at: { gt: lastSyncDate } } }),
+        prisma.top_issues.count({ where: { updated_at: { gt: lastSyncDate } } }),
+        prisma.proposals.count({ where: { updated_at: { gt: lastSyncDate } } }),
+        prisma.csr_projects.count({ where: { updated_at: { gt: lastSyncDate } } }),
+        prisma.grievance.count({ where: { updated_at: { gt: lastSyncDate } } }),
+        prisma.lrp.count({ where: { updated_at: { gt: lastSyncDate } } }),
+      ]);
+      unsyncedCount = counts.reduce((a, b) => a + b, 0);
+    } else {
+      const counts = await Promise.all([
+        prisma.daily_activities.count({ where: { is_deleted: false } }),
+        prisma.stakeholder_engagement.count({ where: { is_deleted: false } }),
+        prisma.top_issues.count({ where: { is_deleted: false } }),
+        prisma.proposals.count({ where: { is_deleted: false } }),
+        prisma.csr_projects.count({ where: { is_deleted: false } }),
+        prisma.grievance.count({ where: { is_deleted: false } }),
+        prisma.lrp.count({ where: { is_deleted: false } }),
+      ]);
+      unsyncedCount = counts.reduce((a, b) => a + b, 0);
+    }
+
+    return {
+      last_sync: lastSync,
+      unsynced_count: unsyncedCount,
+      is_syncing: isSyncing
+    };
   }
 
   public async executeSync(triggeredBy: string = 'System'): Promise<void> {
