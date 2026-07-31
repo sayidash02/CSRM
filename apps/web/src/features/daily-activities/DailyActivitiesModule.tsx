@@ -320,3 +320,5 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
       {editing && <DailyForm refs={references} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
       {toDelete && <DeleteConfirm label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
+  );
+}
