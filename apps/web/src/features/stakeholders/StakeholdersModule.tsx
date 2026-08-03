@@ -219,8 +219,9 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
       />
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
               <tr className="border-b border-border bg-muted/40">
                 {["No","Stakeholder","Date & Venue","Concern / Issue","Docs",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-16">{h}</th>)}
               </tr>
@@ -251,8 +252,9 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
                   </tr>
                 ))
               )}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         </div>
         {!loading && <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {filtered.length} dari {items.length} data</div>}
       </div>

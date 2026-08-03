@@ -249,8 +249,9 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
       </TopBar>
       <div className="flex-1 overflow-auto p-6">
         <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead>
               <tr className="border-b border-border bg-muted/40">
                 {["No. Reg","Tgl Terima","Institusi","Keterangan","Status","Files",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-16">{h}</th>)}
               </tr>
@@ -277,8 +278,9 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
           {displayed.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Tidak ada proposal dengan filter ini.</div>}
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} proposal</div>

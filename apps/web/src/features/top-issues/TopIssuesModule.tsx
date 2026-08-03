@@ -216,7 +216,9 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar title="Top Issues" subtitle="Isu prioritas yang sedang dipantau dan ditindaklanjuti" addLabel="Tambah Isu" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Top Issues", items)} />
-      <div className="flex-1 overflow-auto p-6 space-y-3">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="overflow-x-auto">
+          <div className="min-w-[800px] space-y-3">
         {filtered.map((issue, i) => (
           <div key={issue.id} className="bg-card rounded-xl border border-border overflow-hidden">
             <button onClick={() => setExpanded(expanded === issue.id ? null : issue.id)} className="w-full flex items-start justify-between px-5 py-4 text-left hover:bg-muted/30 transition-colors">
@@ -243,6 +245,8 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
             )}
           </div>
         ))}
+          </div>
+        </div>
         {filtered.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Tidak ada isu yang cocok.</div>}
       </div>
       {showForm && <TopIssueForm onClose={() => setShowForm(false)} onSave={handleAdd} />}

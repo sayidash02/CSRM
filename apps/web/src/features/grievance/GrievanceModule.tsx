@@ -284,8 +284,9 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
           ))}
         </div>
       </TopBar>
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-72 shrink-0 border-r border-border overflow-y-auto bg-card flex flex-col">
+      <div className="flex-1 overflow-x-auto">
+        <div className="flex h-full min-w-[800px]">
+          <div className="w-72 shrink-0 border-r border-border overflow-y-auto bg-card flex flex-col">
           <div className="p-2 border-b border-border flex gap-1 flex-wrap shrink-0">
             {["All","Open","On Progress","Resolved","Closed"].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} className={`px-2 py-1 text-[10px] rounded font-medium font-mono transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>{s === "All" ? "Semua" : s}</button>
@@ -327,6 +328,7 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
               {detail.supporting_files && <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-3 py-1.5 cursor-pointer"><ExternalLink size={11} /> Dokumen Pendukung</span>}
             </div>
           ) : <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Pilih pengaduan di sebelah kiri.</div>}
+        </div>
         </div>
       </div>
       {showForm && <GrievanceForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} />}
