@@ -26,6 +26,8 @@ export interface DailyActivity {
   pic?: any;
   category?: any;
   sub_category?: any;
+  category_name?: string;
+  sub_category_name?: string;
 }
 
 const PIC_LIST = ["Ziya Ramadhani", "Adji Pratama", "Ziya & Adji", "Fadhil Akbar", "Nisa Rahayu"];
@@ -96,10 +98,11 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, categories, catFilter, onCatFilterChange }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
   onExport?: () => void; children?: React.ReactNode;
+  categories?: any[]; catFilter?: string; onCatFilterChange?: (v: string) => void;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -110,11 +113,23 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
       <div className="flex items-center gap-2 flex-wrap">
         {children}
         {showSearch && (
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari…"
-              className="pl-8 pr-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring w-44 placeholder:text-muted-foreground" />
-          </div>
+          <>
+            {categories && (
+              <select 
+                value={catFilter} 
+                onChange={(e) => onCatFilterChange?.(e.target.value)}
+                className="px-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="All">Semua Kategori</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari…"
+                className="pl-8 pr-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring w-44 placeholder:text-muted-foreground" />
+            </div>
+          </>
         )}
         <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
         {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
@@ -247,13 +262,24 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
     }
   };
 
-  const { q, setQ, filtered } = useGlobalSearch(items);
+  const enrichedItems = useMemo(() => {
+    return items.map(a => ({
+      ...a,
+      category_name: references.categories?.find((c: any) => String(c.id) === String(a.category_id))?.name || "-",
+      sub_category_name: references.sub_categories?.find((s: any) => String(s.id) === String(a.sub_category_id))?.name || "-"
+    }));
+  }, [items, references.categories, references.sub_categories]);
+
+  const { q, setQ, filtered } = useGlobalSearch(enrichedItems);
   const [catFilter, setCatFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
   
-  const displayed = filtered;
+  const displayed = useMemo(() => {
+    if (catFilter === "All") return filtered;
+    return filtered.filter(a => String(a.category_id) === String(catFilter));
+  }, [filtered, catFilter]);
 
   const handleExportClick = () => {
     const exportColumns = [
@@ -264,6 +290,8 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
       { header: 'Institusi', key: 'institution', width: 25 },
       { header: 'Alamat', key: 'address', width: 30 },
       { header: 'Lokasi', key: 'location', width: 20 },
+      { header: 'Kategori', key: 'kategori', width: 20 },
+      { header: 'Sub Kategori', key: 'sub_kategori', width: 25 },
       { header: 'PIC', key: 'pic', width: 15 },
       { header: 'Biaya', key: 'cost', width: 15 },
       { header: 'Keterangan', key: 'description', width: 40 }
@@ -277,6 +305,8 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
       institution: a.institution_group || '-',
       address: a.address || '-',
       location: a.location || '-',
+      kategori: a.category_name,
+      sub_kategori: a.sub_category_name,
       pic: a.pic?.name || a.pic_id,
       cost: a.cost,
       description: a.description_result || '-'
@@ -297,6 +327,8 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
       </div>
     )},
     { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Kategori", accessor: "category_name", sortable: true },
+    { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
     { header: "PIC", accessor: "pic.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pic?.name || a.pic_id}</span> },
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <div className="text-xs text-right font-mono whitespace-nowrap">{a.cost > 0 ? formatIDR(a.cost) : <span className="text-muted-foreground">—</span>}</div> },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
@@ -311,7 +343,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick} categories={references.categories} catFilter={catFilter} onCatFilterChange={setCatFilter}>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
         <div className="flex-1 min-h-0">
