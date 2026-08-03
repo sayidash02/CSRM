@@ -5,6 +5,7 @@ import { Edit2, ExternalLink, Trash2, Check, X, Calendar, Search, Plus, Download
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
+import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 
 // Types
 export interface DailyActivity {
@@ -254,47 +255,37 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
   
   const displayed = filtered;
 
+  const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
+    { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
+    { header: "Tanggal", accessor: "activity_date", sortable: true, render: (a) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(a.activity_date)}</span> },
+    { header: "Kegiatan", accessor: "activity", sortable: true, render: (a) => <div className="text-sm font-medium text-foreground whitespace-normal max-w-[200px]">{a.activity}</div> },
+    { header: "Fokus", accessor: "focus", sortable: true, render: (a) => <div className="text-xs text-muted-foreground whitespace-normal max-w-[150px]">{a.focus || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Institusi & Alamat", accessor: "institution_group", sortable: true, render: (a) => (
+      <div className="max-w-[200px]">
+        <div className="text-sm font-medium text-foreground">{a.institution_group || <span className="text-muted-foreground/50">—</span>}</div>
+        {a.address && <div className="text-xs text-muted-foreground mt-0.5 whitespace-normal">{a.address}</div>}
+      </div>
+    )},
+    { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "PIC", accessor: "pic.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pic?.name || a.pic_id}</span> },
+    { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <div className="text-xs text-right font-mono whitespace-nowrap">{a.cost > 0 ? formatIDR(a.cost) : <span className="text-muted-foreground">—</span>}</div> },
+    { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span> },
+    { header: "", render: (a) => (
+      <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => setEditing(a)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
+        <button onClick={() => setToDelete(a)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
+      </div>
+    )}
+  ], []);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Daily Activities Juli 2026", items)}>
       </TopBar>
-      <div className="flex-1 overflow-auto p-6">
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                {["No","Tanggal","Kegiatan","Fokus","Institusi & Alamat","Lokasi","PIC","Biaya","Keterangan & Hasil","Docs",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-20">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {displayed.map((a, i) => (
-                <tr key={a.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-xs text-muted-foreground font-mono">{i + 1}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(a.activity_date)}</td>
-                  <td className="px-4 py-3 max-w-[200px]"><div className="text-sm font-medium text-foreground whitespace-normal">{a.activity}</div></td>
-                  <td className="px-4 py-3 max-w-[150px]"><div className="text-xs text-muted-foreground whitespace-normal">{a.focus || <span className="text-muted-foreground/50">—</span>}</div></td>
-                  <td className="px-4 py-3 max-w-[200px]">
-                    <div className="text-sm font-medium text-foreground">{a.institution_group || <span className="text-muted-foreground/50">—</span>}</div>
-                    {a.address && <div className="text-xs text-muted-foreground mt-0.5 whitespace-normal">{a.address}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</td>
-                  <td className="px-4 py-3 text-xs text-foreground whitespace-nowrap">{a.pic?.name || a.pic_id}</td>
-                  <td className="px-4 py-3 text-xs text-right font-mono whitespace-nowrap">{a.cost > 0 ? formatIDR(a.cost) : <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-4 py-3 max-w-[250px]"><div className="text-xs text-foreground whitespace-normal leading-relaxed">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div></td>
-                  <td className="px-4 py-3 text-center">
-                    {a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => setEditing(a)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
-                      <button onClick={() => setToDelete(a)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {displayed.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Tidak ada data yang cocok.</div>}
+      <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
+        <div className="flex-1 min-h-0">
+          <DataTable columns={columns} data={displayed} />
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} kegiatan</div>
       </div>

@@ -4,6 +4,7 @@ import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
+import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 
 export interface CsrProject {
   id: number | string;
@@ -254,6 +255,29 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
   
   const displayed = statusFilter === "All" ? filtered : filtered.filter(c => c.status === statusFilter);
 
+  const columns: ColumnDef<CsrProject>[] = useMemo(() => [
+    { header: "Status & Jenis", render: (p) => <div className="flex flex-col gap-1 items-start"><StatusBadge status={p.status} /><span className="text-xs font-mono text-muted-foreground">{p.type_of_activity}</span></div> },
+    { header: "Program", accessor: "program", sortable: true, render: (p) => <div><h3 className="text-sm font-semibold text-foreground whitespace-normal">{p.program}</h3><p className="text-xs text-muted-foreground mt-0.5 whitespace-normal">{p.activity}</p></div> },
+    { header: "Lokasi", accessor: "location", sortable: true, render: (p) => <div className="text-xs text-foreground mt-0.5 whitespace-normal">{p.location || "—"}</div> },
+    { header: "Target", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-foreground mt-0.5 whitespace-normal">{p.target_beneficiaries || "—"}</div> },
+    { header: "Periode", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-foreground mt-0.5 whitespace-nowrap">{p.implementation_period || "—"}</div> },
+    { header: "Budget", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
+    { header: "Objektif", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-muted-foreground italic leading-relaxed max-w-[200px] whitespace-normal">{p.objective || "—"}</div> },
+    { header: "Docs", className: "whitespace-nowrap", render: (p) => (
+      <div className="flex flex-col gap-1">
+        {p.document && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Dokumen</span>}
+        {p.documentation_image && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Gambar</span>}
+        {!p.document && !p.documentation_image && <span className="text-muted-foreground text-xs">—</span>}
+      </div>
+    )},
+    { header: "", render: (p) => (
+      <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => setEditing(p)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(p)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+      </div>
+    )}
+  ], []);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar title="CSR Projects" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("CSR Projects", items)}>
@@ -263,39 +287,11 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
           ))}
         </div>
       </TopBar>
-      <div className="flex-1 overflow-auto p-6 space-y-4">
-        {displayed.length > 0 && <div className="text-xs text-muted-foreground font-mono">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + (c.budget || 0), 0))}</span></div>}
-        {displayed.map(p => (
-          <div key={p.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-sm transition-shadow">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1"><StatusBadge status={p.status} /><span className="text-xs font-mono text-muted-foreground">{p.type_of_activity}</span></div>
-                <h3 className="text-sm font-semibold text-foreground">{p.program}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">{p.activity}</p>
-              </div>
-              <div className="flex items-start gap-2 shrink-0">
-                <div className="text-right"><div className="text-xs text-muted-foreground font-mono">Budget</div><div className="text-sm font-semibold font-mono">{formatIDR(p.budget)}</div></div>
-                <div className="flex flex-col gap-1">
-                  <button onClick={() => setEditing(p)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
-                  <button onClick={() => setToDelete(p)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
-                </div>
-              </div>
-            </div>
-            <div className="mt-3 pt-3 border-t border-border grid grid-cols-4 gap-4 text-xs">
-              <div><span className="text-muted-foreground">Lokasi</span><div className="font-medium text-foreground mt-0.5">{p.location || "—"}</div></div>
-              <div><span className="text-muted-foreground">Target</span><div className="font-medium text-foreground mt-0.5">{p.target_beneficiaries || "—"}</div></div>
-              <div><span className="text-muted-foreground">Periode</span><div className="font-medium font-mono text-foreground mt-0.5">{p.implementation_period || "—"}</div></div>
-              <div className="flex items-end">
-                <div className="flex flex-col gap-1">
-                  {p.document && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Dokumen</span>}
-                  {p.documentation_image && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Gambar</span>}
-                </div>
-              </div>
-            </div>
-            {p.objective && <div className="mt-2 text-xs text-muted-foreground italic leading-relaxed">{p.objective}</div>}
-          </div>
-        ))}
-        {displayed.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Belum ada program CSR dengan filter ini.</div>}
+      <div className="flex-1 overflow-auto p-6 flex flex-col">
+        <div className="mb-4 text-xs text-muted-foreground font-mono shrink-0">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + (c.budget || 0), 0))}</span></div>
+        <div className="flex-1 min-h-0">
+          <DataTable columns={columns} data={displayed} />
+        </div>
       </div>
       {showForm && <CsrForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
       {editing && <CsrForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
