@@ -182,9 +182,8 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
           <p className="text-xs text-amber-700 leading-relaxed">Modul ini belum memiliki sheet Excel berjalan — akan masuk ke sheet baru saat Export &amp; Sync berikutnya.</p>
         </div>
         <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[800px]">
-              <thead>
+          <table className="w-full text-sm">
+            <thead>
               <tr className="border-b border-border bg-muted/40">
                 {["No","Nama Program","SharePoint Link",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-20">{h}</th>)}
               </tr>
@@ -203,9 +202,8 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
                   </td>
                 </tr>
               ))}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
           {filtered.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Belum ada program LRP.</div>}
         </div>
       </div>

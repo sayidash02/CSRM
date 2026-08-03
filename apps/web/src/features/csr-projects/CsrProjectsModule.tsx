@@ -267,9 +267,7 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
           ))}
         </div>
       </TopBar>
-      <div className="flex-1 overflow-auto p-6">
-        <div className="overflow-x-auto">
-          <div className="min-w-[800px] space-y-4">
+      <div className="flex-1 overflow-auto p-6 space-y-4">
         {displayed.length > 0 && <div className="text-xs text-muted-foreground font-mono">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + (c.budget || 0), 0))}</span></div>}
         {displayed.map(p => (
           <div key={p.id} className="bg-card rounded-xl border border-border p-5 hover:shadow-sm transition-shadow">
@@ -301,8 +299,6 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
             {p.objective && <div className="mt-2 text-xs text-muted-foreground italic leading-relaxed">{p.objective}</div>}
           </div>
         ))}
-          </div>
-        </div>
         {displayed.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Belum ada program CSR dengan filter ini.</div>}
       </div>
       {showForm && <CsrForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
