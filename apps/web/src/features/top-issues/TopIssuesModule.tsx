@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, ChevronDown, FileText } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
@@ -98,13 +99,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function useSearch<T>(items: T[], keys: (keyof T)[]) {
-  const [q, setQ] = useState("");
-  const filtered = useMemo(() =>
-    q.trim() === "" ? items : items.filter(item => keys.some(k => String(item[k]).toLowerCase().includes(q.toLowerCase()))),
-    [items, q]);
-  return { q, setQ, filtered };
-}
+
 
 function TopIssueForm({ initial, onClose, onSave }: { initial?: TopIssue; onClose: () => void; onSave: (d: Omit<TopIssue, "id">) => void }) {
   const [f, setF] = useState({ 
@@ -207,7 +202,7 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
     }
   };
 
-  const { q, setQ, filtered } = useSearch(items, ["issue", "period", "description", "follow_up"]);
+  const { q, setQ, filtered } = useGlobalSearch(items);
   const [expanded, setExpanded] = useState<number | string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TopIssue | null>(null);

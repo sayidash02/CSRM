@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
@@ -17,13 +18,7 @@ export interface Proposal {
 
 const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
-function useSearch<T>(items: T[], keys: (keyof T)[]) {
-  const [q, setQ] = useState("");
-  const filtered = useMemo(() =>
-    q.trim() === "" ? items : items.filter(item => keys.some(k => String(item[k]).toLowerCase().includes(q.toLowerCase()))),
-    [items, q]);
-  return { q, setQ, filtered };
-}
+
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -227,7 +222,7 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
     }
   };
 
-  const { q, setQ, filtered } = useSearch(items, ["registration_no", "institution", "address", "proposal_description"]);
+  const { q, setQ, filtered } = useGlobalSearch(items);
   const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Proposal | null>(null);

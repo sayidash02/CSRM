@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
@@ -25,13 +26,7 @@ const formatIDR = (n: number | null) => {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 };
 
-function useSearch<T>(items: T[], keys: (keyof T)[]) {
-  const [q, setQ] = useState("");
-  const filtered = useMemo(() =>
-    q.trim() === "" ? items : items.filter(item => keys.some(k => String(item[k]).toLowerCase().includes(q.toLowerCase()))),
-    [items, q]);
-  return { q, setQ, filtered };
-}
+
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -251,7 +246,7 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
     }
   };
 
-  const { q, setQ, filtered } = useSearch(items, ["program", "activity", "type_of_activity", "location", "target_beneficiaries"]);
+  const { q, setQ, filtered } = useGlobalSearch(items);
   const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CsrProject | null>(null);

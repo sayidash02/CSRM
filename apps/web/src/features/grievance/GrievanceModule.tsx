@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
@@ -25,13 +26,7 @@ export interface Grievance {
 
 const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
-function useSearch<T>(items: T[], keys: (keyof T)[]) {
-  const [q, setQ] = useState("");
-  const filtered = useMemo(() =>
-    q.trim() === "" ? items : items.filter(item => keys.some(k => String(item[k]).toLowerCase().includes(q.toLowerCase()))),
-    [items, q]);
-  return { q, setQ, filtered };
-}
+
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -255,7 +250,7 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
     }
   };
 
-  const { q, setQ, filtered } = useSearch(items, ["complainant_name", "register_no", "category", "description", "location"]);
+  const { q, setQ, filtered } = useGlobalSearch(items);
   const [sigFilter, setSigFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selected, setSelected] = useState<string | number | null>(items[0]?.id ?? null);

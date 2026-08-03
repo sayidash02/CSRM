@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
@@ -11,13 +12,7 @@ export interface Stakeholder {
   document_link: string | null;
 }
 
-function useSearch<T>(items: T[], keys: (keyof T)[]) {
-  const [q, setQ] = useState("");
-  const filtered = useMemo(() =>
-    q.trim() === "" ? items : items.filter(item => keys.some(k => String(item[k] || '').toLowerCase().includes(q.toLowerCase()))),
-    [items, q]);
-  return { q, setQ, filtered };
-}
+
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -163,7 +158,7 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
     fetchData();
   }, []);
 
-  const { q, setQ, filtered } = useSearch(items, ["stakeholder", "concern_issue", "date_venue"]);
+  const { q, setQ, filtered } = useGlobalSearch(items);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Stakeholder | null>(null);
   const [toDelete, setToDelete] = useState<Stakeholder | null>(null);
