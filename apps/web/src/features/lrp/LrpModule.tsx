@@ -3,6 +3,7 @@ import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, AlertTriangle } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 
 export interface LrpProgram {
   id: string | number;
@@ -168,38 +169,28 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
     }
   };
 
+  const columns: ColumnDef<LrpProgram>[] = useMemo(() => [
+    { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
+    { header: "Nama Program", accessor: "program", sortable: true, render: (p) => <span className="text-sm font-medium text-foreground">{p.program}</span> },
+    { header: "SharePoint Link", accessor: "sharepoint_link", sortable: true, render: (p) => <span className="text-xs text-blue-600 font-mono flex items-center gap-1.5 cursor-pointer hover:underline"><ExternalLink size={10} className="shrink-0" />{p.sharepoint_link}</span> },
+    { header: "", render: (p) => (
+      <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
+        <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
+      </div>
+    )}
+  ], []);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar title="LRP — Livelihood Restoration Program" subtitle="Program community development & pemulihan mata pencaharian" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport?.("LRP")} />
-      <div className="flex-1 overflow-auto p-6">
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3">
+      <div className="flex-1 overflow-auto p-6 flex flex-col">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3 shrink-0">
           <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700 leading-relaxed">Modul ini belum memiliki sheet Excel berjalan — akan masuk ke sheet baru saat Export &amp; Sync berikutnya.</p>
         </div>
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                {["No","Nama Program","SharePoint Link",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-20">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((p, i) => (
-                <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-xs text-muted-foreground font-mono">{i + 1}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-foreground">{p.program}</td>
-                  <td className="px-4 py-3"><span className="text-xs text-blue-600 font-mono flex items-center gap-1.5 cursor-pointer hover:underline"><ExternalLink size={10} className="shrink-0" />{p.sharepoint_link}</span></td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
-                      <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Belum ada program LRP.</div>}
+        <div className="flex-1 min-h-0">
+          <DataTable columns={columns} data={filtered} />
         </div>
       </div>
       {showForm && <LrpForm onClose={() => setShowForm(false)} onSave={onAdd} />}

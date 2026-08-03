@@ -3,6 +3,7 @@ import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 
 export interface Proposal {
   id: string | number;
@@ -231,6 +232,26 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
   const displayed = statusFilter === "All" ? filtered : filtered.filter(p => p.status === statusFilter);
   const nextRegNo = `PRP-2026-${String(items.length + 1).padStart(4, "0")}`;
 
+  const columns: ColumnDef<Proposal>[] = useMemo(() => [
+    { header: "No. Reg", accessor: "registration_no", sortable: true, render: (p) => <span className="text-xs font-mono text-blue-600">{p.registration_no}</span> },
+    { header: "Tgl Terima", accessor: "date_received", sortable: true, render: (p) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(p.date_received)}</span> },
+    { header: "Institusi", accessor: "institution", sortable: true, render: (p) => <div><div className="text-sm font-medium text-foreground truncate max-w-[150px]">{p.institution}</div><div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[150px]">{p.address}</div></div> },
+    { header: "Keterangan", accessor: "proposal_description", sortable: true, render: (p) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{p.proposal_description}</div></div> },
+    { header: "Status", accessor: "status", sortable: true, render: (p) => <StatusBadge status={p.status} /> },
+    { header: "Files", render: (p) => (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {p.proposal_file && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Prop</span>}
+        {p.assessment_file && <span className="text-xs text-violet-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Assess</span>}
+      </div>
+    )},
+    { header: "", render: (p) => (
+      <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
+        <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
+      </div>
+    )}
+  ], []);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar title="Proposals" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Proposals", items)}>
@@ -242,39 +263,9 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
           ))}
         </div>
       </TopBar>
-      <div className="flex-1 overflow-auto p-6">
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                {["No. Reg","Tgl Terima","Institusi","Keterangan","Status","Files",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-16">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {displayed.map(p => (
-                <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-xs font-mono text-blue-600">{p.registration_no}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(p.date_received)}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-foreground"><div className="truncate max-w-[150px]">{p.institution}</div><div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[150px]">{p.address}</div></td>
-                  <td className="px-4 py-3 text-sm text-foreground max-w-xs"><div className="line-clamp-2">{p.proposal_description}</div></td>
-                  <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {p.proposal_file && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Prop</span>}
-                      {p.assessment_file && <span className="text-xs text-violet-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Assess</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
-                      <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {displayed.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Tidak ada proposal dengan filter ini.</div>}
+      <div className="flex-1 overflow-auto p-6 flex flex-col">
+        <div className="flex-1 min-h-0">
+          <DataTable columns={columns} data={displayed} />
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} proposal</div>
       </div>

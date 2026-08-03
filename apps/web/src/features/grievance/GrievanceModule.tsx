@@ -3,6 +3,7 @@ import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 
 export interface Grievance {
   id: number | string;
@@ -268,7 +269,22 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
   
   const nextRegNo = `GRV-2026-${String(items.length + 1).padStart(4, "0")}`;
   const displayed = filtered.filter(g => sigFilter === "All" || g.significance === sigFilter).filter(g => statusFilter === "All" || g.status === statusFilter);
-  const detail = items.find(g => g.id === selected);
+
+  const columns: ColumnDef<Grievance>[] = useMemo(() => [
+    { header: "No. Reg", accessor: "register_no", sortable: true, render: (g) => <div><span className="text-xs font-mono text-blue-600">{g.register_no}</span><div className="mt-1"><SignificanceBadge level={g.significance} /></div></div> },
+    { header: "Pelapor & Kontak", accessor: "complainant_name", sortable: true, render: (g) => <div><div className="text-sm font-medium text-foreground">{g.complainant_name}</div><div className="text-xs text-muted-foreground mt-0.5">{g.phone}</div><div className="text-xs text-muted-foreground mt-0.5">{g.address}</div></div> },
+    { header: "Tanggal & Kategori", accessor: "log_date", sortable: true, render: (g) => <div><div className="text-xs text-muted-foreground font-mono">{formatDate(g.log_date)}</div><div className="text-xs text-muted-foreground mt-0.5">{g.category}</div></div> },
+    { header: "Deskripsi & Lokasi", accessor: "description", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal"><div className="text-sm text-foreground line-clamp-2">{g.description}</div><div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{g.location}</div></div> },
+    { header: "Penyelesaian", accessor: "resolution", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal"><div className="text-xs text-muted-foreground line-clamp-2">Investigasi: {g.investigation || "—"}</div><div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">Resolusi: {g.resolution || "—"}</div></div> },
+    { header: "Status", accessor: "status", sortable: true, render: (g) => <div><StatusBadge status={g.status} />{g.completion_date && <div className="text-xs text-muted-foreground font-mono mt-1">Selesai: {formatDate(g.completion_date)}</div>}</div> },
+    { header: "Docs", render: (g) => g.supporting_files ? <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-2 py-1 cursor-pointer"><ExternalLink size={11} /> Dok</span> : <span className="text-muted-foreground text-xs">—</span> },
+    { header: "", render: (g) => (
+      <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => setEditing(g)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(g)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+      </div>
+    )}
+  ], []);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -278,50 +294,15 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
             <button key={s} onClick={() => setSigFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${sigFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>{s}</button>
           ))}
         </div>
-      </TopBar>
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-72 shrink-0 border-r border-border overflow-y-auto bg-card flex flex-col">
-          <div className="p-2 border-b border-border flex gap-1 flex-wrap shrink-0">
-            {["All","Open","On Progress","Resolved","Closed"].map(s => (
-              <button key={s} onClick={() => setStatusFilter(s)} className={`px-2 py-1 text-[10px] rounded font-medium font-mono transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}>{s === "All" ? "Semua" : s}</button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {displayed.map(g => (
-              <button key={g.id} onClick={() => setSelected(g.id)} className={`w-full text-left px-4 py-3.5 border-b border-border transition-colors ${selected === g.id ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-muted/50"}`}>
-                <div className="flex items-center justify-between mb-1"><span className="text-xs font-mono text-blue-600">{g.register_no}</span><SignificanceBadge level={g.significance} /></div>
-                <div className="text-sm font-medium text-foreground truncate">{g.complainant_name}</div>
-                <div className="text-xs text-muted-foreground font-mono mt-0.5">{formatDate(g.log_date)} · {g.category}</div>
-                <div className="mt-1.5"><StatusBadge status={g.status} /></div>
-              </button>
-            ))}
-            {displayed.length === 0 && <div className="px-4 py-8 text-sm text-muted-foreground text-center">Tidak ada pengaduan.</div>}
-          </div>
+        <div className="flex gap-1">
+          {["All","Open","On Progress","Resolved","Closed"].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>{s === "All" ? "Status: Semua" : s}</button>
+          ))}
         </div>
-        <div className="flex-1 overflow-y-auto p-6">
-          {detail ? (
-            <div className="max-w-2xl space-y-4">
-              <div className="flex items-start justify-between">
-                <div><span className="text-xs font-mono text-blue-600">{detail.register_no}</span><h2 className="text-base font-semibold text-foreground mt-0.5">{detail.complainant_name}</h2></div>
-                <div className="flex items-center gap-2">
-                  <SignificanceBadge level={detail.significance} /><StatusBadge status={detail.status} />
-                  <button onClick={() => setEditing(detail)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
-                  <button onClick={() => setToDelete(detail)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 bg-card rounded-xl border border-border p-4 text-sm">
-                <div><span className="text-xs text-muted-foreground">Alamat</span><div className="font-medium mt-0.5">{detail.address}</div></div>
-                <div><span className="text-xs text-muted-foreground">Telepon</span><div className="font-medium font-mono mt-0.5">{detail.phone}</div></div>
-                <div><span className="text-xs text-muted-foreground">Kategori</span><div className="font-medium mt-0.5">{detail.category}</div></div>
-                <div><span className="text-xs text-muted-foreground">Tanggal Log</span><div className="font-medium font-mono mt-0.5">{formatDate(detail.log_date)}</div></div>
-                {detail.completion_date && <div><span className="text-xs text-muted-foreground">Tgl Selesai</span><div className="font-medium font-mono mt-0.5">{formatDate(detail.completion_date)}</div></div>}
-              </div>
-              {[{ label: "Deskripsi Pengaduan", val: detail.description }, { label: "Lokasi Kejadian", val: detail.location }, { label: "Investigasi", val: detail.investigation }, { label: "Resolusi", val: detail.resolution }, { label: "Feedback Pelapor", val: detail.feedback }, { label: "Remarks", val: detail.remarks }].map(({ label, val }) => val && (
-                <div key={label} className="bg-card rounded-xl border border-border p-4"><div className="text-xs font-medium text-muted-foreground mb-2">{label}</div><p className="text-sm text-foreground leading-relaxed">{val}</p></div>
-              ))}
-              {detail.supporting_files && <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-3 py-1.5 cursor-pointer"><ExternalLink size={11} /> Dokumen Pendukung</span>}
-            </div>
-          ) : <div className="h-full flex items-center justify-center text-sm text-muted-foreground">Pilih pengaduan di sebelah kiri.</div>}
+      </TopBar>
+      <div className="flex-1 overflow-auto p-6 flex flex-col">
+        <div className="flex-1 min-h-0">
+          <DataTable columns={columns} data={displayed} />
         </div>
       </div>
       {showForm && <GrievanceForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} />}
