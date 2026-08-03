@@ -60,17 +60,17 @@ export function FileInput({ value, onChange, activityDate, picName, multiple = t
           multiple={multiple}
           disabled={uploading}
           onChange={async (e) => {
-            const files = e.target.files;
-            if (!files || files.length === 0) return;
+            if (!e.target.files || e.target.files.length === 0) return;
+            const fileArray = Array.from(e.target.files);
             
             setUploading(true);
             const newUrls: string[] = [];
             const originalButtonText = e.target.className;
             
             try {
-              for (let i = 0; i < files.length; i++) {
+              for (let i = 0; i < fileArray.length; i++) {
                 const fd = new FormData();
-                fd.append("file", files[i]);
+                fd.append("file", fileArray[i]);
                 if (activityDate) fd.append("activity_date", activityDate);
                 if (picName) fd.append("pic_name", picName);
 
