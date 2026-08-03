@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { SyncService } from '../services/SyncService';
-import { GraphSharePointClient } from '../services/sharepoint/GraphSharePointClient';
-const sharePointClient = new GraphSharePointClient();
+import { MockSharePointClient } from '../services/sharepoint/MockSharePointClient';
+const sharePointClient = new MockSharePointClient();
 const syncService = new SyncService(sharePointClient);
 
 let isSyncing = false;
