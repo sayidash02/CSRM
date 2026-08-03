@@ -98,11 +98,12 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, categories, catFilter, onCatFilterChange }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, categories, catFilter, onCatFilterChange, subCategories, subCatFilter, onSubCatFilterChange }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
   onExport?: () => void; children?: React.ReactNode;
   categories?: any[]; catFilter?: string; onCatFilterChange?: (v: string) => void;
+  subCategories?: any[]; subCatFilter?: string; onSubCatFilterChange?: (v: string) => void;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -122,6 +123,18 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
               >
                 <option value="All">Semua Kategori</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
+            {subCategories && (
+              <select 
+                value={subCatFilter} 
+                onChange={(e) => onSubCatFilterChange?.(e.target.value)}
+                className="px-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring max-w-[150px] truncate"
+              >
+                <option value="All">Semua Sub Kategori</option>
+                {subCategories
+                  .filter((s: any) => catFilter === "All" || catFilter === undefined || String(s.category_id) === String(catFilter))
+                  .map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
             )}
             <div className="relative">
@@ -272,14 +285,17 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
 
   const { q, setQ, filtered } = useGlobalSearch(enrichedItems);
   const [catFilter, setCatFilter] = useState("All");
+  const [subCatFilter, setSubCatFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
   
   const displayed = useMemo(() => {
-    if (catFilter === "All") return filtered;
-    return filtered.filter(a => String(a.category_id) === String(catFilter));
-  }, [filtered, catFilter]);
+    let result = filtered;
+    if (catFilter !== "All") result = result.filter(a => String(a.category_id) === String(catFilter));
+    if (subCatFilter !== "All") result = result.filter(a => String(a.sub_category_id) === String(subCatFilter));
+    return result;
+  }, [filtered, catFilter, subCatFilter]);
 
   const handleExportClick = () => {
     const exportColumns = [
@@ -343,8 +359,18 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick} categories={references.categories} catFilter={catFilter} onCatFilterChange={setCatFilter}>
-      </TopBar>
+      <TopBar 
+        title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" 
+        onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" 
+        showSearch searchValue={q} onSearch={setQ} 
+        onExport={handleExportClick}
+        categories={references.categories}
+        catFilter={catFilter}
+        onCatFilterChange={(val) => { setCatFilter(val); setSubCatFilter("All"); }}
+        subCategories={references.sub_categories}
+        subCatFilter={subCatFilter}
+        onSubCatFilterChange={setSubCatFilter}
+      ></TopBar>
       <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
         <div className="flex-1 min-h-0">
           <DataTable columns={columns} data={displayed} />
