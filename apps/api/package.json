@@ -3,11 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "dotenv -e .env.test -- jest --runInBand",
+    "test": "dotenv -e .env.test -- jest",
     "dev": "nodemon src/server.ts"
   },
   "keywords": [],
