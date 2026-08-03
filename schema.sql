@@ -82,7 +82,7 @@ CREATE TABLE daily_activities (
   location VARCHAR(255),
   cost DECIMAL(15,2),                     -- kolom "Biaya" — baru ditambahkan, ada di template Excel 2026 tapi kelewat di v1
   description_result TEXT,                -- gabungan "Keterangan" + "Hasil" — dikonfirmasi ke pegawai, memang boleh disatukan
-  document_link VARCHAR(500),             -- kolom "link" — cuma 1 kolom link di Excel, bukan 2
+  document_link TEXT,             -- kolom "link" — cuma 1 kolom link di Excel, bukan 2
   pic_id BIGINT NOT NULL,
   category_id BIGINT NOT NULL,
   sub_category_id BIGINT NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE stakeholder_engagement (
   date_venue VARCHAR(255),                -- kolom "Date And Venue": tanggal & lokasi digabung jadi 1 teks bebas di Excel,
                                            -- bukan tanggal terstruktur — konsekuensinya tidak bisa difilter/sort per tanggal
   concern_issue TEXT,
-  document_link VARCHAR(500),             -- kolom "Docs"
+  document_link TEXT,             -- kolom "Docs"
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -129,8 +129,8 @@ CREATE TABLE top_issues (
   issue VARCHAR(255) NOT NULL,
   description TEXT,
   follow_up TEXT,
-  main_document VARCHAR(500),
-  supporting_document VARCHAR(500),
+  main_document TEXT,
+  supporting_document TEXT,
   next_plan TEXT,
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -152,8 +152,8 @@ CREATE TABLE proposals (
   institution VARCHAR(255) NOT NULL,
   address VARCHAR(255),
   proposal_description TEXT,
-  proposal_file VARCHAR(500),
-  assessment_file VARCHAR(500),
+  proposal_file TEXT,
+  assessment_file TEXT,
   status VARCHAR(20) NOT NULL DEFAULT 'Under Review'
     CHECK (status IN ('Approved','Under Review','Declined')),
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -186,8 +186,8 @@ CREATE TABLE csr_projects (
     CHECK (status IN ('Planning','On Going','Completed','Cancelled')),
   budget DECIMAL(15,2),                    -- pemetaan dari kolom "REALISASI" — perlu konfirmasi tipe data asli
   implementation_period VARCHAR(100),      -- teks bebas, misal "Jan - Mar 2026"
-  documentation_image VARCHAR(500),
-  document VARCHAR(500),
+  documentation_image TEXT,
+  document TEXT,
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -225,7 +225,7 @@ CREATE TABLE grievance (
     CHECK (status IN ('Open','On Progress','Resolved','Closed')),
   completion_date DATE,
   remarks TEXT,
-  supporting_files VARCHAR(500),
+  supporting_files TEXT,
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -252,7 +252,7 @@ CREATE INDEX idx_grievance_deleted ON grievance(is_deleted);
 CREATE TABLE lrp (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   program VARCHAR(255) NOT NULL,          -- nama/judul program, supaya baris bisa dibedakan
-  sharepoint_link VARCHAR(500) NOT NULL,  -- link ke folder/file SharePoint (docx, pdf, gambar, dst)
+  sharepoint_link TEXT NOT NULL,  -- link ke folder/file SharePoint (docx, pdf, gambar, dst)
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
