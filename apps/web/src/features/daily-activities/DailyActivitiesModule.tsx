@@ -187,7 +187,7 @@ function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences }: { in
   );
 }
 
-export default function DailyActivitiesModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function DailyActivitiesModule({ onExport, showToast }: { onExport: (l: string, payload?: any) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<DailyActivity[]>([]);
   const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   
@@ -255,6 +255,36 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
   
   const displayed = filtered;
 
+  const handleExportClick = () => {
+    const exportColumns = [
+      { header: 'No', key: 'no', width: 5 },
+      { header: 'Tanggal', key: 'date', width: 15 },
+      { header: 'Kegiatan', key: 'activity', width: 30 },
+      { header: 'Fokus', key: 'focus', width: 20 },
+      { header: 'Institusi', key: 'institution', width: 25 },
+      { header: 'Alamat', key: 'address', width: 30 },
+      { header: 'Lokasi', key: 'location', width: 20 },
+      { header: 'PIC', key: 'pic', width: 15 },
+      { header: 'Biaya', key: 'cost', width: 15 },
+      { header: 'Keterangan', key: 'description', width: 40 }
+    ];
+
+    const exportData = displayed.map((a, i) => ({
+      no: i + 1,
+      date: formatDate(a.activity_date),
+      activity: a.activity,
+      focus: a.focus || '-',
+      institution: a.institution_group || '-',
+      address: a.address || '-',
+      location: a.location || '-',
+      pic: a.pic?.name || a.pic_id,
+      cost: a.cost,
+      description: a.description_result || '-'
+    }));
+
+    onExport("Daily Activities", { sheetName: "Daily Activities Juli 2026", columns: exportColumns, data: exportData });
+  };
+
   const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
     { header: "Tanggal", accessor: "activity_date", sortable: true, render: (a) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(a.activity_date)}</span> },
@@ -281,7 +311,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Daily Activities Juli 2026", items)}>
+      <TopBar title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
         <div className="flex-1 min-h-0">

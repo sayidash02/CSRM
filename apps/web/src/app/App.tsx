@@ -605,9 +605,23 @@ export default function App() {
     setTimeout(() => setToast(null), 3500);
   }, []);
 
-  const handleExport = useCallback((label: string) => {
-    showToast(`Mengunduh "${label}.xlsx"…`, "info");
-    setTimeout(() => showToast(`"${label}.xlsx" berhasil diunduh`), 1800);
+  const handleExport = useCallback(async (label: string, payload?: any) => {
+    showToast(`Mengekspor data ke Excel...`, "info");
+    try {
+      const res = await apiClient.post('/export/excel', payload, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${payload?.sheetName || label}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast(`"${label}.xlsx" berhasil diunduh`, "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Gagal mengekspor data", "error");
+    }
   }, [showToast]);
 
   function makeAdder<T extends { id: number }>(setter: React.Dispatch<React.SetStateAction<T[]>>, arr: T[], label: string) {

@@ -15,6 +15,7 @@ import picsRouter from './routes/pics';
 };
 
 import uploadRouter from './routes/upload';
+import exportRouter from './routes/export';
 
 const app = express();
 app.use(cors());
@@ -31,6 +32,7 @@ app.use('/api/lrp', lrpRouter);
 app.use('/api/upload', uploadRouter);
 import syncRouter from './routes/sync';
 app.use('/api/sync', syncRouter);
+app.use('/api/export', exportRouter);
 app.use('/api/pics', picsRouter);
 
 export default app;
