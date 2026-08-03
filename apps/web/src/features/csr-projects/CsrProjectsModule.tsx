@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { CurrencyInput } from "../../components/ui/CurrencyInput";
 
 export interface CsrProject {
   id: number | string;
@@ -177,7 +178,7 @@ function CsrForm({ initial, onClose, onSave }: { initial?: CsrProject; onClose: 
         <Field label="Tujuan / Objektif"><textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} /></Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Planning</option><option>On Going</option><option>Completed</option><option>Cancelled</option></select></Field>
-          <Field label="Budget (Rp)"><input type="number" value={f.budget} onChange={e => set("budget", e.target.value)} placeholder="0" className={`${inputCls} font-mono`} /></Field>
+          <Field label="Budget (Rp)"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Dokumen">
