@@ -12,17 +12,53 @@ router.post('/excel', async (req: Request, res: Response) => {
 
     worksheet.columns = columns;
 
-    const firstRow = worksheet.getRow(1);
-    firstRow.font = { bold: true };
-    firstRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FFD3D3D3' } // Light grey
-    };
-
     data.forEach((row: any) => {
       worksheet.addRow(row);
     });
+
+    worksheet.spliceRows(1, 0, [], [], []);
+
+    const titleRow = worksheet.getRow(1);
+    titleRow.getCell(1).value = `Data Export - ${sheetName}`;
+    titleRow.font = { size: 16, bold: true };
+    if (columns.length > 0) {
+      worksheet.mergeCells(1, 1, 1, columns.length);
+    }
+
+    const dateRow = worksheet.getRow(2);
+    dateRow.getCell(1).value = `Generated on: ${new Date().toLocaleString()}`;
+    dateRow.font = { italic: true };
+    if (columns.length > 0) {
+      worksheet.mergeCells(2, 1, 2, columns.length);
+    }
+
+    const headerRow = worksheet.getRow(4);
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F497D' } };
+    headerRow.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+
+    if (columns.length > 0) {
+      worksheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4, column: columns.length } };
+    }
+    worksheet.views = [{ state: 'frozen', ySplit: 4 }];
+
+    for (let i = 5; i <= worksheet.rowCount; i++) {
+      const row = worksheet.getRow(i);
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+        cell.alignment = { vertical: 'top', wrapText: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: i % 2 === 0 ? 'FFF4F4F4' : 'FFFFFFFF' }
+        };
+      });
+    }
 
     res.setHeader(
       'Content-Type',
