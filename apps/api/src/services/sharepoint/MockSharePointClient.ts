@@ -1,12 +1,23 @@
 import { ISharePointClient } from './ISharePointClient';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class MockSharePointClient implements ISharePointClient {
-  public async uploadFile(path: string, fileName: string, fileBuffer: Buffer, fileSize: number): Promise<string> {
-    console.log(`[MockSharePoint] Uploading ${fileName} (${fileSize} bytes) to ${path}`);
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  public async uploadFile(targetPath: string, fileName: string, fileBuffer: Buffer, fileSize: number): Promise<string> {
+    // Create local mock directory in apps/api/.sharepoint_mock
+    const baseMockDir = path.resolve(process.cwd(), '.sharepoint_mock');
+    const fullDirPath = path.join(baseMockDir, targetPath);
     
-    // Return a fake URL
-    return `https://mocksharepoint.com/02.06%20Community%20Relations/${encodeURIComponent(path)}/${encodeURIComponent(fileName)}`;
+    // Ensure the directory exists
+    await fs.mkdir(fullDirPath, { recursive: true });
+    
+    const fullFilePath = path.join(fullDirPath, fileName);
+    
+    // Write the buffer to disk
+    await fs.writeFile(fullFilePath, fileBuffer);
+    console.log(`[MockSharePoint] File written successfully to ${fullFilePath}`);
+    
+    // Return absolute path so user can find it
+    return `file://${fullFilePath.replace(/\\/g, '/')}`;
   }
 }
