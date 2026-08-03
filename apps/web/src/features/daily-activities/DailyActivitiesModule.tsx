@@ -268,7 +268,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/40">
-                {["No","Tanggal","Kegiatan","Institusi","Lokasi","PIC","Biaya","Docs",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-20">{h}</th>)}
+                {["No","Tanggal","Kegiatan","Fokus","Institusi & Alamat","Lokasi","PIC","Biaya","Keterangan & Hasil","Docs",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-20">{h}</th>)}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -276,12 +276,19 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
                 <tr key={a.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3 text-xs text-muted-foreground font-mono">{i + 1}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(a.activity_date)}</td>
-                  <td className="px-4 py-3 max-w-[180px]"><div className="text-sm font-medium text-foreground truncate">{a.activity}</div><div className="text-xs text-muted-foreground mt-0.5 truncate">{a.focus}</div></td>
-                  <td className="px-4 py-3 text-xs text-foreground">{a.institution_group}</td>
-                  <td className="px-4 py-3 text-xs text-foreground">{a.location}</td>
+                  <td className="px-4 py-3 max-w-[200px]"><div className="text-sm font-medium text-foreground whitespace-normal">{a.activity}</div></td>
+                  <td className="px-4 py-3 max-w-[150px]"><div className="text-xs text-muted-foreground whitespace-normal">{a.focus || <span className="text-muted-foreground/50">—</span>}</div></td>
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <div className="text-sm font-medium text-foreground">{a.institution_group || <span className="text-muted-foreground/50">—</span>}</div>
+                    {a.address && <div className="text-xs text-muted-foreground mt-0.5 whitespace-normal">{a.address}</div>}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</td>
                   <td className="px-4 py-3 text-xs text-foreground whitespace-nowrap">{a.pic?.name || a.pic_id}</td>
                   <td className="px-4 py-3 text-xs text-right font-mono whitespace-nowrap">{a.cost > 0 ? formatIDR(a.cost) : <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-4 py-3 text-center">{a.document_link ? <span className="text-blue-600 cursor-pointer"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span>}</td>
+                  <td className="px-4 py-3 max-w-[250px]"><div className="text-xs text-foreground whitespace-normal leading-relaxed">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div></td>
+                  <td className="px-4 py-3 text-center">
+                    {a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span>}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
                       <button onClick={() => setEditing(a)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
