@@ -3,6 +3,7 @@ import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, ChevronDown, FileText } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 
 export interface TopIssue {
   id: number | string;
@@ -208,37 +209,34 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
   const [editing, setEditing] = useState<TopIssue | null>(null);
   const [toDelete, setToDelete] = useState<TopIssue | null>(null);
 
+  const columns: ColumnDef<TopIssue>[] = useMemo(() => [
+    { header: "No", render: (_, i) => <span className="text-xs font-mono text-muted-foreground">{i + 1}</span> },
+    { header: "Isu & Periode", accessor: "issue", sortable: true, render: (issue) => <div><div className="text-sm font-semibold text-foreground whitespace-normal">{issue.issue}</div><div className="text-xs text-muted-foreground font-mono mt-0.5">{issue.period}</div></div> },
+    { header: "Deskripsi", accessor: "description", sortable: true, render: (issue) => <div className="text-sm text-foreground leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-3">{issue.description}</div></div> },
+    { header: "Follow Up", accessor: "follow_up", sortable: true, render: (issue) => <div className="text-sm text-foreground leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-3">{issue.follow_up}</div></div> },
+    { header: "Next Plan", accessor: "next_plan", sortable: true, render: (issue) => <div className="text-sm text-foreground leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-3">{issue.next_plan}</div></div> },
+    { header: "Docs", className: "whitespace-nowrap", render: (issue) => (
+      <div className="flex flex-col gap-1.5">
+        {issue.main_document && <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 cursor-pointer"><FileText size={11} /> Main Doc</span>}
+        {issue.supporting_document && <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 cursor-pointer"><FileText size={11} /> Support Doc</span>}
+        {!issue.main_document && !issue.supporting_document && <span className="text-muted-foreground text-xs">—</span>}
+      </div>
+    )},
+    { header: "", render: (issue) => (
+      <div className="flex items-center gap-1.5 justify-end">
+        <button onClick={() => setEditing(issue)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
+        <button onClick={() => setToDelete(issue)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
+      </div>
+    )}
+  ], []);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar title="Top Issues" subtitle="Isu prioritas yang sedang dipantau dan ditindaklanjuti" addLabel="Tambah Isu" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Top Issues", items)} />
-      <div className="flex-1 overflow-auto p-6 space-y-3">
-        {filtered.map((issue, i) => (
-          <div key={issue.id} className="bg-card rounded-xl border border-border overflow-hidden">
-            <button onClick={() => setExpanded(expanded === issue.id ? null : issue.id)} className="w-full flex items-start justify-between px-5 py-4 text-left hover:bg-muted/30 transition-colors">
-              <div className="flex items-start gap-3">
-                <span className="text-xs font-mono text-muted-foreground w-5 mt-0.5 shrink-0">{i + 1}</span>
-                <div><div className="text-sm font-semibold text-foreground">{issue.issue}</div><div className="text-xs text-muted-foreground font-mono mt-0.5">{issue.period}</div></div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                <button onClick={e => { e.stopPropagation(); setEditing(issue); }} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
-                <button onClick={e => { e.stopPropagation(); setToDelete(issue); }} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
-                <ChevronDown size={15} className={`text-muted-foreground transition-transform ${expanded === issue.id ? "rotate-180" : ""}`} />
-              </div>
-            </button>
-            {expanded === issue.id && (
-              <div className="px-5 pb-5 pt-2 border-t border-border space-y-3">
-                {[{ label: "Deskripsi", val: issue.description }, { label: "Follow Up", val: issue.follow_up }, { label: "Next Plan", val: issue.next_plan }].map(({ label, val }) => val && (
-                  <div key={label}><div className="text-xs font-medium text-muted-foreground mb-1">{label}</div><p className="text-sm text-foreground leading-relaxed">{val}</p></div>
-                ))}
-                <div className="flex gap-2 pt-1">
-                  {issue.main_document && <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-2.5 py-1 cursor-pointer"><FileText size={11} /> Main Doc</span>}
-                  {issue.supporting_document && <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-2.5 py-1 cursor-pointer"><FileText size={11} /> Supporting Doc</span>}
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-        {filtered.length === 0 && <div className="py-12 text-center text-sm text-muted-foreground">Tidak ada isu yang cocok.</div>}
+      <div className="flex-1 overflow-auto p-6 flex flex-col">
+        <div className="flex-1 min-h-0">
+          <DataTable columns={columns} data={filtered} />
+        </div>
       </div>
       {showForm && <TopIssueForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
       {editing && <TopIssueForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}

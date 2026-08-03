@@ -3,6 +3,7 @@ import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 
 export interface Stakeholder {
   id: string;
@@ -200,6 +201,20 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
     onExport("Stakeholders", items);
   };
 
+  const columns: ColumnDef<Stakeholder>[] = useMemo(() => [
+    { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
+    { header: "Stakeholder", accessor: "stakeholder", sortable: true, render: (s) => <span className="text-sm font-medium text-foreground">{s.stakeholder}</span> },
+    { header: "Date & Venue", accessor: "date_venue", sortable: true, render: (s) => <span className="text-xs text-muted-foreground font-mono">{s.date_venue}</span> },
+    { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
+    { header: "Docs", className: "text-center", render: (s) => s.document_link ? <a href={s.document_link} target="_blank" rel="noreferrer" className="text-blue-600 cursor-pointer inline-flex"><ExternalLink size={13} /></a> : <span className="text-muted-foreground text-xs">—</span> },
+    { header: "", render: (s) => (
+      <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => setEditing(s)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
+        <button onClick={() => setToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
+      </div>
+    )}
+  ], []);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar 
@@ -212,43 +227,14 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
         onAdd={() => setShowForm(true)} 
         onExport={handleExport} 
       />
-      <div className="flex-1 overflow-auto p-6">
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                {["No","Stakeholder","Date & Venue","Concern / Issue","Docs",""].map(h => <th key={h} className="text-left px-4 py-3 text-xs font-medium text-muted-foreground font-mono uppercase tracking-wide last:w-16">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-sm text-muted-foreground">Loading...</td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="text-center py-12 text-sm text-muted-foreground">Tidak ada data.</td>
-                </tr>
-              ) : (
-                filtered.map((s, i) => (
-                  <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-3 text-xs text-muted-foreground font-mono">{i + 1}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-foreground">{s.stakeholder}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground font-mono">{s.date_venue}</td>
-                    <td className="px-4 py-3 text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></td>
-                    <td className="px-4 py-3 text-center">{s.document_link ? <a href={s.document_link} target="_blank" rel="noreferrer" className="text-blue-600 cursor-pointer inline-flex"><ExternalLink size={13} /></a> : <span className="text-muted-foreground text-xs">—</span>}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => setEditing(s)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
-                        <button onClick={() => setToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+      <div className="flex-1 overflow-auto p-6 flex flex-col">
+        {loading ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
+        ) : (
+          <div className="flex-1 min-h-0">
+            <DataTable columns={columns} data={filtered} />
+          </div>
+        )}
         {!loading && <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {filtered.length} dari {items.length} data</div>}
       </div>
       {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
