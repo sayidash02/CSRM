@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Calendar, Search, Plus, Download, Settings } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
 
 // Types
@@ -160,7 +161,7 @@ function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences }: { in
         <Field label="Alamat"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Alamat institusi" className={inputCls} /></Field>
         <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi kegiatan" className={inputCls} /></Field>
         <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Fokus kegiatan" className={inputCls} /></Field>
-        <Field label="Biaya (Rp)"><input type="number" value={f.cost} onChange={e => set("cost", e.target.value)} placeholder="0" className={`${inputCls} font-mono`} /></Field>
+        <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
         <Field label="Category" required><select value={f.category_id} onChange={e => set("category_id", e.target.value)} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
         <Field label="PIC" required>
