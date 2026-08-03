@@ -5,7 +5,6 @@ import {
   Leaf, MessageSquareWarning, TreePine, RefreshCw, Upload,
   Search, Plus, ChevronDown, X, Check, Download, ExternalLink,
   Bell, ChevronRight, Trash2, Edit2, ArrowUpRight, Wifi, BarChart2,
-  Moon, Sun, Loader2, Menu
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
@@ -195,8 +194,8 @@ const NAV_ITEMS = [
   { id: "lrp" as Module, label: "LRP", icon: <TreePine size={16} /> },
 ];
 
-function Sidebar({ active, onNav, counts, unsyncedCount, onSync, darkMode, setDarkMode, onClose }: {
-  active: Module; onNav: (m: Module) => void; counts: any; unsyncedCount: number; onSync: () => void; darkMode: boolean; setDarkMode: (d: boolean) => void; onClose?: () => void;
+function Sidebar({ active, onNav, counts, unsyncedCount, onSync }: {
+  active: Module; onNav: (m: Module) => void; counts: Record<string, number>; unsyncedCount: number; onSync: () => void;
 }) {
   return (
     <aside className="flex flex-col w-60 shrink-0 h-screen bg-[#0F1729] text-sidebar-foreground border-r border-sidebar-border">
@@ -214,7 +213,7 @@ function Sidebar({ active, onNav, counts, unsyncedCount, onSync, darkMode, setDa
         {NAV_ITEMS.map(item => {
           const isActive = active === item.id;
           return (
-            <button key={item.id} onClick={() => { onNav(item.id as Module); onClose?.(); }}
+            <button key={item.id} onClick={() => onNav(item.id)}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-md mb-0.5 text-sm transition-all duration-150 group ${isActive ? "bg-[#1E2D4A] text-white" : "text-sidebar-foreground hover:bg-[#1A2438] hover:text-white"}`}>
               <div className="flex items-center gap-2.5 min-w-0">
                 <span className={`shrink-0 transition-colors ${isActive ? "text-blue-400" : "text-[#3D5070] group-hover:text-blue-400"}`}>{item.icon}</span>
@@ -227,17 +226,14 @@ function Sidebar({ active, onNav, counts, unsyncedCount, onSync, darkMode, setDa
           );
         })}
       </nav>
-      <div className="p-4 border-t border-sidebar-border shrink-0 space-y-2">
-        <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center justify-between px-3 py-2 text-sm text-sidebar-foreground rounded-lg hover:bg-[#1A2438] hover:text-white transition-colors">
-          <span className="flex items-center gap-3">{darkMode ? <Sun size={15} /> : <Moon size={15} />} {darkMode ? "Light Mode" : "Dark Mode"}</span>
-        </button>
+      <div className="p-3 border-t border-sidebar-border">
         {unsyncedCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-500/10 border border-amber-500/20">
+          <div className="flex items-center gap-2 px-3 py-2 mb-2 rounded-md bg-amber-500/10 border border-amber-500/20">
             <Bell size={12} className="text-amber-400 shrink-0" />
             <span className="text-amber-300 text-[11px] font-mono">{unsyncedCount} data belum di-sync</span>
           </div>
         )}
-        <button onClick={onSync} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors group">
+        <button onClick={onSync} className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors">
           <Upload size={14} />Export &amp; Sync
         </button>
         <div className="mt-3 px-1 flex items-center gap-2">
@@ -549,18 +545,6 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [syncHistory, setSyncHistory] = useState<SyncLog[]>(SEED_SYNC);
-  
-  const [darkMode, setDarkMode] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLoadingInitial, setIsLoadingInitial] = useState(true);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
 
   const fetchSyncStatus = useCallback(() => {
     apiClient.get('/sync/status').then(res => {
@@ -596,7 +580,6 @@ export default function App() {
 
   useEffect(() => {
     if (activeModule === "dashboard") {
-      setIsLoadingInitial(true);
       Promise.all([
         apiClient.get('/daily-activities').catch(() => ({ data: { data: [] } })),
         apiClient.get('/stakeholders').catch(() => ({ data: { data: [] } })),
@@ -613,8 +596,6 @@ export default function App() {
         setCsr(c.data.data || []);
         setGrievances(g.data.data || []);
         setLrp(l.data.data || []);
-      }).finally(() => {
-        setIsLoadingInitial(false);
       });
     }
   }, [activeModule]);
@@ -659,33 +640,10 @@ export default function App() {
 
   const counts = { daily: daily.length, stakeholder: stakeholders.length, topissues: issues.length, proposals: proposals.length, csr: csr.length, grievance: grievances.length, lrp: lrp.length };
 
-  if (isLoadingInitial) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background text-foreground">
-        <Loader2 className="animate-spin text-primary" size={32} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-      {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
-      )}
-      
-      {/* Sidebar Wrapper */}
-      <div className={`fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 md:relative md:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <Sidebar active={activeModule} onNav={setActiveModule} counts={counts} unsyncedCount={unsyncedCount} onSync={() => setShowSync(true)} darkMode={darkMode} setDarkMode={setDarkMode} onClose={() => setIsSidebarOpen(false)} />
-      </div>
-
-      <main className="flex-1 flex flex-col overflow-hidden relative w-full">
-        {/* Mobile Header Toggle */}
-        <div className="md:hidden flex items-center p-3 border-b border-border bg-card shrink-0">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 mr-2 rounded hover:bg-muted text-foreground"><Menu size={18} /></button>
-          <span className="font-semibold text-sm text-foreground">CRMS</span>
-        </div>
-
+      <Sidebar active={activeModule} onNav={setActiveModule} counts={counts} unsyncedCount={unsyncedCount} onSync={() => setShowSync(true)} />
+      <main className="flex-1 flex flex-col overflow-hidden">
         {activeModule === "dashboard" && <Dashboard onNav={setActiveModule} daily={daily} stakeholders={stakeholders} issues={issues} proposals={proposals} csr={csr} grievances={grievances} syncHistory={syncHistory} />}
         {activeModule === "daily" && <DailyActivitiesModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "stakeholder" && <StakeholdersModule onExport={handleExport} showToast={showToast} />}
