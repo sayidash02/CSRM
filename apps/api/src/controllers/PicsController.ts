@@ -33,7 +33,7 @@ export const updatePic = async (req: Request, res: Response): Promise<void> => {
       return;
     }
     const pic = await prisma.pics.update({
-      where: { id: BigInt(id) },
+      where: { id: BigInt(id as string) },
       data: { name }
     });
     res.status(200).json({ data: { ...pic, id: pic.id.toString() } });
@@ -46,7 +46,7 @@ export const deletePic = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const pic = await prisma.pics.update({
-      where: { id: BigInt(id) },
+      where: { id: BigInt(id as string) },
       data: { is_active: false }
     });
     res.status(200).json({ data: { ...pic, id: pic.id.toString() } });
