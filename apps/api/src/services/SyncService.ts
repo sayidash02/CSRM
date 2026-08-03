@@ -82,7 +82,7 @@ export class SyncService {
       this.addLrpSheet(workbook, lrps);
 
       // 3. Write to Buffer
-      const buffer = (await workbook.xlsx.writeBuffer()) as Buffer;
+      const buffer = (await workbook.xlsx.writeBuffer()) as any as Buffer;
 
       // 4. Upload to SharePoint
       const masterPath = '0. Testing/Master';
@@ -114,7 +114,7 @@ export class SyncService {
 
   private formatDate(d: Date | null | undefined): string {
     if (!d) return '';
-    return d.toISOString().split('T')[0];
+    return d.toISOString().split('T')[0] || '';
   }
 
   private hyperlink(url: string | null | undefined, text: string = 'Lihat Dokumen'): any {

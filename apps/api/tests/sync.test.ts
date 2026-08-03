@@ -44,7 +44,7 @@ describe('Sync Flow', () => {
     // 3. Verify sync_log created
     const logs1 = await prisma.sync_log.findMany();
     expect(logs1.length).toBe(1);
-    expect(logs1[0].status).toBe('SUCCESS');
+    expect(logs1[0]!.status).toBe('SUCCESS');
 
     // 4. Verify unsynced count becomes 0
     const status1 = await request(app).get('/api/sync/status');
