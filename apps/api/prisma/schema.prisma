@@ -63,7 +63,8 @@ model daily_activities {
 model stakeholder_engagement {
   id            BigInt   @id @default(autoincrement())
   stakeholder   String   @db.VarChar(255)
-  date_venue    String?  @db.VarChar(255)
+  date          DateTime? @db.Date
+  venue         String?   @db.VarChar(255)
   concern_issue String?  @db.Text
   document_link String?  @db.Text
   is_deleted    Boolean  @default(false)

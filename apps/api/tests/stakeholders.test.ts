@@ -23,7 +23,8 @@ describe('POST /api/stakeholders', () => {
   it('Positive: Should create a new stakeholder engagement', async () => {
     const payload = {
       stakeholder: 'Government Official',
-      date_venue: '2026-07-25 / City Hall',
+      date: '2026-07-25',
+      venue: 'City Hall',
       concern_issue: 'Infrastructure',
       document_link: 'http://example.com/doc'
     };
@@ -33,7 +34,7 @@ describe('POST /api/stakeholders', () => {
   });
 
   it('Negative: Should fail if stakeholder is missing', async () => {
-    const payload = { date_venue: '2026-07-25 / City Hall' };
+    const payload = { date: '2026-07-25', venue: 'City Hall' };
     const res = await request(testApp).post('/api/stakeholders').send(payload);
     expect(res.status).toBe(400);
   });
@@ -41,7 +42,8 @@ describe('POST /api/stakeholders', () => {
   it('Negative: Should fail if stakeholder is an empty string', async () => {
     const payload = {
       stakeholder: '   ',
-      date_venue: '2026-07-25 / City Hall'
+      date: '2026-07-25',
+      venue: 'City Hall'
     };
     const res = await request(testApp).post('/api/stakeholders').send(payload);
     expect(res.status).toBe(400);
@@ -61,7 +63,8 @@ describe('PUT /api/stakeholders/:id', () => {
   it('Should update an existing stakeholder engagement', async () => {
     const createRes = await request(testApp).post('/api/stakeholders').send({
       stakeholder: 'NGO',
-      date_venue: '2026-08-01 / HQ'
+      date: '2026-08-01',
+      venue: 'HQ'
     });
     const id = createRes.body.data.id;
     

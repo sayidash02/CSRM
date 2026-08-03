@@ -8,7 +8,8 @@ import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 export interface Stakeholder {
   id: string;
   stakeholder: string;
-  date_venue: string | null;
+  date: string | null;
+  venue: string | null;
   concern_issue: string | null;
   document_link: string | null;
 }
@@ -102,7 +103,8 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 function StakeholderForm({ initial, onClose, onSave }: { initial?: Stakeholder; onClose: () => void; onSave: (d: Omit<Stakeholder, "id">) => void }) {
   const [f, setF] = useState({ 
     stakeholder: initial?.stakeholder ?? "", 
-    date_venue: initial?.date_venue ?? "", 
+    date: initial?.date ?? "", 
+    venue: initial?.venue ?? "", 
     concern_issue: initial?.concern_issue ?? "", 
     document_link: initial?.document_link ?? "" 
   });
@@ -112,7 +114,8 @@ function StakeholderForm({ initial, onClose, onSave }: { initial?: Stakeholder; 
     if (!f.stakeholder) return; 
     onSave({ 
       ...f, 
-      date_venue: f.date_venue || null,
+      date: f.date || null,
+      venue: f.venue || null,
       concern_issue: f.concern_issue || null,
       document_link: f.document_link || null
     }); 
@@ -123,13 +126,20 @@ function StakeholderForm({ initial, onClose, onSave }: { initial?: Stakeholder; 
     <Modal title={initial ? "Edit Stakeholder" : "Tambah Stakeholder Engagement"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
         <Field label="Nama Stakeholder" required><input type="text" value={f.stakeholder} onChange={e => set("stakeholder", e.target.value)} placeholder="Nama institusi / individu" className={inputCls} /></Field>
-        <Field label="Tanggal & Tempat" hint="Contoh: 14 Juli 2026 — Kantor Dinas Sosial Bogor"><input type="text" value={f.date_venue} onChange={e => set("date_venue", e.target.value)} placeholder="14 Juli 2026 — Kantor Dinas…" className={inputCls} /></Field>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <Field label="Tanggal"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} className={inputCls} /></Field>
+          </div>
+          <div className="flex-1">
+            <Field label="Tempat"><input type="text" value={f.venue} onChange={e => set("venue", e.target.value)} placeholder="Contoh: Kantor Dinas..." className={inputCls} /></Field>
+          </div>
+        </div>
         <Field label="Concern / Isu yang Dibahas"><textarea rows={3} value={f.concern_issue} onChange={e => set("concern_issue", e.target.value)} placeholder="Topik atau isu yang dibahas dalam pertemuan" className={`${inputCls} resize-none`} /></Field>
         <Field label="Dokumen">
           <FileInput 
             value={f.document_link || null} 
             onChange={url => set("document_link", url)}
-            activityDate={f.date_venue}
+            activityDate={f.date}
             picName={f.stakeholder}
           />
         </Field>
@@ -200,7 +210,7 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
   const handleExportClick = () => {
     const exportData = filtered.map(s => ({
       "Stakeholder": s.stakeholder,
-      "Date/Venue": s.date_venue || "",
+      "Date/Venue": (s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || ""),
       "Concern/Issue": s.concern_issue || "",
       "Document Link": s.document_link || ""
     }));
@@ -210,7 +220,7 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
   const columns: ColumnDef<Stakeholder>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
     { header: "Stakeholder", accessor: "stakeholder", sortable: true, render: (s) => <span className="text-sm font-medium text-foreground">{s.stakeholder}</span> },
-    { header: "Date & Venue", accessor: "date_venue", sortable: true, render: (s) => <span className="text-xs text-muted-foreground font-mono">{s.date_venue}</span> },
+    { header: "Date & Venue", accessor: "date", sortable: true, render: (s) => <span className="text-xs text-muted-foreground font-mono">{(s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || "")}</span> },
     { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
     { header: "Docs", className: "text-center", render: (s) => s.document_link ? <a href={s.document_link} target="_blank" rel="noreferrer" className="text-blue-600 cursor-pointer inline-flex"><ExternalLink size={13} /></a> : <span className="text-muted-foreground text-xs">—</span> },
     { header: "", render: (s) => (

@@ -107,8 +107,8 @@ CREATE INDEX idx_daily_activities_deleted ON daily_activities(is_deleted);
 CREATE TABLE stakeholder_engagement (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   stakeholder VARCHAR(255) NOT NULL,
-  date_venue VARCHAR(255),                -- kolom "Date And Venue": tanggal & lokasi digabung jadi 1 teks bebas di Excel,
-                                           -- bukan tanggal terstruktur — konsekuensinya tidak bisa difilter/sort per tanggal
+  date DATE,
+  venue VARCHAR(255),
   concern_issue TEXT,
   document_link TEXT,             -- kolom "Docs"
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
