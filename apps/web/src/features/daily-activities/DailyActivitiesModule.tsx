@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Calendar, Search, Plus, Download } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Check, X, Calendar, Search, Plus, Download, Settings } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
+import { PicManagementModal } from './PicManagementModal';
 
 // Types
 export interface DailyActivity {
@@ -125,7 +126,8 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] } }) {
+function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences }: { initial?: DailyActivity; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] }; onRefreshReferences: () => void }) {
+  const [showPicManager, setShowPicManager] = useState(false);
   const [f, setF] = useState({
     activity_date: initial?.activity_date ?? "",
     activity: initial?.activity ?? "",
@@ -161,7 +163,15 @@ function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity
         <Field label="Biaya (Rp)"><input type="number" value={f.cost} onChange={e => set("cost", e.target.value)} placeholder="0" className={`${inputCls} font-mono`} /></Field>
         <Field label="Category" required><select value={f.category_id} onChange={e => set("category_id", e.target.value)} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
-        <Field label="PIC" required><select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={inputCls}><option value="">Pilih PIC</option>{refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>
+        <Field label="PIC" required>
+          <div className="flex gap-2 items-center">
+            <select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={`${inputCls} flex-1`}>
+              <option value="">Pilih PIC</option>
+              {refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0" title="Atur PIC"><Settings size={14} /></button>
+          </div>
+        </Field>
         <div className="col-span-3"><Field label="Keterangan & Hasil"><textarea rows={2} value={f.description_result} onChange={e => set("description_result", e.target.value)} placeholder="Uraian kegiatan dan hasil yang dicapai" className={`${inputCls} resize-none`} /></Field></div>
         <div className="col-span-3">
           <Field label="Dokumen Lampiran" hint="Pilih file dokumen (maks 5MB). Pastikan Tanggal dan PIC sudah terisi.">
@@ -175,6 +185,7 @@ function DailyForm({ initial, onClose, onSave, refs }: { initial?: DailyActivity
         </div>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Kegiatan"} isEdit={!!initial} />
+      {showPicManager && <PicManagementModal onClose={() => { setShowPicManager(false); onRefreshReferences(); }} />}
     </Modal>
   );
 }
@@ -284,8 +295,8 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} kegiatan</div>
       </div>
-      {showForm && <DailyForm refs={references} onClose={() => setShowForm(false)} onSave={handleAdd} />}
-      {editing && <DailyForm refs={references} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
+      {showForm && <DailyForm refs={references} onRefreshReferences={fetchReferences} onClose={() => setShowForm(false)} onSave={handleAdd} />}
+      {editing && <DailyForm refs={references} onRefreshReferences={fetchReferences} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
       {toDelete && <DeleteConfirm label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );
