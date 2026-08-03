@@ -8,6 +8,7 @@ import proposalsRouter from './routes/proposals';
 import csrProjectsRouter from './routes/csrProjects';
 import grievanceRouter from './routes/grievance';
 import lrpRouter from './routes/lrp';
+import picsRouter from './routes/pics';
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -30,5 +31,6 @@ app.use('/api/lrp', lrpRouter);
 app.use('/api/upload', uploadRouter);
 import syncRouter from './routes/sync';
 app.use('/api/sync', syncRouter);
+app.use('/api/pics', picsRouter);
 
 export default app;
