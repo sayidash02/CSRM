@@ -32,8 +32,8 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
         
         if (typeof aValue === 'string' && typeof bValue === 'string') {
           return sortConfig.direction === 'asc' 
-            ? aValue.localeCompare(bValue)
-            : bValue.localeCompare(aValue);
+            ? aValue.localeCompare(bValue, undefined, { numeric: true })
+            : bValue.localeCompare(aValue, undefined, { numeric: true });
         }
 
         if (aValue < bValue) {
