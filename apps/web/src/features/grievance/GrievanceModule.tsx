@@ -286,19 +286,39 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
     )}
   ], []);
 
+  const handleExportClick = () => {
+    const exportData = displayed.map(g => ({
+      "Register No": g.register_no,
+      "Date": formatDate(g.log_date),
+      "Complainant": g.complainant_name,
+      "Category": g.category,
+      "Significance": g.significance,
+      "Description": g.description,
+      "Location": g.location,
+      "Status": g.status,
+      "Resolution": g.resolution || "",
+      "Remarks": g.remarks || ""
+    }));
+    onExport("Grievance", exportData);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Grievance" subtitle="Penanganan pengaduan & keluhan dari masyarakat" addLabel="Tambah Pengaduan" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Grievance", items)}>
-        <div className="flex gap-1">
-          {["All","Low","Medium","High","Critical"].map(s => (
-            <button key={s} onClick={() => setSigFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${sigFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>{s}</button>
-          ))}
-        </div>
-        <div className="flex gap-1">
-          {["All","Open","On Progress","Resolved","Closed"].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>{s === "All" ? "Status: Semua" : s}</button>
-          ))}
-        </div>
+      <TopBar title="Grievance" subtitle="Penanganan pengaduan & keluhan dari masyarakat" addLabel="Tambah Pengaduan" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <select value={sigFilter} onChange={(e) => setSigFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
+          <option value="All">Semua Signifikansi</option>
+          <option value="Low">Low</option>
+          <option value="Medium">Medium</option>
+          <option value="High">High</option>
+          <option value="Critical">Critical</option>
+        </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
+          <option value="All">Semua Status</option>
+          <option value="Open">Open</option>
+          <option value="On Progress">On Progress</option>
+          <option value="Resolved">Resolved</option>
+          <option value="Closed">Closed</option>
+        </select>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="flex-1 min-h-0">

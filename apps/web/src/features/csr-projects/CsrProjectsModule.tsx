@@ -278,14 +278,32 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
     )}
   ], []);
 
+  const handleExportClick = () => {
+    const exportData = displayed.map(p => ({
+      "Year": p.project_year,
+      "Program": p.program,
+      "Activity": p.activity || "",
+      "Type": p.type_of_activity || "",
+      "Location": p.location || "",
+      "Beneficiaries": p.target_beneficiaries || "",
+      "Objective": p.objective || "",
+      "Status": p.status,
+      "Budget": p.budget || 0,
+      "Period": p.implementation_period || ""
+    }));
+    onExport("CSR Projects", exportData);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="CSR Projects" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("CSR Projects", items)}>
-        <div className="flex gap-1">
-          {["All","Planning","On Going","Completed","Cancelled"].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>{s === "All" ? "Semua" : s}</button>
-          ))}
-        </div>
+      <TopBar title="CSR Projects" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
+          <option value="All">Semua Status</option>
+          <option value="Planning">Planning</option>
+          <option value="On Going">On Going</option>
+          <option value="Completed">Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="mb-4 text-xs text-muted-foreground font-mono shrink-0">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + (c.budget || 0), 0))}</span></div>

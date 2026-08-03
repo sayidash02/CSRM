@@ -197,8 +197,14 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
     }
   };
 
-  const handleExport = () => {
-    onExport("Stakeholders", items);
+  const handleExportClick = () => {
+    const exportData = filtered.map(s => ({
+      "Stakeholder": s.stakeholder,
+      "Date/Venue": s.date_venue || "",
+      "Concern/Issue": s.concern_issue || "",
+      "Document Link": s.document_link || ""
+    }));
+    onExport("Stakeholders", exportData);
   };
 
   const columns: ColumnDef<Stakeholder>[] = useMemo(() => [
@@ -225,7 +231,7 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
         onSearch={setQ} 
         addLabel="Tambah" 
         onAdd={() => setShowForm(true)} 
-        onExport={handleExport} 
+        onExport={handleExportClick} 
       />
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         {loading ? (

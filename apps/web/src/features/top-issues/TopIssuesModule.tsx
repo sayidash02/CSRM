@@ -208,6 +208,9 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TopIssue | null>(null);
   const [toDelete, setToDelete] = useState<TopIssue | null>(null);
+  const [periodFilter, setPeriodFilter] = useState("All");
+  
+  const displayed = periodFilter === "All" ? filtered : filtered.filter(i => i.period === periodFilter);
 
   const columns: ColumnDef<TopIssue>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs font-mono text-muted-foreground">{i + 1}</span> },
@@ -230,12 +233,30 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
     )}
   ], []);
 
+  const handleExportClick = () => {
+    const exportData = displayed.map(i => ({
+      "Period": i.period,
+      "Issue": i.issue,
+      "Description": i.description,
+      "Follow Up": i.follow_up,
+      "Next Plan": i.next_plan
+    }));
+    onExport("Top Issues", exportData);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Top Issues" subtitle="Isu prioritas yang sedang dipantau dan ditindaklanjuti" addLabel="Tambah Isu" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Top Issues", items)} />
+      <TopBar title="Top Issues" subtitle="Isu prioritas yang sedang dipantau dan ditindaklanjuti" addLabel="Tambah Isu" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <select value={periodFilter} onChange={(e) => setPeriodFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
+          <option value="All">Semua Periode</option>
+          {Array.from(new Set(items.map(i => i.period))).map(p => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+      </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="flex-1 min-h-0">
-          <DataTable columns={columns} data={filtered} />
+          <DataTable columns={columns} data={displayed} />
         </div>
       </div>
       {showForm && <TopIssueForm onClose={() => setShowForm(false)} onSave={handleAdd} />}

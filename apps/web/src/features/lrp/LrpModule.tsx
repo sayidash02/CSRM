@@ -118,7 +118,7 @@ function LrpForm({ initial, onClose, onSave }: { initial?: LrpProgram; onClose: 
   );
 }
 
-export default function LrpModule({ onExport, showToast }: { onExport?: (l: string) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function LrpModule({ onExport, showToast }: { onExport?: (l: string, data: any[]) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<LrpProgram[]>([]);
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [showForm, setShowForm] = useState(false);
@@ -181,9 +181,17 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
     )}
   ], []);
 
+  const handleExportClick = () => {
+    const exportData = filtered.map(p => ({
+      "Program": p.program,
+      "SharePoint Link": p.sharepoint_link
+    }));
+    onExport?.("LRP", exportData);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="LRP — Livelihood Restoration Program" subtitle="Program community development & pemulihan mata pencaharian" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport?.("LRP")} />
+      <TopBar title="LRP — Livelihood Restoration Program" subtitle="Program community development & pemulihan mata pencaharian" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick} />
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3 shrink-0">
           <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />

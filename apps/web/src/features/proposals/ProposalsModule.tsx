@@ -252,16 +252,27 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
     )}
   ], []);
 
+  const handleExportClick = () => {
+    const exportData = displayed.map(p => ({
+      "Registration No": p.registration_no,
+      "Date": formatDate(p.date_received),
+      "Institution": p.institution,
+      "Address": p.address || "",
+      "Proposal Description": p.proposal_description || "",
+      "Status": p.status
+    }));
+    onExport("Proposals", exportData);
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Proposals" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={() => onExport("Proposals", items)}>
-        <div className="flex gap-1">
-          {["All","Under Review","Approved","Declined"].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={`px-2.5 py-1.5 text-xs rounded-md font-medium transition-colors ${statusFilter === s ? "bg-primary text-primary-foreground" : "bg-card border border-border text-muted-foreground hover:text-foreground"}`}>
-              {s}{s !== "All" && <span className="ml-1 font-mono">{items.filter(p => p.status === s).length}</span>}
-            </button>
+      <TopBar title="Proposals" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
+          <option value="All">Semua Status</option>
+          {Array.from(new Set(items.map(i => i.status))).map(s => (
+            <option key={s} value={s}>{s}</option>
           ))}
-        </div>
+        </select>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="flex-1 min-h-0">
