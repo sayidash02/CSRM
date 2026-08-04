@@ -4,6 +4,7 @@ import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, AlertTriangle } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
+import { Modal, ModalFooter } from '../../components/ui/Modal';
 
 export interface LrpProgram {
   id: string | number;
@@ -13,39 +14,12 @@ export interface LrpProgram {
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
-
-
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
       {children}
       {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "md" | "lg" }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={15} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalFooter({ onClose, onSave, saveLabel = "Simpan", isEdit }: { onClose: () => void; onSave: () => void; saveLabel?: string; isEdit?: boolean }) {
-  return (
-    <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
-      <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-      <button onClick={onSave} className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${isEdit ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-blue-700"}`}>
-        {isEdit ? <Edit2 size={13} /> : <Check size={13} />}{saveLabel}
-      </button>
     </div>
   );
 }
@@ -97,9 +71,40 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function LrpForm({ initial, onClose, onSave, showToast }: { initial?: LrpProgram; onClose: () => void; onSave: (d: Omit<LrpProgram, "id">) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
-  const [f, setF] = useState({ program: initial?.program ?? "", sharepoint_link: initial?.sharepoint_link ?? "" });
-  const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
+const emptyLrpDraft = { program: "", sharepoint_link: "" };
+
+function LrpForm({
+  initial,
+  defaultValues,
+  onDraftChange,
+  onClose,
+  onSave,
+  showToast,
+}: {
+  initial?: LrpProgram;
+  defaultValues?: typeof emptyLrpDraft;
+  onDraftChange?: (v: typeof emptyLrpDraft) => void;
+  onClose: () => void;
+  onSave: (d: Omit<LrpProgram, "id">) => void;
+  showToast?: (msg: string, type?: "success" | "error" | "info") => void;
+}) {
+  const [f, setF] = useState(
+    initial
+      ? { program: initial.program ?? "", sharepoint_link: initial.sharepoint_link ?? "" }
+      : { ...emptyLrpDraft, ...defaultValues }
+  );
+
+  const set = (k: string, v: string) => {
+    const next = { ...f, [k]: v };
+    setF(next);
+    if (!initial) onDraftChange?.(next);
+  };
+
+  const handleClear = () => {
+    setF({ ...emptyLrpDraft });
+    onDraftChange?.({ ...emptyLrpDraft });
+  };
+
   const handleSave = () => {
     const missing: string[] = (
       [
@@ -115,8 +120,10 @@ function LrpForm({ initial, onClose, onSave, showToast }: { initial?: LrpProgram
       return;
     }
     onSave(f);
+    if (!initial) onDraftChange?.({ ...emptyLrpDraft });
     onClose();
   };
+
   return (
     <Modal title={initial ? "Edit Program LRP" : "Tambah Program LRP"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
@@ -129,7 +136,7 @@ function LrpForm({ initial, onClose, onSave, showToast }: { initial?: LrpProgram
           />
         </Field>
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
+      <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
     </Modal>
   );
 }
@@ -140,6 +147,7 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<LrpProgram | null>(null);
   const [toDelete, setToDelete] = useState<LrpProgram | null>(null);
+  const [addDraft, setAddDraft] = useState({ ...emptyLrpDraft });
 
   const fetchData = async () => {
     try {
@@ -217,7 +225,7 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
           <DataTable columns={columns} data={filtered} />
         </div>
       </div>
-      {showForm && <LrpForm onClose={() => setShowForm(false)} onSave={onAdd} showToast={showToast} />}
+      {showForm && <LrpForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={onAdd} showToast={showToast} />}
       {editing && <LrpForm initial={editing} onClose={() => setEditing(null)} onSave={d => { onEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.program} onCancel={() => setToDelete(null)} onConfirm={() => { onDelete(toDelete.id); setToDelete(null); }} />}
     </div>
