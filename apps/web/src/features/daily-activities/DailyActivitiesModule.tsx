@@ -171,7 +171,10 @@ function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences }: { in
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
   
   const handleSave = () => {
-    if (!f.activity_date || !f.activity || !f.pic_id || !f.category_id || !f.sub_category_id) return;
+    if (!f.activity_date || !f.activity || !f.pic_id || !f.category_id || !f.sub_category_id) {
+      alert("Harap isi semua field yang wajib (dengan tanda *).");
+      return;
+    }
     onSave({ ...f, cost: Number(f.cost) || 0, document_link: f.document_link || null });
     onClose();
   };
@@ -246,7 +249,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
     try {
       await apiClient.post('/daily-activities', d);
       fetchData();
-      showToast("Data berhasil ditambahkan", "success");
+      showToast(`Kegiatan '${d.activity}' berhasil ditambahkan`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menyimpan data", "error");
@@ -257,7 +260,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
     try {
       await apiClient.put(`/daily-activities/${id}`, d);
       fetchData();
-      showToast("Data berhasil diperbarui", "success");
+      showToast(`Kegiatan '${d.activity}' berhasil diperbarui`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal memperbarui data", "error");
@@ -268,7 +271,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
     try {
       await apiClient.delete(`/daily-activities/${id}`);
       fetchData();
-      showToast("Data berhasil dihapus", "success");
+      showToast(`Kegiatan '${toDelete?.activity || ''}' berhasil dihapus`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menghapus data", "error");
