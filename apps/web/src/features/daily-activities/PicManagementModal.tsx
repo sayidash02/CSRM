@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, Trash2, Check, X, Plus } from "lucide-react";
+import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -10,6 +11,7 @@ export function PicManagementModal({ onClose }: { onClose: () => void }) {
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [picToDelete, setPicToDelete] = useState<any | null>(null);
 
   const loadPics = async () => {
     setLoading(true);
@@ -49,10 +51,10 @@ export function PicManagementModal({ onClose }: { onClose: () => void }) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Hapus PIC ini?")) return;
     try {
       await apiClient.delete(`/pics/${id}`);
       loadPics();
+      setPicToDelete(null);
     } catch (e) {
       console.error(e);
     }
@@ -87,7 +89,7 @@ export function PicManagementModal({ onClose }: { onClose: () => void }) {
                       ) : (
                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => { setEditingId(p.id); setEditName(p.name); }} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={13} /></button>
-                          <button onClick={() => handleDelete(p.id)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+                          <button onClick={() => setPicToDelete(p)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
                         </div>
                       )}
                     </td>
@@ -103,6 +105,13 @@ export function PicManagementModal({ onClose }: { onClose: () => void }) {
           <button onClick={handleAdd} className="px-3 py-2 bg-primary text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"><Plus size={14} />Tambah</button>
         </div>
       </div>
+      {picToDelete && (
+        <DeleteConfirmModal
+          label={picToDelete.name}
+          onCancel={() => setPicToDelete(null)}
+          onConfirm={() => handleDelete(picToDelete.id)}
+        />
+      )}
     </div>
   );
 }
