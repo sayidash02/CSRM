@@ -5,6 +5,7 @@ import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "l
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
+import { Modal, ModalFooter } from "../../components/ui/Modal";
 
 export interface CsrProject {
   id: number | string;
@@ -27,8 +28,6 @@ const formatIDR = (n: number | null) => {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 };
 
-
-
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
@@ -37,31 +36,6 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
       {children}
       {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "md" | "lg" }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={15} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalFooter({ onClose, onSave, saveLabel = "Simpan", isEdit }: { onClose: () => void; onSave: () => void; saveLabel?: string; isEdit?: boolean }) {
-  return (
-    <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
-      <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-      <button onClick={onSave} className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${isEdit ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-blue-700"}`}>
-        {isEdit ? <Edit2 size={13} /> : <Check size={13} />}{saveLabel}
-      </button>
     </div>
   );
 }
@@ -121,24 +95,66 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function CsrForm({ initial, onClose, onSave, showToast }: { initial?: CsrProject; onClose: () => void; onSave: (d: Omit<CsrProject, "id">) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
-  const [f, setF] = useState({ 
-    project_year: String(initial?.project_year ?? new Date().getFullYear()), 
-    program: initial?.program ?? "", 
-    activity: initial?.activity ?? "", 
-    type_of_activity: initial?.type_of_activity ?? "", 
-    location: initial?.location ?? "", 
-    target_beneficiaries: initial?.target_beneficiaries ?? "", 
-    objective: initial?.objective ?? "", 
-    status: initial?.status ?? "Planning", 
-    budget: initial?.budget ? String(initial.budget) : "", 
-    implementation_period: initial?.implementation_period ?? "", 
-    documentation_image: initial?.documentation_image ?? "",
-    document: initial?.document ?? "" 
-  });
-  
-  const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
-  
+const emptyCsrDraft = {
+  project_year: String(new Date().getFullYear()),
+  program: "",
+  activity: "",
+  type_of_activity: "",
+  location: "",
+  target_beneficiaries: "",
+  objective: "",
+  status: "Planning",
+  budget: "",
+  implementation_period: "",
+  documentation_image: "",
+  document: ""
+};
+
+function CsrForm({
+  initial,
+  defaultValues,
+  onDraftChange,
+  onClose,
+  onSave,
+  showToast
+}: {
+  initial?: CsrProject;
+  defaultValues?: typeof emptyCsrDraft;
+  onDraftChange?: (v: typeof emptyCsrDraft) => void;
+  onClose: () => void;
+  onSave: (d: Omit<CsrProject, "id">) => void;
+  showToast?: (msg: string, type?: "success" | "error" | "info") => void;
+}) {
+  const [f, setF] = useState(
+    initial
+      ? {
+          project_year: String(initial.project_year ?? new Date().getFullYear()),
+          program: initial.program ?? "",
+          activity: initial.activity ?? "",
+          type_of_activity: initial.type_of_activity ?? "",
+          location: initial.location ?? "",
+          target_beneficiaries: initial.target_beneficiaries ?? "",
+          objective: initial.objective ?? "",
+          status: initial.status ?? "Planning",
+          budget: initial.budget ? String(initial.budget) : "",
+          implementation_period: initial.implementation_period ?? "",
+          documentation_image: initial.documentation_image ?? "",
+          document: initial.document ?? ""
+        }
+      : { ...emptyCsrDraft, ...defaultValues }
+  );
+
+  const set = (k: string, v: string) => {
+    const next = { ...f, [k]: v };
+    setF(next);
+    if (!initial) onDraftChange?.(next);
+  };
+
+  const handleClear = () => {
+    setF({ ...emptyCsrDraft });
+    onDraftChange?.({ ...emptyCsrDraft });
+  };
+
   const handleSave = () => {
     const missing: string[] = (
       [
@@ -166,9 +182,10 @@ function CsrForm({ initial, onClose, onSave, showToast }: { initial?: CsrProject
       documentation_image: f.documentation_image || null,
       document: f.document || null
     });
+    if (!initial) onDraftChange?.({ ...emptyCsrDraft });
     onClose();
   };
-  
+
   return (
     <Modal title={initial ? "Edit CSR Project" : "Tambah CSR Project"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
@@ -205,13 +222,14 @@ function CsrForm({ initial, onClose, onSave, showToast }: { initial?: CsrProject
           </Field>
         </div>
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
+      <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
     </Modal>
   );
 }
 
 export default function CsrProjectsModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<CsrProject[]>([]);
+  const [addDraft, setAddDraft] = useState({ ...emptyCsrDraft });
   
   useEffect(() => {
     fetchData();
@@ -323,9 +341,10 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
           <DataTable columns={columns} data={displayed} />
         </div>
       </div>
-      {showForm && <CsrForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {showForm && <CsrForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
       {editing && <CsrForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.program} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );
 }
+
