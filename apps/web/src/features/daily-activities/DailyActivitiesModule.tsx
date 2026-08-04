@@ -151,7 +151,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences }: { initial?: DailyActivity; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] }; onRefreshReferences: () => void }) {
+function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences, showToast }: { initial?: DailyActivity; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] }; onRefreshReferences: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
   const [showPicManager, setShowPicManager] = useState(false);
   const [f, setF] = useState({
     activity_date: initial?.activity_date ?? "",
@@ -172,7 +172,11 @@ function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences }: { in
   
   const handleSave = () => {
     if (!f.activity_date || !f.activity || !f.pic_id || !f.category_id || !f.sub_category_id) {
-      alert("Harap isi semua field yang wajib (dengan tanda *).");
+      if (showToast) {
+        showToast("Harap isi semua field yang wajib (dengan tanda *).", "error");
+      } else {
+        alert("Harap isi semua field yang wajib (dengan tanda *).");
+      }
       return;
     }
     onSave({ ...f, cost: Number(f.cost) || 0, document_link: f.document_link || null });
@@ -380,8 +384,8 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} kegiatan</div>
       </div>
-      {showForm && <DailyForm refs={references} onRefreshReferences={fetchReferences} onClose={() => setShowForm(false)} onSave={handleAdd} />}
-      {editing && <DailyForm refs={references} onRefreshReferences={fetchReferences} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
+      {showForm && <DailyForm refs={references} onRefreshReferences={fetchReferences} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {editing && <DailyForm refs={references} onRefreshReferences={fetchReferences} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );
