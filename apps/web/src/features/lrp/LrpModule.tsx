@@ -140,7 +140,7 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
     try {
       const res = await apiClient.post('/lrp', d);
       setItems([...items, res.data.data]);
-      showToast?.("Data berhasil ditambahkan", "success");
+      showToast?.(`Program LRP '${d.program}' berhasil ditambahkan`, "success");
     } catch (e) {
       console.error(e);
       showToast?.("Gagal menyimpan data", "error");
@@ -151,7 +151,7 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
     try {
       const res = await apiClient.put(`/lrp/${id}`, d);
       setItems(items.map(i => i.id === id ? res.data.data : i));
-      showToast?.("Data berhasil diperbarui", "success");
+      showToast?.(`Program LRP '${d.program}' berhasil diperbarui`, "success");
     } catch (e) {
       console.error(e);
       showToast?.("Gagal memperbarui data", "error");
@@ -162,7 +162,7 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
     try {
       await apiClient.delete(`/lrp/${id}`);
       setItems(items.filter(i => i.id !== id));
-      showToast?.("Data berhasil dihapus", "success");
+      showToast?.(`Program LRP '${toDelete?.program || ''}' berhasil dihapus`, "success");
     } catch (e) {
       console.error(e);
       showToast?.("Gagal menghapus data", "error");
