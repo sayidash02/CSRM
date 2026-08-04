@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
+import { Modal, ModalFooter } from '../../components/ui/Modal';
 
 export interface Stakeholder {
   id: string;
@@ -24,31 +25,6 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
       {children}
       {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "md" | "lg" }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={15} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalFooter({ onClose, onSave, saveLabel = "Simpan", isEdit }: { onClose: () => void; onSave: () => void; saveLabel?: string; isEdit?: boolean }) {
-  return (
-    <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
-      <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-      <button onClick={onSave} className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${isEdit ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-blue-700"}`}>
-        {isEdit ? <Edit2 size={13} /> : <Check size={13} />}{saveLabel}
-      </button>
     </div>
   );
 }
@@ -100,15 +76,41 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function StakeholderForm({ initial, onClose, onSave, showToast }: { initial?: Stakeholder; onClose: () => void; onSave: (d: Omit<Stakeholder, "id">) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
-  const [f, setF] = useState({ 
-    stakeholder: initial?.stakeholder ?? "", 
-    date: initial?.date ?? "", 
-    venue: initial?.venue ?? "", 
-    concern_issue: initial?.concern_issue ?? "", 
-    document_link: initial?.document_link ?? "" 
-  });
-  const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
+const emptyStakeholderDraft = {
+  stakeholder: "", date: "", venue: "", concern_issue: "", document_link: ""
+};
+
+function StakeholderForm({ 
+  initial, 
+  onClose, 
+  onSave, 
+  showToast,
+  defaultValues,
+  onDraftChange
+}: { 
+  initial?: Stakeholder; 
+  onClose: () => void; 
+  onSave: (d: Omit<Stakeholder, "id">) => void; 
+  showToast?: (msg: string, type?: "success"|"error"|"info") => void;
+  defaultValues?: typeof emptyStakeholderDraft;
+  onDraftChange?: (v: typeof emptyStakeholderDraft) => void;
+}) {
+  const [f, setF] = useState(
+    initial
+      ? { stakeholder: initial.stakeholder ?? "", date: initial.date ?? "", venue: initial.venue ?? "", concern_issue: initial.concern_issue ?? "", document_link: initial.document_link ?? "" }
+      : { ...emptyStakeholderDraft, ...defaultValues }
+  );
+  
+  const set = (k: string, v: string) => {
+    const next = { ...f, [k]: v };
+    setF(next);
+    if (!initial) onDraftChange?.(next);
+  };
+
+  const handleClear = () => {
+    setF({ ...emptyStakeholderDraft });
+    onDraftChange?.({ ...emptyStakeholderDraft });
+  };
   
   const handleSave = () => {
     const missing: string[] = (
@@ -130,6 +132,7 @@ function StakeholderForm({ initial, onClose, onSave, showToast }: { initial?: St
       concern_issue: f.concern_issue || null,
       document_link: f.document_link || null
     });
+    if (!initial) onDraftChange?.({ ...emptyStakeholderDraft });
     onClose();
   };
   
@@ -155,7 +158,7 @@ function StakeholderForm({ initial, onClose, onSave, showToast }: { initial?: St
           />
         </Field>
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan"} isEdit={!!initial} />
+      <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan"} isEdit={!!initial} />
     </Modal>
   );
 }
@@ -163,6 +166,7 @@ function StakeholderForm({ initial, onClose, onSave, showToast }: { initial?: St
 export default function StakeholdersModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Stakeholder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addDraft, setAddDraft] = useState({ ...emptyStakeholderDraft });
   
   const fetchData = async () => {
     try {
@@ -264,9 +268,10 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
         )}
         {!loading && <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {filtered.length} dari {items.length} data</div>}
       </div>
-      {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} defaultValues={addDraft} onDraftChange={setAddDraft} />}
       {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.stakeholder} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );
 }
+
