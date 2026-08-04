@@ -1,21 +1,32 @@
 export function filterByDateRange<T>(
   items: T[], 
   dateKey: keyof T, 
-  range: { start?: string; end?: string }
+  range?: { start?: string; end?: string }
 ): T[] {
-  if (!range.start && !range.end) return items;
+  if (!Array.isArray(items)) return [];
+  if (!range || (!range.start?.trim() && !range.end?.trim())) return items;
+  
+  const start = range.start?.trim();
+  const end = range.end?.trim();
   
   return items.filter(item => {
     const itemDateVal = item[dateKey];
     if (!itemDateVal) return false;
     
-    // Extract just the YYYY-MM-DD part for comparison
-    const itemDateStr = String(itemDateVal).split('T')[0];
+    let itemDateStr = '';
+    if (itemDateVal instanceof Date) {
+      if (isNaN(itemDateVal.getTime())) return false;
+      itemDateStr = itemDateVal.toISOString().split('T')[0];
+    } else if (typeof itemDateVal === 'string') {
+      itemDateStr = itemDateVal.split('T')[0].trim();
+    } else {
+      return false;
+    }
     
-    let isValid = true;
-    if (range.start && itemDateStr < range.start) isValid = false;
-    if (range.end && itemDateStr > range.end) isValid = false;
+    if (start && itemDateStr < start) return false;
+    if (end && itemDateStr > end) return false;
     
-    return isValid;
+    return true;
   });
 }
+
