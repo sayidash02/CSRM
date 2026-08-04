@@ -4,6 +4,7 @@ import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
+import { Modal, ModalFooter } from '../../components/ui/Modal';
 
 export interface Grievance {
   id: number | string;
@@ -37,31 +38,6 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
       {children}
       {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "md" | "lg" }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={15} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalFooter({ onClose, onSave, saveLabel = "Simpan", isEdit }: { onClose: () => void; onSave: () => void; saveLabel?: string; isEdit?: boolean }) {
-  return (
-    <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
-      <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-      <button onClick={onSave} className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${isEdit ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-blue-700"}`}>
-        {isEdit ? <Edit2 size={13} /> : <Check size={13} />}{saveLabel}
-      </button>
     </div>
   );
 }
@@ -128,27 +104,48 @@ function SignificanceBadge({ level }: { level: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[level] ?? ""}`}>{level}</span>;
 }
 
-function GrievanceForm({ initial, onClose, onSave, nextRegNo, showToast }: { initial?: Grievance; onClose: () => void; onSave: (d: Omit<Grievance, "id">) => void; nextRegNo: string; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
-  const [f, setF] = useState({
-    register_no: initial?.register_no ?? nextRegNo,
-    log_date: initial?.log_date ? String(initial.log_date).split('T')[0] : "",
-    complainant_name: initial?.complainant_name ?? "",
-    address: initial?.address ?? "",
-    phone: initial?.phone ?? "",
-    category: initial?.category ?? "",
-    significance: initial?.significance ?? "Low",
-    description: initial?.description ?? "",
-    location: initial?.location ?? "",
-    investigation: initial?.investigation ?? "",
-    resolution: initial?.resolution ?? "",
-    feedback: initial?.feedback ?? "",
-    status: initial?.status ?? "Open",
-    completion_date: initial?.completion_date ? String(initial.completion_date).split('T')[0] : "",
-    supporting_files: initial?.supporting_files ?? "",
-    remarks: initial?.remarks ?? ""
-  });
+const emptyGrievanceDraft = {
+  register_no: "", log_date: "", complainant_name: "", address: "", phone: "",
+  category: "", significance: "Low", description: "", location: "",
+  investigation: "", resolution: "", feedback: "", status: "Open",
+  completion_date: "", supporting_files: "", remarks: ""
+};
+
+function GrievanceForm({
+  initial,
+  defaultValues,
+  onDraftChange,
+  onClose,
+  onSave,
+  nextRegNo,
+  showToast
+}: {
+  initial?: Grievance;
+  defaultValues?: typeof emptyGrievanceDraft;
+  onDraftChange?: (v: typeof emptyGrievanceDraft) => void;
+  onClose: () => void;
+  onSave: (d: Omit<Grievance, "id">) => void;
+  nextRegNo: string;
+  showToast?: (msg: string, type?: "success"|"error"|"info") => void;
+}) {
+  const [f, setF] = useState(
+    initial
+      ? { register_no: initial.register_no ?? nextRegNo, log_date: initial.log_date ? String(initial.log_date).split('T')[0] : "", complainant_name: initial.complainant_name ?? "", address: initial.address ?? "", phone: initial.phone ?? "", category: initial.category ?? "", significance: initial.significance ?? "Low", description: initial.description ?? "", location: initial.location ?? "", investigation: initial.investigation ?? "", resolution: initial.resolution ?? "", feedback: initial.feedback ?? "", status: initial.status ?? "Open", completion_date: initial.completion_date ? String(initial.completion_date).split('T')[0] : "", supporting_files: initial.supporting_files ?? "", remarks: initial.remarks ?? "" }
+      : { ...emptyGrievanceDraft, register_no: defaultValues?.register_no || nextRegNo, ...defaultValues }
+  );
   
-  const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
+  const set = (k: string, v: string) => {
+    const next = { ...f, [k]: v };
+    setF(next);
+    if (!initial) onDraftChange?.(next);
+  };
+
+  const handleClear = () => {
+    const cleared = { ...emptyGrievanceDraft, register_no: nextRegNo };
+    setF(cleared);
+    onDraftChange?.(cleared);
+  };
+
   const handleSave = () => {
     const missing: string[] = (
       [
@@ -173,6 +170,7 @@ function GrievanceForm({ initial, onClose, onSave, nextRegNo, showToast }: { ini
       supporting_files: f.supporting_files || null,
       remarks: f.remarks || null
     });
+    if (!initial) onDraftChange?.({ ...emptyGrievanceDraft });
     onClose();
   };
   
@@ -211,7 +209,7 @@ function GrievanceForm({ initial, onClose, onSave, nextRegNo, showToast }: { ini
           />
         </Field>
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Pengaduan"} isEdit={!!initial} />
+      <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Pengaduan"} isEdit={!!initial} />
     </Modal>
   );
 }
@@ -280,6 +278,7 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Grievance | null>(null);
   const [toDelete, setToDelete] = useState<Grievance | null>(null);
+  const [addDraft, setAddDraft] = useState({ ...emptyGrievanceDraft });
   
   const nextRegNo = `GRV-2026-${String(items.length + 1).padStart(4, "0")}`;
   const displayed = filtered.filter(g => sigFilter === "All" || g.significance === sigFilter).filter(g => statusFilter === "All" || g.status === statusFilter);
@@ -339,7 +338,7 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
           <DataTable columns={columns} data={displayed} />
         </div>
       </div>
-      {showForm && <GrievanceForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
+      {showForm && <GrievanceForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
       {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.register_no} — ${toDelete.complainant_name}`} onCancel={() => setToDelete(null)} onConfirm={() => { if (selected === toDelete.id) setSelected(null); handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
