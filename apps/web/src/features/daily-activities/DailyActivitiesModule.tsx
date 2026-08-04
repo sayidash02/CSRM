@@ -125,9 +125,9 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           focus: initial.focus ?? "",
           location: initial.location ?? "",
           cost: String(initial.cost ?? ""),
-          pic_id: initial.pic_id ?? "",
-          category_id: initial.category_id ?? "",
-          sub_category_id: initial.sub_category_id ?? "",
+          pic_id: initial.pic_id != null ? String(initial.pic_id) : "",
+          category_id: initial.category_id != null ? String(initial.category_id) : "",
+          sub_category_id: initial.sub_category_id != null ? String(initial.sub_category_id) : "",
           description_result: initial.description_result ?? "",
           document_link: initial.document_link ?? "",
         }
