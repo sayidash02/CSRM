@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
+import { Modal, ModalFooter } from '../../components/ui/Modal';
 
 export interface Proposal {
   id: string | number;
@@ -19,8 +20,6 @@ export interface Proposal {
 
 const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
-
-
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
@@ -29,31 +28,6 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
       {children}
       {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "md" | "lg" }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={15} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalFooter({ onClose, onSave, saveLabel = "Simpan", isEdit }: { onClose: () => void; onSave: () => void; saveLabel?: string; isEdit?: boolean }) {
-  return (
-    <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
-      <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-      <button onClick={onSave} className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${isEdit ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-blue-700"}`}>
-        {isEdit ? <Edit2 size={13} /> : <Check size={13} />}{saveLabel}
-      </button>
     </div>
   );
 }
@@ -113,19 +87,37 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
 }
 
-function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast }: { initial?: Proposal; onClose: () => void; onSave: (d: Omit<Proposal, "id">) => void; nextRegNo: string; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
-  const [f, setF] = useState({ 
-    registration_no: initial?.registration_no ?? nextRegNo, 
-    date_received: initial?.date_received ? String(initial.date_received).split('T')[0] : "", 
-    institution: initial?.institution ?? "", 
-    address: initial?.address ?? "", 
-    proposal_description: initial?.proposal_description ?? "", 
-    proposal_file: initial?.proposal_file ?? "", 
-    assessment_file: initial?.assessment_file ?? "", 
-    status: initial?.status ?? "Under Review" 
-  });
+const emptyProposalDraft = {
+  registration_no: "", date_received: "", institution: "", address: "",
+  proposal_description: "", proposal_file: "", assessment_file: "", status: "Under Review"
+};
+
+function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultValues, onDraftChange }: {
+  initial?: Proposal;
+  onClose: () => void;
+  onSave: (d: Omit<Proposal, "id">) => void;
+  nextRegNo: string;
+  showToast?: (msg: string, type?: "success"|"error"|"info") => void;
+  defaultValues?: typeof emptyProposalDraft;
+  onDraftChange?: (v: typeof emptyProposalDraft) => void;
+}) {
+  const [f, setF] = useState(
+    initial
+      ? { registration_no: initial.registration_no ?? nextRegNo, date_received: initial.date_received ? String(initial.date_received).split('T')[0] : "", institution: initial.institution ?? "", address: initial.address ?? "", proposal_description: initial.proposal_description ?? "", proposal_file: initial.proposal_file ?? "", assessment_file: initial.assessment_file ?? "", status: initial.status ?? "Under Review" }
+      : { ...emptyProposalDraft, registration_no: defaultValues?.registration_no || nextRegNo, ...defaultValues }
+  );
   
-  const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
+  const set = (k: string, v: string) => {
+    const next = { ...f, [k]: v };
+    setF(next);
+    if (!initial) onDraftChange?.(next);
+  };
+
+  const handleClear = () => {
+    const cleared = { ...emptyProposalDraft, registration_no: nextRegNo };
+    setF(cleared);
+    onDraftChange?.(cleared);
+  };
   
   const handleSave = () => {
     const missing: string[] = (
@@ -149,6 +141,7 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast }: { init
       address: f.address || null,
       proposal_description: f.proposal_description || null
     });
+    if (!initial) onDraftChange?.({ ...emptyProposalDraft });
     onClose();
   };
   
@@ -182,13 +175,14 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast }: { init
         </div>
         <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Under Review</option><option>Approved</option><option>Declined</option></select></Field>
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} saveLabel={initial ? "Simpan Perubahan" : "Simpan Proposal"} isEdit={!!initial} />
+      <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Proposal"} isEdit={!!initial} />
     </Modal>
   );
 }
 
 export default function ProposalsModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Proposal[]>([]);
+  const [addDraft, setAddDraft] = useState({ ...emptyProposalDraft });
   
   useEffect(() => {
     fetchData();
@@ -293,9 +287,10 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} proposal</div>
       </div>
-      {showForm && <ProposalForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
+      {showForm && <ProposalForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
       {editing && <ProposalForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.registration_no} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.registration_no} — ${toDelete.institution}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );
 }
+
