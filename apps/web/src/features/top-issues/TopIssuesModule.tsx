@@ -174,7 +174,7 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.post('/top-issues', d);
       fetchData();
-      showToast("Data berhasil ditambahkan", "success");
+      showToast(`Isu '${d.issue}' berhasil ditambahkan`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menyimpan data", "error");
@@ -185,7 +185,7 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.put(`/top-issues/${id}`, d);
       fetchData();
-      showToast("Data berhasil diperbarui", "success");
+      showToast(`Isu '${d.issue}' berhasil diperbarui`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal memperbarui data", "error");
@@ -196,7 +196,7 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.delete(`/top-issues/${id}`);
       fetchData();
-      showToast("Data berhasil dihapus", "success");
+      showToast(`Isu '${toDelete?.issue || ''}' berhasil dihapus`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menghapus data", "error");
