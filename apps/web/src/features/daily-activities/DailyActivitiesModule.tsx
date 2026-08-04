@@ -34,9 +34,6 @@ export interface DailyActivity {
   sub_category_name?: string;
 }
 
-const PIC_LIST = ["Ziya Ramadhani", "Adji Pratama", "Ziya & Adji", "Fadhil Akbar", "Nisa Rahayu"];
-
-
 // Helpers
 const formatIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
@@ -182,7 +179,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
         <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi kegiatan" className={inputCls} /></Field>
         <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
-        <Field label="Category" required><select value={f.category_id} onChange={e => set("category_id", e.target.value)} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+        <Field label="Category" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next); }} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
         <Field label="PIC" required>
           <div className="flex gap-2 items-center">
@@ -267,11 +264,11 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
     }
   };
 
-  const handleDelete = async (id: string | number) => {
+  const handleDelete = async (id: string | number, activityName?: string) => {
     try {
       await apiClient.delete(`/daily-activities/${id}`);
       fetchData();
-      showToast(`Kegiatan '${toDelete?.activity || ''}' berhasil dihapus`, "success");
+      showToast(`Kegiatan '${activityName || ''}' berhasil dihapus`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menghapus data", "error");
@@ -386,7 +383,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
       </div>
       {showForm && <DailyForm defaultValues={addDraft} onDraftChange={setAddDraft} refs={references} onRefreshReferences={fetchReferences} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
       {editing && <DailyForm refs={references} onRefreshReferences={fetchReferences} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
-      {toDelete && <DeleteConfirmModal label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
+      {toDelete && <DeleteConfirmModal label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.activity); setToDelete(null); }} />}
     </div>
   );
 }
