@@ -100,7 +100,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function StakeholderForm({ initial, onClose, onSave }: { initial?: Stakeholder; onClose: () => void; onSave: (d: Omit<Stakeholder, "id">) => void }) {
+function StakeholderForm({ initial, onClose, onSave, showToast }: { initial?: Stakeholder; onClose: () => void; onSave: (d: Omit<Stakeholder, "id">) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [f, setF] = useState({ 
     stakeholder: initial?.stakeholder ?? "", 
     date: initial?.date ?? "", 
@@ -110,16 +110,27 @@ function StakeholderForm({ initial, onClose, onSave }: { initial?: Stakeholder; 
   });
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
   
-  const handleSave = () => { 
-    if (!f.stakeholder) return; 
-    onSave({ 
-      ...f, 
+  const handleSave = () => {
+    const missing: string[] = (
+      [
+        [!f.stakeholder, "Nama Stakeholder"],
+      ] as [boolean, string][]
+    ).filter(([cond]) => cond).map(([, label]) => label);
+
+    if (missing.length > 0) {
+      if (showToast) {
+        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
+      }
+      return;
+    }
+    onSave({
+      ...f,
       date: f.date || null,
       venue: f.venue || null,
       concern_issue: f.concern_issue || null,
       document_link: f.document_link || null
-    }); 
-    onClose(); 
+    });
+    onClose();
   };
   
   return (
@@ -253,8 +264,8 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
         )}
         {!loading && <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {filtered.length} dari {items.length} data</div>}
       </div>
-      {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
-      {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
+      {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.stakeholder} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );

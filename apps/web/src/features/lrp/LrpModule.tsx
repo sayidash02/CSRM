@@ -97,10 +97,26 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function LrpForm({ initial, onClose, onSave }: { initial?: LrpProgram; onClose: () => void; onSave: (d: Omit<LrpProgram, "id">) => void }) {
+function LrpForm({ initial, onClose, onSave, showToast }: { initial?: LrpProgram; onClose: () => void; onSave: (d: Omit<LrpProgram, "id">) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [f, setF] = useState({ program: initial?.program ?? "", sharepoint_link: initial?.sharepoint_link ?? "" });
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
-  const handleSave = () => { if (!f.program || !f.sharepoint_link) return; onSave(f); onClose(); };
+  const handleSave = () => {
+    const missing: string[] = (
+      [
+        [!f.program, "Nama Program"],
+        [!f.sharepoint_link, "Link SharePoint"],
+      ] as [boolean, string][]
+    ).filter(([cond]) => cond).map(([, label]) => label);
+
+    if (missing.length > 0) {
+      if (showToast) {
+        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
+      }
+      return;
+    }
+    onSave(f);
+    onClose();
+  };
   return (
     <Modal title={initial ? "Edit Program LRP" : "Tambah Program LRP"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
@@ -201,8 +217,8 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
           <DataTable columns={columns} data={filtered} />
         </div>
       </div>
-      {showForm && <LrpForm onClose={() => setShowForm(false)} onSave={onAdd} />}
-      {editing && <LrpForm initial={editing} onClose={() => setEditing(null)} onSave={d => { onEdit(editing.id, d); setEditing(null); }} />}
+      {showForm && <LrpForm onClose={() => setShowForm(false)} onSave={onAdd} showToast={showToast} />}
+      {editing && <LrpForm initial={editing} onClose={() => setEditing(null)} onSave={d => { onEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.program} onCancel={() => setToDelete(null)} onConfirm={() => { onDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );

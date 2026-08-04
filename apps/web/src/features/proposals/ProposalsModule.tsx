@@ -113,7 +113,7 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
 }
 
-function ProposalForm({ initial, onClose, onSave, nextRegNo }: { initial?: Proposal; onClose: () => void; onSave: (d: Omit<Proposal, "id">) => void; nextRegNo: string }) {
+function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast }: { initial?: Proposal; onClose: () => void; onSave: (d: Omit<Proposal, "id">) => void; nextRegNo: string; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [f, setF] = useState({ 
     registration_no: initial?.registration_no ?? nextRegNo, 
     date_received: initial?.date_received ? String(initial.date_received).split('T')[0] : "", 
@@ -127,16 +127,29 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo }: { initial?: Propo
   
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
   
-  const handleSave = () => { 
-    if (!f.institution || !f.date_received || !f.registration_no) return; 
-    onSave({ 
-      ...f, 
-      proposal_file: f.proposal_file || null, 
+  const handleSave = () => {
+    const missing: string[] = (
+      [
+        [!f.institution, "Nama Institusi"],
+        [!f.date_received, "Tanggal Diterima"],
+        [!f.registration_no, "No. Registrasi"],
+      ] as [boolean, string][]
+    ).filter(([cond]) => cond).map(([, label]) => label);
+
+    if (missing.length > 0) {
+      if (showToast) {
+        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
+      }
+      return;
+    }
+    onSave({
+      ...f,
+      proposal_file: f.proposal_file || null,
       assessment_file: f.assessment_file || null,
       address: f.address || null,
       proposal_description: f.proposal_description || null
-    }); 
-    onClose(); 
+    });
+    onClose();
   };
   
   return (
@@ -280,8 +293,8 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
         </div>
         <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} proposal</div>
       </div>
-      {showForm && <ProposalForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} />}
-      {editing && <ProposalForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.registration_no} />}
+      {showForm && <ProposalForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
+      {editing && <ProposalForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.registration_no} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.registration_no} — ${toDelete.institution}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );

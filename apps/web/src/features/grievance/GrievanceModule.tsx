@@ -128,7 +128,7 @@ function SignificanceBadge({ level }: { level: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[level] ?? ""}`}>{level}</span>;
 }
 
-function GrievanceForm({ initial, onClose, onSave, nextRegNo }: { initial?: Grievance; onClose: () => void; onSave: (d: Omit<Grievance, "id">) => void; nextRegNo: string }) {
+function GrievanceForm({ initial, onClose, onSave, nextRegNo, showToast }: { initial?: Grievance; onClose: () => void; onSave: (d: Omit<Grievance, "id">) => void; nextRegNo: string; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [f, setF] = useState({
     register_no: initial?.register_no ?? nextRegNo,
     log_date: initial?.log_date ? String(initial.log_date).split('T')[0] : "",
@@ -149,17 +149,31 @@ function GrievanceForm({ initial, onClose, onSave, nextRegNo }: { initial?: Grie
   });
   
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
-  const handleSave = () => { 
-    if (!f.register_no || !f.log_date || !f.complainant_name || !f.significance) return; 
-    onSave({ 
-      ...f, 
-      resolution: f.resolution || null, 
-      feedback: f.feedback || null, 
-      completion_date: f.completion_date || null, 
+  const handleSave = () => {
+    const missing: string[] = (
+      [
+        [!f.register_no, "No. Registrasi"],
+        [!f.log_date, "Tanggal Pengaduan"],
+        [!f.complainant_name, "Nama Pelapor"],
+        [!f.significance, "Signifikansi"],
+      ] as [boolean, string][]
+    ).filter(([cond]) => cond).map(([, label]) => label);
+
+    if (missing.length > 0) {
+      if (showToast) {
+        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
+      }
+      return;
+    }
+    onSave({
+      ...f,
+      resolution: f.resolution || null,
+      feedback: f.feedback || null,
+      completion_date: f.completion_date || null,
       supporting_files: f.supporting_files || null,
       remarks: f.remarks || null
-    }); 
-    onClose(); 
+    });
+    onClose();
   };
   
   return (
@@ -325,8 +339,8 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
           <DataTable columns={columns} data={displayed} />
         </div>
       </div>
-      {showForm && <GrievanceForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} />}
-      {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} />}
+      {showForm && <GrievanceForm onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
+      {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.register_no} — ${toDelete.complainant_name}`} onCancel={() => setToDelete(null)} onConfirm={() => { if (selected === toDelete.id) setSelected(null); handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );

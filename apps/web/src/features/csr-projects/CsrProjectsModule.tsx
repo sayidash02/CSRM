@@ -121,7 +121,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-function CsrForm({ initial, onClose, onSave }: { initial?: CsrProject; onClose: () => void; onSave: (d: Omit<CsrProject, "id">) => void }) {
+function CsrForm({ initial, onClose, onSave, showToast }: { initial?: CsrProject; onClose: () => void; onSave: (d: Omit<CsrProject, "id">) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [f, setF] = useState({ 
     project_year: String(initial?.project_year ?? new Date().getFullYear()), 
     program: initial?.program ?? "", 
@@ -139,11 +139,23 @@ function CsrForm({ initial, onClose, onSave }: { initial?: CsrProject; onClose: 
   
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
   
-  const handleSave = () => { 
-    if (!f.program || !f.project_year) return; 
-    onSave({ 
-      ...f, 
-      project_year: Number(f.project_year), 
+  const handleSave = () => {
+    const missing: string[] = (
+      [
+        [!f.program, "Nama Program"],
+        [!f.project_year, "Tahun"],
+      ] as [boolean, string][]
+    ).filter(([cond]) => cond).map(([, label]) => label);
+
+    if (missing.length > 0) {
+      if (showToast) {
+        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
+      }
+      return;
+    }
+    onSave({
+      ...f,
+      project_year: Number(f.project_year),
       budget: f.budget ? Number(f.budget) : null,
       activity: f.activity || null,
       type_of_activity: f.type_of_activity || null,
@@ -153,8 +165,8 @@ function CsrForm({ initial, onClose, onSave }: { initial?: CsrProject; onClose: 
       implementation_period: f.implementation_period || null,
       documentation_image: f.documentation_image || null,
       document: f.document || null
-    }); 
-    onClose(); 
+    });
+    onClose();
   };
   
   return (
@@ -311,8 +323,8 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
           <DataTable columns={columns} data={displayed} />
         </div>
       </div>
-      {showForm && <CsrForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
-      {editing && <CsrForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
+      {showForm && <CsrForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {editing && <CsrForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.program} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );

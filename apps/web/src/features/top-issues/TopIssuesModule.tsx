@@ -102,7 +102,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 
 
 
-function TopIssueForm({ initial, onClose, onSave }: { initial?: TopIssue; onClose: () => void; onSave: (d: Omit<TopIssue, "id">) => void }) {
+function TopIssueForm({ initial, onClose, onSave, showToast }: { initial?: TopIssue; onClose: () => void; onSave: (d: Omit<TopIssue, "id">) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [f, setF] = useState({ 
     period: initial?.period ?? "", 
     issue: initial?.issue ?? "", 
@@ -114,14 +114,26 @@ function TopIssueForm({ initial, onClose, onSave }: { initial?: TopIssue; onClos
   });
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
   
-  const handleSave = () => { 
-    if (!f.period || !f.issue) return; 
-    onSave({ 
-      ...f, 
-      main_document: f.main_document || null, 
-      supporting_document: f.supporting_document || null 
-    }); 
-    onClose(); 
+  const handleSave = () => {
+    const missing: string[] = (
+      [
+        [!f.period, "Periode"],
+        [!f.issue, "Isu"],
+      ] as [boolean, string][]
+    ).filter(([cond]) => cond).map(([, label]) => label);
+
+    if (missing.length > 0) {
+      if (showToast) {
+        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
+      }
+      return;
+    }
+    onSave({
+      ...f,
+      main_document: f.main_document || null,
+      supporting_document: f.supporting_document || null
+    });
+    onClose();
   };
 
   return (
@@ -259,8 +271,8 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
           <DataTable columns={columns} data={displayed} />
         </div>
       </div>
-      {showForm && <TopIssueForm onClose={() => setShowForm(false)} onSave={handleAdd} />}
-      {editing && <TopIssueForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} />}
+      {showForm && <TopIssueForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {editing && <TopIssueForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.issue} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
     </div>
   );

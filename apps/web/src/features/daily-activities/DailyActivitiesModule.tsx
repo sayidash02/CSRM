@@ -152,11 +152,21 @@ function DailyForm({ initial, onClose, onSave, refs, onRefreshReferences, showTo
   const set = (k: string, v: string) => setF(p => ({ ...p, [k]: v }));
   
   const handleSave = () => {
-    if (!f.activity_date || !f.activity || !f.pic_id || !f.category_id || !f.sub_category_id) {
+    const missing: string[] = (
+      [
+        [!f.activity_date, "Tanggal Kegiatan"],
+        [!f.activity, "Kegiatan"],
+        [!f.pic_id, "PIC"],
+        [!f.category_id, "Kategori"],
+        [!f.sub_category_id, "Sub Kategori"],
+      ] as [boolean, string][]
+    ).filter(([cond]) => cond).map(([, label]) => label);
+
+    if (missing.length > 0) {
       if (showToast) {
-        showToast("Harap isi semua field yang wajib (dengan tanda *).", "error");
+        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
       } else {
-        alert("Harap isi semua field yang wajib (dengan tanda *).");
+        alert(`Field berikut belum diisi: ${missing.join(", ")}`);
       }
       return;
     }
