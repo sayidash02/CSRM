@@ -222,7 +222,7 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.post('/grievance', d);
       fetchData();
-      showToast("Data berhasil ditambahkan", "success");
+      showToast(`Keluhan dari '${(d as any).name || d.complainant_name}' berhasil ditambahkan`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menyimpan data", "error");
@@ -233,7 +233,7 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.put(`/grievance/${id}`, d);
       fetchData();
-      showToast("Data berhasil diperbarui", "success");
+      showToast(`Keluhan dari '${(d as any).name || d.complainant_name}' berhasil diperbarui`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal memperbarui data", "error");
@@ -244,7 +244,7 @@ export default function GrievanceModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.delete(`/grievance/${id}`);
       fetchData();
-      showToast("Data berhasil dihapus", "success");
+      showToast(`Keluhan dari '${(toDelete as any)?.name || toDelete?.complainant_name || ''}' berhasil dihapus`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menghapus data", "error");
