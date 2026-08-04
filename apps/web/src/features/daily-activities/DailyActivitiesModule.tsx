@@ -8,6 +8,8 @@ import { PicManagementModal } from './PicManagementModal';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
+import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter";
+import { filterByDateRange } from "../../utils/dateFilter";
 
 // Types
 export interface DailyActivity {
@@ -287,6 +289,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
   const { q, setQ, filtered } = useGlobalSearch(enrichedItems);
   const [catFilter, setCatFilter] = useState("All");
   const [subCatFilter, setSubCatFilter] = useState("All");
+  const [dateRange, setDateRange] = useState<DateRange>({ start: "", end: "" });
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
@@ -295,8 +298,9 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
     let result = filtered;
     if (catFilter !== "All") result = result.filter(a => String(a.category_id) === String(catFilter));
     if (subCatFilter !== "All") result = result.filter(a => String(a.sub_category_id) === String(subCatFilter));
+    result = filterByDateRange(result, 'activity_date', dateRange);
     return result;
-  }, [filtered, catFilter, subCatFilter]);
+  }, [filtered, catFilter, subCatFilter, dateRange]);
 
   const handleExportClick = () => {
     const exportColumns = [
@@ -371,7 +375,9 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
         subCategories={references.sub_categories}
         subCatFilter={subCatFilter}
         onSubCatFilterChange={setSubCatFilter}
-      ></TopBar>
+      >
+        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+      </TopBar>
       <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
         <div className="flex-1 min-h-0">
           <DataTable columns={columns} data={displayed} />
