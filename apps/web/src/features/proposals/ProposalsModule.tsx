@@ -194,7 +194,7 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.post('/proposals', d);
       fetchData();
-      showToast("Data berhasil ditambahkan", "success");
+      showToast(`Proposal dari '${d.institution}' berhasil ditambahkan`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menyimpan data", "error");
@@ -205,7 +205,7 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.put(`/proposals/${id}`, d);
       fetchData();
-      showToast("Data berhasil diperbarui", "success");
+      showToast(`Proposal dari '${d.institution}' berhasil diperbarui`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal memperbarui data", "error");
@@ -216,7 +216,7 @@ export default function ProposalsModule({ onExport, showToast }: { onExport: (l:
     try {
       await apiClient.delete(`/proposals/${id}`);
       fetchData();
-      showToast("Data berhasil dihapus", "success");
+      showToast(`Proposal dari '${toDelete?.institution || ''}' berhasil dihapus`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menghapus data", "error");
