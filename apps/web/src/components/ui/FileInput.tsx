@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ExternalLink, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiClient } from '../../lib/apiClient';
 
 interface FileInputProps {
@@ -81,7 +82,7 @@ export function FileInput({ value, onChange, activityDate, picName, multiple = t
               const combined = [...fileList, ...newUrls];
               onChange(JSON.stringify(combined));
             } catch (err: any) {
-              alert("Beberapa file gagal diunggah: " + (err.response?.data?.error || err.message));
+              toast.error("Beberapa file gagal diunggah: " + (err.response?.data?.error || err.message));
             } finally {
               setUploading(false);
               e.target.value = "";
