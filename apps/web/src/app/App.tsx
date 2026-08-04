@@ -1,5 +1,6 @@
 import { apiClient } from "../lib/apiClient";
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { Toaster, toast } from "sonner";
 import {
   LayoutDashboard, Calendar, Users, AlertTriangle, FileText,
   Leaf, MessageSquareWarning, TreePine, RefreshCw, Upload,
@@ -171,15 +172,7 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
   );
 }
 
-function Toast({ message, type, onDismiss }: { message: string; type: "success" | "error" | "info"; onDismiss: () => void }) {
-  const s = { success: "bg-emerald-50 border-emerald-200 text-emerald-800", error: "bg-red-50 border-red-200 text-red-800", info: "bg-blue-50 border-blue-200 text-blue-800" };
-  const ic = { success: <Check size={14} className="text-emerald-600 shrink-0" />, error: <X size={14} className="text-red-500 shrink-0" />, info: <Download size={14} className="text-blue-600 shrink-0" /> };
-  return (
-    <div onClick={onDismiss} className={`fixed bottom-5 right-5 z-[70] flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-sm font-medium cursor-pointer ${s[type]}`}>
-      {ic[type]}{message}
-    </div>
-  );
-}
+
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -542,7 +535,6 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
 export default function App() {
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
   const [showSync, setShowSync] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [syncHistory, setSyncHistory] = useState<SyncLog[]>(SEED_SYNC);
 
@@ -562,7 +554,7 @@ export default function App() {
       }
     }).catch((err) => {
       console.error(err);
-      setToast({ message: "Gagal memuat status sinkronisasi", type: "error" });
+      toast.error("Gagal memuat status sinkronisasi");
     });
   }, []);
 
@@ -600,9 +592,10 @@ export default function App() {
     }
   }, [activeModule]);
 
-  const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+  const showToast = useCallback((msg: string, type: "success" | "error" | "info" = "info") => {
+    if (type === "success") toast.success(msg);
+    else if (type === "error") toast.error(msg);
+    else toast.info(msg);
   }, []);
 
   const handleExport = useCallback(async (label: string, payload?: any) => {
@@ -668,7 +661,7 @@ export default function App() {
         {activeModule === "lrp" && <LrpModule onExport={handleExport} showToast={showToast} />}
       </main>
       {showSync && <SyncModal onClose={() => setShowSync(false)} totalUnsynced={unsyncedCount} onSuccess={handleSyncSuccess} />}
-      {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }
