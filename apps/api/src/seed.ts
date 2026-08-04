@@ -1,3 +1,4 @@
+/** Seed script for master data categories and sub-categories */
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
