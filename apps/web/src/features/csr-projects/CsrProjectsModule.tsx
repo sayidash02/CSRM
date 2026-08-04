@@ -218,7 +218,7 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
     try {
       await apiClient.post('/csr-projects', d);
       fetchData();
-      showToast("Data berhasil ditambahkan", "success");
+      showToast(`Program '${d.program}' berhasil ditambahkan`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menyimpan data", "error");
@@ -229,7 +229,7 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
     try {
       await apiClient.put(`/csr-projects/${id}`, d);
       fetchData();
-      showToast("Data berhasil diperbarui", "success");
+      showToast(`Program '${d.program}' berhasil diperbarui`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal memperbarui data", "error");
@@ -240,7 +240,7 @@ export default function CsrProjectsModule({ onExport, showToast }: { onExport: (
     try {
       await apiClient.delete(`/csr-projects/${id}`);
       fetchData();
-      showToast("Data berhasil dihapus", "success");
+      showToast(`Program '${toDelete?.program || ''}' berhasil dihapus`, "success");
     } catch (e) {
       console.error(e);
       showToast("Gagal menghapus data", "error");
