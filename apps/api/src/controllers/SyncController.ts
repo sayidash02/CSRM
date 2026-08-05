@@ -13,10 +13,16 @@ export const triggerSync = async (req: Request, res: Response): Promise<void> =>
     return;
   }
 
+  const year = req.body?.year ? parseInt(req.body.year) : new Date().getFullYear();
+  if (isNaN(year) || year < 1900 || year > 2100) {
+    res.status(400).json({ error: 'Parameter year tidak valid' });
+    return;
+  }
+
   isSyncing = true;
   try {
-    await syncService.executeSync('User (via Web UI)');
-    res.status(200).json({ message: 'Sync completed successfully' });
+    await syncService.executeSync('User (via Web UI)', year);
+    res.status(200).json({ message: 'Sync completed successfully', year });
   } catch (error) {
     console.error('Sync error:', error);
     res.status(500).json({ error: 'Sync failed: ' + (error instanceof Error ? error.message : String(error)) });
@@ -27,7 +33,8 @@ export const triggerSync = async (req: Request, res: Response): Promise<void> =>
 
 export const getSyncStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const data = await syncService.getSyncStatus(isSyncing);
+    const year = req.query.year ? parseInt(req.query.year as string) : new Date().getFullYear();
+    const data = await syncService.getSyncStatus(isSyncing, year);
     res.status(200).json({ data });
   } catch (error) {
     console.error('Get sync status error:', error);

@@ -81,6 +81,7 @@ model stakeholder_engagement {
 model top_issues {
   id                  BigInt   @id @default(autoincrement())
   period              String   @db.VarChar(50)
+  year                Int      @default(2026)
   issue               String   @db.VarChar(255)
   description         String?  @db.Text
   follow_up           String?  @db.Text
@@ -94,6 +95,7 @@ model top_issues {
 
   @@index([is_deleted])
   @@index([is_archived])
+  @@index([year])
 }
 
 model proposals {
@@ -173,6 +175,7 @@ model grievance {
 model lrp {
   id              BigInt   @id @default(autoincrement())
   program         String   @db.VarChar(255)
+  year            Int      @default(2026)
   sharepoint_link String   @db.Text
   is_deleted      Boolean  @default(false)
   is_archived     Boolean  @default(false)
@@ -181,11 +184,13 @@ model lrp {
 
   @@index([is_deleted])
   @@index([is_archived])
+  @@index([year])
 }
 
 model sync_log {
   id            BigInt   @id @default(autoincrement())
   synced_at     DateTime @db.Timestamp(0)
+  synced_year   Int?
   status        String   @db.VarChar(20)
   error_message String?  @db.Text
   file_url      String?  @db.VarChar(500)

@@ -5,10 +5,18 @@ import prisma from '../lib/prisma';
 export class SyncService {
   constructor(private sharePointClient: ISharePointClient) {}
 
-  public async getSyncStatus(isSyncing: boolean) {
+  public async getSyncStatus(isSyncing: boolean, year?: number) {
+    const syncYear = year ?? new Date().getFullYear();
+
     const lastSync = await prisma.sync_log.findFirst({
-      where: { status: 'SUCCESS' },
+      where: { status: 'SUCCESS', synced_year: syncYear },
       orderBy: { synced_at: 'desc' }
+    });
+
+    // Year filter helpers
+    const dateRangeFilter = (col: string) => ({
+      gte: new Date(`${syncYear}-01-01T00:00:00.000Z`),
+      lte: new Date(`${syncYear}-12-31T23:59:59.999Z`)
     });
 
     let unsyncedCount = 0;
@@ -16,24 +24,24 @@ export class SyncService {
     if (lastSync) {
       const lastSyncDate = lastSync.synced_at;
       const counts = await Promise.all([
-        prisma.daily_activities.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
-        prisma.stakeholder_engagement.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
-        prisma.top_issues.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
-        prisma.proposals.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
-        prisma.csr_projects.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
-        prisma.grievance.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
-        prisma.lrp.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
+        prisma.daily_activities.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false, activity_date: dateRangeFilter('activity_date') } }),
+        prisma.stakeholder_engagement.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false, date: dateRangeFilter('date') } }),
+        prisma.top_issues.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false, year: syncYear } }),
+        prisma.proposals.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false, date_received: dateRangeFilter('date_received') } }),
+        prisma.csr_projects.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false, project_year: syncYear } }),
+        prisma.grievance.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false, log_date: dateRangeFilter('log_date') } }),
+        prisma.lrp.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false, year: syncYear } }),
       ]);
       unsyncedCount = counts.reduce((a, b) => a + b, 0);
     } else {
       const counts = await Promise.all([
-        prisma.daily_activities.count({ where: { is_deleted: false, is_archived: false } }),
-        prisma.stakeholder_engagement.count({ where: { is_deleted: false, is_archived: false } }),
-        prisma.top_issues.count({ where: { is_deleted: false, is_archived: false } }),
-        prisma.proposals.count({ where: { is_deleted: false, is_archived: false } }),
-        prisma.csr_projects.count({ where: { is_deleted: false, is_archived: false } }),
-        prisma.grievance.count({ where: { is_deleted: false, is_archived: false } }),
-        prisma.lrp.count({ where: { is_deleted: false, is_archived: false } }),
+        prisma.daily_activities.count({ where: { is_deleted: false, is_archived: false, activity_date: dateRangeFilter('activity_date') } }),
+        prisma.stakeholder_engagement.count({ where: { is_deleted: false, is_archived: false, date: dateRangeFilter('date') } }),
+        prisma.top_issues.count({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
+        prisma.proposals.count({ where: { is_deleted: false, is_archived: false, date_received: dateRangeFilter('date_received') } }),
+        prisma.csr_projects.count({ where: { is_deleted: false, is_archived: false, project_year: syncYear } }),
+        prisma.grievance.count({ where: { is_deleted: false, is_archived: false, log_date: dateRangeFilter('log_date') } }),
+        prisma.lrp.count({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
       ]);
       unsyncedCount = counts.reduce((a, b) => a + b, 0);
     }
@@ -69,11 +77,18 @@ export class SyncService {
     return (await workbook.xlsx.writeBuffer()) as any as Buffer;
   }
 
-  public async executeSync(triggeredBy: string = 'System'): Promise<void> {
+  public async executeSync(triggeredBy: string = 'System', year?: number): Promise<void> {
     const startedAt = new Date();
+    const syncYear = year ?? new Date().getFullYear();
+
+    // Year filter helpers
+    const dateRange = {
+      gte: new Date(`${syncYear}-01-01T00:00:00.000Z`),
+      lte: new Date(`${syncYear}-12-31T23:59:59.999Z`)
+    };
 
     try {
-      // 1. Fetch data from 7 tables
+      // 1. Fetch data from 7 tables (scoped to syncYear)
       const [
         dailyActivities,
         stakeholders,
@@ -83,13 +98,13 @@ export class SyncService {
         grievances,
         lrps
       ] = await Promise.all([
-        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false }, include: { pic: true, category: true, sub_category: true } }),
-        prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false } }),
-        prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false } }),
-        prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false } }),
-        prisma.csr_projects.findMany({ where: { is_deleted: false, is_archived: false } }),
-        prisma.grievance.findMany({ where: { is_deleted: false, is_archived: false } }),
-        prisma.lrp.findMany({ where: { is_deleted: false, is_archived: false } }),
+        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { pic: true, category: true, sub_category: true } }),
+        prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false, date: dateRange } }),
+        prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
+        prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false, date_received: dateRange } }),
+        prisma.csr_projects.findMany({ where: { is_deleted: false, is_archived: false, project_year: syncYear } }),
+        prisma.grievance.findMany({ where: { is_deleted: false, is_archived: false, log_date: dateRange } }),
+        prisma.lrp.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
       ]);
 
       // 2. Generate Workbook Buffer
@@ -105,13 +120,14 @@ export class SyncService {
 
       // 3. Upload to SharePoint
       const masterPath = '0. Testing/Master';
-      const fileName = 'CRMS_Master_Data.xlsx';
+      const fileName = `CRMS_Master_Data_${syncYear}.xlsx`;
       const fileUrl = await this.sharePointClient.uploadFile(masterPath, fileName, buffer, buffer.byteLength);
 
-      // 4. Update sync_log
+      // 4. Update sync_log (with synced_year)
       await prisma.sync_log.create({
         data: {
           synced_at: startedAt,
+          synced_year: syncYear,
           status: 'SUCCESS',
           file_url: fileUrl,
           triggered_by: triggeredBy
@@ -122,6 +138,7 @@ export class SyncService {
       await prisma.sync_log.create({
         data: {
           synced_at: startedAt,
+          synced_year: syncYear,
           status: 'FAILED',
           error_message: error instanceof Error ? error.message : String(error),
           triggered_by: triggeredBy
