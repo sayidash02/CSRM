@@ -1,178 +1,33 @@
 import { apiClient } from "../lib/apiClient";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Toaster, toast } from "sonner";
 import {
   LayoutDashboard, Calendar, Users, AlertTriangle, FileText,
   Leaf, MessageSquareWarning, TreePine, RefreshCw, Upload,
-  Search, Plus, ChevronDown, X, Check, Download, ExternalLink,
-  Bell, ChevronRight, Trash2, Edit2, ArrowUpRight, Wifi, BarChart2,
+  X, Check, Bell, Archive,
 } from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
-} from "recharts";
-import DailyActivitiesModule, { DailyActivity } from "../features/daily-activities/DailyActivitiesModule";
+import DailyActivitiesModule from "../features/daily-activities/DailyActivitiesModule";
 import StakeholdersModule from "../features/stakeholders/StakeholdersModule";
 import TopIssuesModule from "../features/top-issues/TopIssuesModule";
 import ProposalsModule from "../features/proposals/ProposalsModule";
 import CsrProjectsModule from "../features/csr-projects/CsrProjectsModule";
 import GrievanceModule from "../features/grievance/GrievanceModule";
 import LrpModule from "../features/lrp/LrpModule";
+import DashboardModule, { DashboardStats } from "../features/dashboard/DashboardModule";
+import ArchiveSettings from "../features/archive/ArchiveSettings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Module = "dashboard" | "daily" | "stakeholder" | "topissues" | "proposals" | "csr" | "grievance" | "lrp";
-interface Stakeholder { id: number; stakeholder: string; dateVenue: string; concern: string; docs: string | null; }
-interface TopIssue { id: number; period: string; issue: string; description: string; followUp: string; mainDoc: string | null; supportDoc: string | null; nextPlan: string; }
-interface Proposal { id: number; regNo: string; dateReceived: string; institution: string; address: string; proposalDescription: string; proposalFile: string | null; assessmentFile: string | null; status: string; }
-interface CsrProject { id: number; year: number; program: string; activity: string; type: string; location: string; target: string; objective: string; status: string; budget: number; period: string; docs: string | null; }
-interface Grievance { id: number; regNo: string; logDate: string; name: string; address: string; phone: string; category: string; significance: string; description: string; location: string; investigation: string; resolution: string | null; feedback: string | null; status: string; completionDate: string | null; supportFile: string | null; }
-interface LrpProgram { id: number; program: string; link: string; }
+type Module = "dashboard" | "daily" | "stakeholder" | "topissues" | "proposals" | "csr" | "grievance" | "lrp" | "archive";
 interface SyncLog { id: number; syncedAt: string; status: "SUCCESS" | "FAILED"; }
 
 // ─── Seed Data ────────────────────────────────────────────────────────────────
-
-const SEED_DAILY: DailyActivity[] = [];
-
-const SEED_STAKEHOLDERS: Stakeholder[] = [
-  { id: 1, stakeholder: "Dinas Sosial Kab. Bogor", dateVenue: "14 Juli 2026 — Kantor Dinas Sosial Bogor", concern: "Koordinasi program CSR pendampingan UMKM", docs: "https://sharepoint/docs/stakeholder_dinsos.pdf" },
-  { id: 2, stakeholder: "Kepala Desa Ciawi", dateVenue: "10 Juli 2026 — Balai Desa Ciawi", concern: "Pembahasan rencana pembangunan jembatan akses warga", docs: null },
-  { id: 3, stakeholder: "PT. Mitra Berkah Abadi", dateVenue: "8 Juli 2026 — Kantor Pusat", concern: "Kerjasama distribusi bantuan sembako ke 3 desa terdampak", docs: "https://sharepoint/docs/stakeholder_mitra.pdf" },
-  { id: 4, stakeholder: "BNPB Kab. Bogor", dateVenue: "3 Juli 2026 — Zoom Meeting", concern: "Koordinasi program pemulihan pasca-banjir Kec. Caringin", docs: "https://sharepoint/docs/stakeholder_bnpb.pdf" },
-];
-
-const SEED_ISSUES: TopIssue[] = [
-  { id: 1, period: "Juli 2026 : Tanggal 14-18", issue: "Keluhan Debu Jalan Hauling", description: "Warga Desa Ciawi mengeluhkan debu berlebih dari jalan hauling yang mengganggu aktivitas sehari-hari dan kesehatan anak-anak sekolah.", followUp: "Koordinasi dengan tim operasional untuk penyiraman jalan 2x sehari", mainDoc: "https://sharepoint/docs/issue_debu.pdf", supportDoc: null, nextPlan: "Evaluasi frekuensi penyiraman dan tambah water sprayer" },
-  { id: 2, period: "Juli 2026 : Tanggal 7-11", issue: "Permintaan Beasiswa Warga", description: "Beberapa keluarga sekitar perusahaan mengajukan permohonan beasiswa pendidikan tinggi untuk anak-anak mereka.", followUp: "Verifikasi data penerima manfaat, koordinasi dengan HR untuk kuota CSR", mainDoc: "https://sharepoint/docs/issue_beasiswa.pdf", supportDoc: "https://sharepoint/docs/issue_beasiswa_lampiran.xlsx", nextPlan: "Pengumuman penerima beasiswa minggu ke-3 Agustus 2026" },
-  { id: 3, period: "Juni 2026 : Tanggal 22-26", issue: "Kerusakan Jalan Akses Desa Cibadak", description: "Jalan utama akses desa rusak parah akibat lalu-lintas kendaraan berat proyek.", followUp: "Survey kondisi jalan dilakukan bersama tim sipil perusahaan", mainDoc: null, supportDoc: null, nextPlan: "Perbaikan dijadwalkan Agustus 2026 setelah anggaran disetujui" },
-];
-
-const SEED_PROPOSALS: Proposal[] = [
-  { id: 1, regNo: "PRP-2026-0021", dateReceived: "2026-07-20", institution: "Karang Taruna Desa Leuwisadeng", address: "Jl. Raya Leuwisadeng No. 12, Bogor", proposalDescription: "Pengajuan bantuan peralatan olahraga dan renovasi lapangan voli", proposalFile: "https://sharepoint/proposals/PRP-2026-0021.pdf", assessmentFile: null, status: "Under Review" },
-  { id: 2, regNo: "PRP-2026-0020", dateReceived: "2026-07-15", institution: "Pesantren Al-Hidayah Cibadak", address: "Kp. Cibadak RT 02/04, Bogor", proposalDescription: "Permohonan bantuan sarana pembelajaran dan perpustakaan mini", proposalFile: "https://sharepoint/proposals/PRP-2026-0020.pdf", assessmentFile: "https://sharepoint/assessment/PRP-2026-0020.pdf", status: "Approved" },
-  { id: 3, regNo: "PRP-2026-0019", dateReceived: "2026-07-08", institution: "Kelompok Tani Maju Bersama", address: "Desa Ciasmara, Kec. Pamijahan, Bogor", proposalDescription: "Bantuan bibit unggul dan pupuk organik untuk 40 KK petani sekitar perusahaan", proposalFile: "https://sharepoint/proposals/PRP-2026-0019.pdf", assessmentFile: "https://sharepoint/assessment/PRP-2026-0019.pdf", status: "Declined" },
-  { id: 4, regNo: "PRP-2026-0018", dateReceived: "2026-06-30", institution: "Posyandu Melati Desa Ciawi", address: "RT 04/03, Desa Ciawi, Kec. Ciawi", proposalDescription: "Pengadaan peralatan posyandu dan suplemen gizi balita", proposalFile: "https://sharepoint/proposals/PRP-2026-0018.pdf", assessmentFile: "https://sharepoint/assessment/PRP-2026-0018.pdf", status: "Approved" },
-];
-
-const SEED_CSR: CsrProject[] = [
-  { id: 1, year: 2026, program: "Program Air Bersih Komunitas", activity: "Pembangunan sumur bor & instalasi perpipaan", type: "Infrastruktur", location: "3 Desa Kec. Leuwisadeng", target: "1.200 KK", objective: "Menyediakan akses air bersih layak bagi warga sekitar operasional perusahaan", status: "On Going", budget: 285000000, period: "Jan – Sep 2026", docs: "https://sharepoint/csr/air_bersih_2026.pdf" },
-  { id: 2, year: 2026, program: "Beasiswa Pendidikan CRS 2026", activity: "Seleksi & penyaluran beasiswa S1/D3", type: "Pendidikan", location: "Kab. Bogor", target: "25 mahasiswa", objective: "Mendukung pendidikan tinggi anak-anak keluarga prasejahtera sekitar perusahaan", status: "On Going", budget: 125000000, period: "Feb – Des 2026", docs: "https://sharepoint/csr/beasiswa_2026.pdf" },
-  { id: 3, year: 2026, program: "Pelatihan UMKM Berbasis Digital", activity: "Workshop e-commerce & digital marketing", type: "Ekonomi", location: "Kantor CRS", target: "60 pelaku UMKM", objective: "Meningkatkan kapasitas usaha mikro warga melalui adopsi platform digital", status: "Completed", budget: 78000000, period: "Mar – Mei 2026", docs: "https://sharepoint/csr/umkm_digital_2026.pdf" },
-  { id: 4, year: 2026, program: "Perbaikan Infrastruktur Jalan Desa", activity: "Pengaspalan & drainase jalan desa", type: "Infrastruktur", location: "Desa Cibadak & Ciasmara", target: "2 desa, ±3.500 warga", objective: "Memperbaiki akses jalan desa yang rusak akibat lalu-lintas operasional", status: "Planning", budget: 420000000, period: "Agt – Nov 2026", docs: null },
-];
-
-const SEED_GRIEVANCES: Grievance[] = [
-  { id: 1, regNo: "GRV-2026-0008", logDate: "2026-07-22", name: "Bapak Suherman", address: "Kp. Cibeureum RT 03/02, Desa Ciawi", phone: "0812-4567-8901", category: "Lingkungan", significance: "High", description: "Getaran akibat aktivitas blasting berdampak pada retakan dinding rumah warga", location: "Desa Ciawi — Area perumahan dekat pit barat", investigation: "Tim HSE melakukan pengukuran ground vibration dan inspeksi visual rumah pada 23 Juli 2026", resolution: null, feedback: null, status: "On Progress", completionDate: null, supportFile: "https://sharepoint/grievance/GRV-2026-0008.pdf" },
-  { id: 2, regNo: "GRV-2026-0007", logDate: "2026-07-10", name: "Ibu Ratna Dewi", address: "Jl. Merdeka No. 5, Desa Cibadak", phone: "0856-2345-6789", category: "Kebisingan", significance: "Medium", description: "Kebisingan dari genset operasional malam hari mengganggu istirahat warga", location: "Area pemukiman sekitar genset auxiliary", investigation: "Pengukuran kebisingan dilakukan pukul 22.00-23.00, hasil 68 dB (ambang 55 dB malam)", resolution: "Pemasangan peredam suara tambahan pada genset, relokasi jadwal maintenance ke siang hari", feedback: "Warga menyatakan kebisingan sudah berkurang signifikan", status: "Resolved", completionDate: "2026-07-20", supportFile: null },
-  { id: 3, regNo: "GRV-2026-0006", logDate: "2026-06-18", name: "Kelompok Nelayan Danau Ciawi", address: "Kp. Nelayan, Desa Ciawi", phone: "0821-9876-5432", category: "Mata Pencaharian", significance: "High", description: "Penurunan hasil tangkapan ikan akibat sedimentasi danau yang diduga berasal dari aktivitas proyek", location: "Danau Ciawi, area selatan", investigation: "Pengambilan sampel air dan sedimen oleh tim lingkungan pada 20 Juni 2026", resolution: "Koordinasi dengan tim proyek untuk pemasangan sediment trap di outlet drainase area proyek", feedback: null, status: "On Progress", completionDate: null, supportFile: "https://sharepoint/grievance/GRV-2026-0006.pdf" },
-  { id: 4, regNo: "GRV-2026-0005", logDate: "2026-05-30", name: "Ibu Sari Dewi", address: "Jl. Raya Ciawi No. 45, Bogor", phone: "0878-1122-3344", category: "Debu", significance: "Low", description: "Debu dari truk material mengotori jemuran dan rumah warga di sepanjang jalan utama", location: "Jl. Raya Ciawi km 3-5", investigation: "Observasi lapangan dan wawancara 5 warga terdampak", resolution: "Penyiraman jalan oleh water truck 3x sehari dan pemasangan terpal penutup muatan truk", feedback: "Warga puas dengan respons cepat perusahaan", status: "Resolved", completionDate: "2026-06-10", supportFile: null },
-];
-
-const SEED_LRP: LrpProgram[] = [
-  { id: 1, program: "Pemulihan Lahan Pertanian Terdampak — Desa Ciasmara", link: "https://sharepoint/lrp/pemulihan_lahan_ciasmara/" },
-  { id: 2, program: "Bantuan Modal Usaha Nelayan Danau Ciawi 2025–2026", link: "https://sharepoint/lrp/bantuan_modal_nelayan_ciawi/" },
-  { id: 3, program: "Peternakan Kambing Komunal Desa Leuwisadeng", link: "https://sharepoint/lrp/ternak_kambing_leuwisadeng/" },
-  { id: 4, program: "Pelatihan Budidaya Ikan Air Tawar — Komunitas Ciawi", link: "https://sharepoint/lrp/budidaya_ikan_ciawi/" },
-];
 
 const SEED_SYNC: SyncLog[] = [
   { id: 1, syncedAt: "2026-07-24 14:32:15", status: "SUCCESS" },
   { id: 2, syncedAt: "2026-07-21 09:15:44", status: "SUCCESS" },
   { id: 3, syncedAt: "2026-07-18 16:08:22", status: "FAILED" },
 ];
-
-const PIC_LIST = ["Ziya Ramadhani", "Adji Pratama", "Ziya & Adji", "Fadhil Akbar", "Nisa Rahayu"];
-const SUB_CATS = ["Donasi","Internal Meeting","Issue","Issue & Grievance","Kehumasan","Project CSR","Security","Support Project","Data Processing (Olah Data)"];
-const CHART_COLORS = ["#1D4ED8","#0EA5E9","#10B981","#F59E0B","#8B5CF6","#EF4444","#64748B","#EC4899","#14B8A6"];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const formatIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
-const formatDate = (d: string) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-const nextId = (arr: { id: number }[]) => arr.length > 0 ? Math.max(...arr.map(x => x.id)) + 1 : 1;
-
-function useSearch<T>(items: T[], keys: (keyof T)[]) {
-  const [q, setQ] = useState("");
-  const filtered = useMemo(() =>
-    q.trim() === "" ? items : items.filter(item => keys.some(k => String(item[k]).toLowerCase().includes(q.toLowerCase()))),
-    [items, q]);
-  return { q, setQ, filtered };
-}
-
-// ─── Shared UI ────────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    "On Going":"bg-blue-100 text-blue-700", Planning:"bg-slate-100 text-slate-600", Completed:"bg-emerald-100 text-emerald-700",
-    Cancelled:"bg-red-100 text-red-600", Approved:"bg-emerald-100 text-emerald-700", "Under Review":"bg-amber-100 text-amber-700",
-    Declined:"bg-red-100 text-red-600", Open:"bg-orange-100 text-orange-700", "On Progress":"bg-blue-100 text-blue-700",
-    Resolved:"bg-emerald-100 text-emerald-700", Closed:"bg-slate-100 text-slate-500", SUCCESS:"bg-emerald-100 text-emerald-700", FAILED:"bg-red-100 text-red-600",
-  };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
-}
-
-function SignificanceBadge({ level }: { level: string }) {
-  const map: Record<string, string> = { Low:"bg-slate-100 text-slate-500", Medium:"bg-amber-100 text-amber-700", High:"bg-orange-100 text-orange-700", Critical:"bg-red-100 text-red-700" };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[level] ?? ""}`}>{level}</span>;
-}
-
-const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
-
-function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
-      {children}
-      {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
-    </div>
-  );
-}
-
-function Modal({ title, onClose, children, size = "md" }: { title: string; onClose: () => void; children: React.ReactNode; size?: "md" | "lg" }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
-      <div className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`} onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={15} /></button>
-        </div>
-        <div className="overflow-y-auto flex-1">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalFooter({ onClose, onSave, saveLabel = "Simpan", isEdit }: { onClose: () => void; onSave: () => void; saveLabel?: string; isEdit?: boolean }) {
-  return (
-    <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
-      <button onClick={onClose} className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-      <button onClick={onSave} className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${isEdit ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-blue-700"}`}>
-        {isEdit ? <Edit2 size={13} /> : <Check size={13} />}{saveLabel}
-      </button>
-    </div>
-  );
-}
-
-function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel: () => void; onConfirm: () => void }) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={onCancel}>
-      <div className="bg-card rounded-xl border border-border shadow-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0"><Trash2 size={15} className="text-red-500" /></div>
-          <div>
-            <div className="text-sm font-semibold text-foreground">Hapus data?</div>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">"<span className="font-medium text-foreground">{label}</span>" akan dihapus (soft delete) dan tidak muncul di daftar.</p>
-          </div>
-        </div>
-        <div className="flex gap-2 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1.5"><Trash2 size={12} />Hapus</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
@@ -185,6 +40,7 @@ const NAV_ITEMS = [
   { id: "csr" as Module, label: "CSR Projects", icon: <Leaf size={16} /> },
   { id: "grievance" as Module, label: "Grievance", icon: <MessageSquareWarning size={16} /> },
   { id: "lrp" as Module, label: "LRP", icon: <TreePine size={16} /> },
+  { id: "archive" as Module, label: "Pengaturan Arsip", icon: <Archive size={16} /> },
 ];
 
 function Sidebar({ active, onNav, counts, unsyncedCount, onSync }: {
@@ -237,197 +93,6 @@ function Sidebar({ active, onNav, counts, unsyncedCount, onSync }: {
     </aside>
   );
 }
-
-// ─── Top Bar ──────────────────────────────────────────────────────────────────
-
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children }: {
-  title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
-  showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
-  onExport?: () => void; children?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
-      <div className="shrink-0">
-        <h1 className="text-base font-semibold text-foreground">{title}</h1>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5 font-mono">{subtitle}</p>}
-      </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        {children}
-        {showSearch && (
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari…"
-              className="pl-8 pr-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring w-44 placeholder:text-muted-foreground" />
-          </div>
-        )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
-      </div>
-    </div>
-  );
-}
-
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-
-function Dashboard({ onNav, daily, stakeholders, issues, proposals, csr, grievances, syncHistory }: {
-  onNav: (m: Module) => void; daily: DailyActivity[]; stakeholders: Stakeholder[]; issues: TopIssue[];
-  proposals: Proposal[]; csr: CsrProject[]; grievances: Grievance[]; syncHistory: SyncLog[];
-}) {
-  const stats = [
-    { label: "Daily Activities", value: daily.length, sub: "kegiatan tercatat", icon: <Calendar size={16} />, color: "text-blue-600", bg: "bg-blue-50", module: "daily" as Module },
-    { label: "Stakeholder Meetings", value: stakeholders.length, sub: "pertemuan", icon: <Users size={16} />, color: "text-violet-600", bg: "bg-violet-50", module: "stakeholder" as Module },
-    { label: "Active Issues", value: issues.length, sub: "isu dipantau", icon: <AlertTriangle size={16} />, color: "text-amber-600", bg: "bg-amber-50", module: "topissues" as Module },
-    { label: "Proposals", value: proposals.length, sub: `${proposals.filter(p => p.status === "Under Review").length} menunggu review`, icon: <FileText size={16} />, color: "text-teal-600", bg: "bg-teal-50", module: "proposals" as Module },
-    { label: "CSR Projects", value: csr.length, sub: `${csr.filter(c => c.status === "On Going").length} sedang berjalan`, icon: <Leaf size={16} />, color: "text-emerald-600", bg: "bg-emerald-50", module: "csr" as Module },
-    { label: "Grievance", value: grievances.length, sub: `${grievances.filter(g => g.status === "On Progress" || g.status === "Open").length} dalam proses`, icon: <MessageSquareWarning size={16} />, color: "text-red-600", bg: "bg-red-50", module: "grievance" as Module },
-  ];
-  const catData = useMemo(() => {
-    const c: Record<string, number> = {};
-    daily.forEach(d => { const subName = d.sub_category?.name || String(d.sub_category_id); c[subName] = (c[subName] || 0) + 1; });
-    return Object.entries(c).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [daily]);
-  const pieData = useMemo(() => [
-    { name: "Under Review", value: proposals.filter(p => p.status === "Under Review").length, color: "#F59E0B" },
-    { name: "Approved", value: proposals.filter(p => p.status === "Approved").length, color: "#10B981" },
-    { name: "Declined", value: proposals.filter(p => p.status === "Declined").length, color: "#EF4444" },
-  ].filter(d => d.value > 0), [proposals]);
-  const openHigh = grievances.filter(g => (g.significance === "High" || g.significance === "Critical") && g.status !== "Resolved" && g.status !== "Closed");
-  const lastSync = syncHistory.find(s => s.status === "SUCCESS");
-
-  return (
-    <div className="flex-1 overflow-y-auto bg-background p-6 space-y-5">
-      <div className="grid grid-cols-3 gap-4">
-        {stats.map(s => (
-          <button key={s.label} onClick={() => onNav(s.module)} className="bg-card rounded-xl p-4 border border-border text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color}`}>{s.icon}</div>
-              <ArrowUpRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="text-2xl font-semibold text-foreground font-mono">{s.value}</div>
-            <div className="text-xs font-medium text-foreground mt-0.5">{s.label}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">{s.sub}</div>
-          </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-card rounded-xl border border-border">
-          <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2"><BarChart2 size={14} className="text-muted-foreground" /><h2 className="text-sm font-semibold">Aktivitas per Sub Category</h2></div>
-            <button onClick={() => onNav("daily")} className="text-xs text-blue-600 hover:underline flex items-center gap-1">Lihat semua <ChevronRight size={12} /></button>
-          </div>
-          <div className="p-4" style={{ height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={catData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 9, fontFamily: "DM Mono, monospace" }} interval={0} />
-                <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {catData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="col-span-2 space-y-4">
-          <div className="bg-card rounded-xl border border-border">
-            <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Status Proposals</h2>
-              <button onClick={() => onNav("proposals")} className="text-xs text-blue-600 hover:underline flex items-center gap-1">Detail <ChevronRight size={12} /></button>
-            </div>
-            <div style={{ height: 140 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={pieData} cx="42%" cy="50%" innerRadius={36} outerRadius={54} dataKey="value" paddingAngle={2}>
-                    {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                  </Pie>
-                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div className="bg-card rounded-xl border border-border">
-            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Sync Log</h2>
-              <Wifi size={12} className="text-emerald-500" />
-            </div>
-            <div className="px-5 py-3 space-y-2">
-              {syncHistory.slice(0, 3).map(s => (
-                <div key={s.id} className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-muted-foreground">{s.syncedAt}</span>
-                  <StatusBadge status={s.status} />
-                </div>
-              ))}
-            </div>
-            {lastSync && <div className="px-5 pb-3 text-[10px] text-muted-foreground font-mono">Terakhir berhasil: {lastSync.syncedAt}</div>}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-card rounded-xl border border-border">
-          <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Kegiatan Terbaru</h2>
-            <button onClick={() => onNav("daily")} className="text-xs text-blue-600 hover:underline flex items-center gap-1">Lihat semua <ChevronRight size={12} /></button>
-          </div>
-          <div className="divide-y divide-border">
-            {daily.slice(0, 5).map(a => (
-              <div key={a.id} className="px-5 py-3 flex items-start gap-3 hover:bg-muted/50 transition-colors">
-                <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0 mt-0.5"><Calendar size={13} className="text-blue-600" /></div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground truncate">{a.activity}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 font-mono">{formatDate(a.activity_date)} · {a.pic?.name || String(a.pic_id)}</div>
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-500 rounded shrink-0">{a.sub_category?.name || String(a.sub_category_id)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="col-span-2 space-y-3">
-          {openHigh.length > 0 ? openHigh.slice(0, 2).map(g => (
-            <div key={g.id} className="bg-red-50 border border-red-100 rounded-xl p-4">
-              <div className="flex items-start gap-2.5">
-                <MessageSquareWarning size={15} className="text-red-500 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5"><span className="text-xs font-mono text-red-600 font-semibold">{g.regNo}</span><SignificanceBadge level={g.significance} /></div>
-                  <div className="text-sm font-semibold text-red-700 truncate">{g.name}</div>
-                  <div className="text-xs text-red-500 mt-0.5 line-clamp-2 leading-relaxed">{g.description}</div>
-                  <button onClick={() => onNav("grievance")} className="mt-2 text-xs text-red-600 font-medium hover:underline flex items-center gap-1">Tinjau <ChevronRight size={11} /></button>
-                </div>
-              </div>
-            </div>
-          )) : (
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center gap-3">
-              <Check size={16} className="text-emerald-500 shrink-0" />
-              <div><div className="text-sm font-semibold text-emerald-700">Tidak ada grievance prioritas tinggi</div><div className="text-xs text-emerald-600 mt-0.5">Semua isu aktif berstatus rendah.</div></div>
-            </div>
-          )}
-          <div className="bg-card border border-border rounded-xl p-4 space-y-2.5">
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide font-mono">CSR Budget (On Going)</div>
-            {csr.filter(c => c.status === "On Going").map(c => (
-              <div key={c.id}>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-foreground truncate max-w-[140px]">{c.program}</span>
-                  <span className="font-mono text-muted-foreground shrink-0 ml-2">{formatIDR(c.budget)}</span>
-                </div>
-                <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, (c.budget / 500000000) * 100)}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Daily Activities ─────────────────────────────────────────────────────────
-
-// DailyActivitiesModule is extracted to features/daily-activities/DailyActivitiesModule.tsx
 
 // ─── Sync Modal ───────────────────────────────────────────────────────────────
 
@@ -485,7 +150,7 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
               <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} /></div>
             </div>
             <div className="space-y-1.5">
-              {SHEETS.map((s, i) => {
+              {SHEETS.map((s) => {
                 const done = progress === 100;
                 const active = progress > 0 && progress < 100;
                 return (
@@ -534,9 +199,11 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
 
 export default function App() {
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
+  const [activeYear, setActiveYear] = useState<string>("2026");
   const [showSync, setShowSync] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
-  const [syncHistory, setSyncHistory] = useState<SyncLog[]>(SEED_SYNC);
+  const [_syncHistory, setSyncHistory] = useState<SyncLog[]>(SEED_SYNC);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 
   const fetchSyncStatus = useCallback(() => {
     apiClient.get('/sync/status').then(res => {
@@ -562,33 +229,11 @@ export default function App() {
     fetchSyncStatus();
   }, [fetchSyncStatus]);
 
-  const [daily, setDaily] = useState<DailyActivity[]>([]);
-  const [stakeholders, setStakeholders] = useState<Stakeholder[]>([]);
-  const [issues, setIssues] = useState<TopIssue[]>([]);
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [csr, setCsr] = useState<CsrProject[]>([]);
-  const [grievances, setGrievances] = useState<Grievance[]>([]);
-  const [lrp, setLrp] = useState<LrpProgram[]>([]);
-
   useEffect(() => {
     if (activeModule === "dashboard") {
-      Promise.all([
-        apiClient.get('/daily-activities').catch(() => ({ data: { data: [] } })),
-        apiClient.get('/stakeholders').catch(() => ({ data: { data: [] } })),
-        apiClient.get('/top-issues').catch(() => ({ data: { data: [] } })),
-        apiClient.get('/proposals').catch(() => ({ data: { data: [] } })),
-        apiClient.get('/csr-projects').catch(() => ({ data: { data: [] } })),
-        apiClient.get('/grievance').catch(() => ({ data: { data: [] } })),
-        apiClient.get('/lrp').catch(() => ({ data: { data: [] } }))
-      ]).then(([d, s, i, p, c, g, l]) => {
-        setDaily(d.data.data || []);
-        setStakeholders(s.data.data || []);
-        setIssues(i.data.data || []);
-        setProposals(p.data.data || []);
-        setCsr(c.data.data || []);
-        setGrievances(g.data.data || []);
-        setLrp(l.data.data || []);
-      });
+      apiClient.get('/dashboard/stats')
+        .then(res => setDashboardStats(res.data.data))
+        .catch(err => console.error("Failed to load dashboard stats", err));
     }
   }, [activeModule]);
 
@@ -617,41 +262,50 @@ export default function App() {
     }
   }, [showToast]);
 
-  function makeAdder<T extends { id: number }>(setter: React.Dispatch<React.SetStateAction<T[]>>, arr: T[], label: string) {
-    return (data: Omit<T, "id">) => {
-      setter(prev => [{ ...data, id: nextId(prev) } as T, ...prev]);
-      setUnsyncedCount(c => c + 1);
-      showToast(`${label} berhasil ditambahkan`);
-    };
-  }
-
-  function makeEditor<T extends { id: number }>(setter: React.Dispatch<React.SetStateAction<T[]>>, label: string) {
-    return (id: number, data: Omit<T, "id">) => {
-      setter(prev => prev.map(x => x.id === id ? { ...data, id } as T : x));
-      setUnsyncedCount(c => c + 1);
-      showToast(`${label} berhasil diperbarui`);
-    };
-  }
-
-  function makeDeleter<T extends { id: number }>(setter: React.Dispatch<React.SetStateAction<T[]>>) {
-    return (id: number) => {
-      setter(prev => prev.filter(x => x.id !== id));
-      setUnsyncedCount(c => c + 1);
-      showToast("Data berhasil dihapus");
-    };
-  }
-
   const handleSyncSuccess = useCallback(() => {
     fetchSyncStatus();
   }, [fetchSyncStatus]);
 
-  const counts = { daily: daily.length, stakeholder: stakeholders.length, topissues: issues.length, proposals: proposals.length, csr: csr.length, grievance: grievances.length, lrp: lrp.length };
+  const counts = dashboardStats?.totals ? {
+    daily: dashboardStats.totals.daily,
+    stakeholder: dashboardStats.totals.stakeholder,
+    topissues: dashboardStats.totals.issues,
+    proposals: dashboardStats.totals.proposals,
+    csr: dashboardStats.totals.csr,
+    grievance: dashboardStats.totals.grievance,
+    lrp: dashboardStats.totals.lrp,
+  } : { daily: 0, stakeholder: 0, topissues: 0, proposals: 0, csr: 0, grievance: 0, lrp: 0 };
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <Sidebar active={activeModule} onNav={setActiveModule} counts={counts} unsyncedCount={unsyncedCount} onSync={() => setShowSync(true)} />
       <main className="flex-1 flex flex-col overflow-hidden">
-        {activeModule === "dashboard" && <Dashboard onNav={setActiveModule} daily={daily} stakeholders={stakeholders} issues={issues} proposals={proposals} csr={csr} grievances={grievances} syncHistory={syncHistory} />}
+        <header className="px-6 py-2 bg-card border-b border-border flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-foreground uppercase tracking-wider font-mono">
+              CRMS {NAV_ITEMS.find((n) => n.id === activeModule)?.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <label htmlFor="header-year-select" className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+              <Calendar size={13} />
+              Tahun:
+            </label>
+            <select
+              id="header-year-select"
+              value={activeYear}
+              onChange={(e) => setActiveYear(e.target.value)}
+              className="px-2.5 py-1 text-xs bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring font-mono font-semibold text-foreground"
+            >
+              <option value="">Semua</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026">2026</option>
+            </select>
+          </div>
+        </header>
+
+        {activeModule === "dashboard" && <DashboardModule stats={dashboardStats} onNav={setActiveModule} />}
         {activeModule === "daily" && <DailyActivitiesModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "stakeholder" && <StakeholdersModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "topissues" && <TopIssuesModule onExport={handleExport} showToast={showToast} />}
@@ -659,12 +313,10 @@ export default function App() {
         {activeModule === "csr" && <CsrProjectsModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "grievance" && <GrievanceModule onExport={handleExport} showToast={showToast} />}
         {activeModule === "lrp" && <LrpModule onExport={handleExport} showToast={showToast} />}
+        {activeModule === "archive" && <ArchiveSettings />}
       </main>
       {showSync && <SyncModal onClose={() => setShowSync(false)} totalUnsynced={unsyncedCount} onSuccess={handleSyncSuccess} />}
       <Toaster richColors position="bottom-right" />
     </div>
   );
 }
-
-
-

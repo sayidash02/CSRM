@@ -95,7 +95,7 @@ export function DateRangeFilter({ value, onChange }: Props) {
         <div 
           role="dialog"
           aria-label="Filter Rentang Tanggal"
-          className="absolute right-0 top-full mt-1 w-72 bg-white border border-border rounded-md shadow-lg z-50 p-3"
+          className="absolute left-0 top-full mt-1 w-72 bg-white border border-border rounded-md shadow-lg z-50 p-3"
         >
           <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
             <button type="button" onClick={() => setPreset(0)} className="px-2 py-1 text-xs bg-muted border border-border rounded hover:bg-blue-50 text-foreground">Hari Ini</button>
