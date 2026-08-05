@@ -180,17 +180,18 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
   );
 }
 
-export default function ProposalsModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function ProposalsModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Proposal[]>([]);
   const [addDraft, setAddDraft] = useState({ ...emptyProposalDraft });
   
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeYear]);
 
   const fetchData = async () => {
     try {
-      const res = await apiClient.get('/proposals');
+      const yearParam = activeYear ? `?year=${activeYear}` : '';
+      const res = await apiClient.get(`/proposals${yearParam}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);

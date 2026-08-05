@@ -163,7 +163,7 @@ function StakeholderForm({
   );
 }
 
-export default function StakeholdersModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function StakeholdersModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Stakeholder[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDraft, setAddDraft] = useState({ ...emptyStakeholderDraft });
@@ -171,7 +171,8 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.get('/stakeholders');
+      const yearParam = activeYear ? `?year=${activeYear}` : '';
+      const res = await apiClient.get(`/stakeholders${yearParam}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);
@@ -182,7 +183,7 @@ export default function StakeholdersModule({ onExport, showToast }: { onExport: 
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeYear]);
 
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [showForm, setShowForm] = useState(false);

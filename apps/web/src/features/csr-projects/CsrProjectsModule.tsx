@@ -227,17 +227,18 @@ function CsrForm({
   );
 }
 
-export default function CsrProjectsModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function CsrProjectsModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<CsrProject[]>([]);
   const [addDraft, setAddDraft] = useState({ ...emptyCsrDraft });
   
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeYear]);
 
   const fetchData = async () => {
     try {
-      const res = await apiClient.get('/csr-projects');
+      const yearParam = activeYear ? `?year=${activeYear}` : '';
+      const res = await apiClient.get(`/csr-projects${yearParam}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);

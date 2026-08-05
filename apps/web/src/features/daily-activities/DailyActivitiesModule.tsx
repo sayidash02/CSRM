@@ -215,7 +215,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
   );
 }
 
-export default function DailyActivitiesModule({ onExport, showToast }: { onExport: (l: string, payload?: any) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function DailyActivitiesModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, payload?: any) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<DailyActivity[]>([]);
   const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   const [addDraft, setAddDraft] = useState({ ...emptyDailyDraft });
@@ -223,7 +223,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
   useEffect(() => {
     fetchData();
     fetchReferences();
-  }, []);
+  }, [activeYear]);
 
   const fetchReferences = async () => {
     try {
@@ -236,7 +236,8 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
 
   const fetchData = async () => {
     try {
-      const res = await apiClient.get('/daily-activities');
+      const yearParam = activeYear ? `?year=${activeYear}` : '';
+      const res = await apiClient.get(`/daily-activities${yearParam}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);

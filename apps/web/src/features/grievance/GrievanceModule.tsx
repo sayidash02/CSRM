@@ -214,16 +214,17 @@ function GrievanceForm({
   );
 }
 
-export default function GrievanceModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function GrievanceModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Grievance[]>([]);
   
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeYear]);
 
   const fetchData = async () => {
     try {
-      const res = await apiClient.get('/grievance');
+      const yearParam = activeYear ? `?year=${activeYear}` : '';
+      const res = await apiClient.get(`/grievance${yearParam}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);

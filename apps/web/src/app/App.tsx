@@ -99,7 +99,7 @@ function Sidebar({ active, onNav, counts, unsyncedCount, onSync }: {
 type SyncState = "confirm" | "loading" | "success" | "error";
 const SHEETS = ["Daily Activities","Stakeholder Engagement","Top Issues","Proposals","CSR Projects","Grievance","LRP"];
 
-function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void; totalUnsynced: number; onSuccess: () => void }) {
+function SyncModal({ onClose, totalUnsynced, onSuccess, activeYear }: { onClose: () => void; totalUnsynced: number; onSuccess: () => void; activeYear: string }) {
   const [state, setState] = useState<SyncState>("confirm");
   const [progress, setProgress] = useState(0);
 
@@ -108,7 +108,8 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
     setProgress(10);
     const interval = setInterval(() => setProgress(p => Math.min(p + 10, 90)), 500);
     try {
-      await apiClient.post('/sync');
+      const year = parseInt(activeYear) || new Date().getFullYear();
+      await apiClient.post('/sync', { year });
       clearInterval(interval);
       setProgress(100);
       setTimeout(() => { setState("success"); onSuccess(); }, 500);
@@ -116,7 +117,7 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
       clearInterval(interval);
       setState("error");
     }
-  }, [onSuccess]);
+  }, [onSuccess, activeYear]);
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={state === "loading" ? undefined : onClose}>
@@ -199,14 +200,17 @@ function SyncModal({ onClose, totalUnsynced, onSuccess }: { onClose: () => void;
 
 export default function App() {
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
-  const [activeYear, setActiveYear] = useState<string>("2026");
+  const [activeYear, setActiveYear] = useState<string>(
+    () => localStorage.getItem('crms_active_year') ?? String(new Date().getFullYear())
+  );
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [showSync, setShowSync] = useState(false);
   const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [_syncHistory, setSyncHistory] = useState<SyncLog[]>(SEED_SYNC);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
 
   const fetchSyncStatus = useCallback(() => {
-    apiClient.get('/sync/status').then(res => {
+    apiClient.get(`/sync/status?year=${activeYear}`).then(res => {
       setUnsyncedCount(res.data.data.unsynced_count);
       if (res.data.data.last_sync) {
         setSyncHistory(prev => {
@@ -223,11 +227,23 @@ export default function App() {
       console.error(err);
       toast.error("Gagal memuat status sinkronisasi");
     });
-  }, []);
+  }, [activeYear]);
 
   useEffect(() => {
     fetchSyncStatus();
   }, [fetchSyncStatus]);
+
+  // Fetch available years from API
+  useEffect(() => {
+    apiClient.get('/years/available')
+      .then(res => setAvailableYears(res.data.data))
+      .catch(() => setAvailableYears([new Date().getFullYear()]));
+  }, []);
+
+  // Re-fetch sync status when active year changes
+  useEffect(() => {
+    fetchSyncStatus();
+  }, [activeYear, fetchSyncStatus]);
 
   useEffect(() => {
     if (activeModule === "dashboard") {
@@ -294,28 +310,32 @@ export default function App() {
             <select
               id="header-year-select"
               value={activeYear}
-              onChange={(e) => setActiveYear(e.target.value)}
+              onChange={(e) => {
+                const y = e.target.value;
+                setActiveYear(y);
+                localStorage.setItem('crms_active_year', y);
+              }}
               className="px-2.5 py-1 text-xs bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring font-mono font-semibold text-foreground"
             >
               <option value="">Semua</option>
-              <option value="2024">2024</option>
-              <option value="2025">2025</option>
-              <option value="2026">2026</option>
+              {availableYears.map(y => (
+                <option key={y} value={String(y)}>{y}</option>
+              ))}
             </select>
           </div>
         </header>
 
         {activeModule === "dashboard" && <DashboardModule stats={dashboardStats} onNav={setActiveModule} />}
-        {activeModule === "daily" && <DailyActivitiesModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "stakeholder" && <StakeholdersModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "topissues" && <TopIssuesModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "proposals" && <ProposalsModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "csr" && <CsrProjectsModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "grievance" && <GrievanceModule onExport={handleExport} showToast={showToast} />}
-        {activeModule === "lrp" && <LrpModule onExport={handleExport} showToast={showToast} />}
+        {activeModule === "daily" && <DailyActivitiesModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
+        {activeModule === "stakeholder" && <StakeholdersModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
+        {activeModule === "topissues" && <TopIssuesModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
+        {activeModule === "proposals" && <ProposalsModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
+        {activeModule === "csr" && <CsrProjectsModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
+        {activeModule === "grievance" && <GrievanceModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
+        {activeModule === "lrp" && <LrpModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
         {activeModule === "archive" && <ArchiveSettings />}
       </main>
-      {showSync && <SyncModal onClose={() => setShowSync(false)} totalUnsynced={unsyncedCount} onSuccess={handleSyncSuccess} />}
+      {showSync && <SyncModal onClose={() => setShowSync(false)} totalUnsynced={unsyncedCount} onSuccess={handleSyncSuccess} activeYear={activeYear} />}
       <Toaster richColors position="bottom-right" />
     </div>
   );

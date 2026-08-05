@@ -141,7 +141,7 @@ function LrpForm({
   );
 }
 
-export default function LrpModule({ onExport, showToast }: { onExport?: (l: string, data: any[]) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function LrpModule({ activeYear, onExport, showToast }: { activeYear: string; onExport?: (l: string, data: any[]) => void; showToast?: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<LrpProgram[]>([]);
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [showForm, setShowForm] = useState(false);
@@ -151,19 +151,21 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
 
   const fetchData = async () => {
     try {
-      const res = await apiClient.get('/lrp');
+      const yearParam = activeYear ? `?year=${activeYear}` : '';
+      const res = await apiClient.get(`/lrp${yearParam}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [activeYear]);
 
   const onAdd = async (d: Omit<LrpProgram, "id">) => {
     try {
-      const res = await apiClient.post('/lrp', d);
-      setItems([...items, res.data.data]);
+      const year = parseInt(activeYear) || new Date().getFullYear();
+      await apiClient.post('/lrp', { ...d, year });
+      fetchData();
       showToast?.(`Program LRP '${d.program}' berhasil ditambahkan`, "success");
     } catch (e) {
       console.error(e);
@@ -173,7 +175,8 @@ export default function LrpModule({ onExport, showToast }: { onExport?: (l: stri
 
   const onEdit = async (id: string | number, d: Omit<LrpProgram, "id">) => {
     try {
-      const res = await apiClient.put(`/lrp/${id}`, d);
+      const year = parseInt(activeYear) || new Date().getFullYear();
+      const res = await apiClient.put(`/lrp/${id}`, { ...d, year });
       setItems(items.map(i => i.id === id ? res.data.data : i));
       showToast?.(`Program LRP '${d.program}' berhasil diperbarui`, "success");
     } catch (e) {

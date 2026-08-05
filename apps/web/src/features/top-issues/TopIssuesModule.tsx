@@ -179,16 +179,17 @@ function TopIssueForm({
   );
 }
 
-export default function TopIssuesModule({ onExport, showToast }: { onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function TopIssuesModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<TopIssue[]>([]);
   
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeYear]);
 
   const fetchData = async () => {
     try {
-      const res = await apiClient.get('/top-issues');
+      const yearParam = activeYear ? `?year=${activeYear}` : '';
+      const res = await apiClient.get(`/top-issues${yearParam}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);
@@ -197,7 +198,8 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
 
   const handleAdd = async (d: Omit<TopIssue, "id">) => {
     try {
-      await apiClient.post('/top-issues', d);
+      const year = parseInt(activeYear) || new Date().getFullYear();
+      await apiClient.post('/top-issues', { ...d, year });
       fetchData();
       showToast(`Isu '${d.issue}' berhasil ditambahkan`, "success");
     } catch (e) {
@@ -208,7 +210,8 @@ export default function TopIssuesModule({ onExport, showToast }: { onExport: (l:
 
   const handleEdit = async (id: string | number, d: Omit<TopIssue, "id">) => {
     try {
-      await apiClient.put(`/top-issues/${id}`, d);
+      const year = parseInt(activeYear) || new Date().getFullYear();
+      await apiClient.put(`/top-issues/${id}`, { ...d, year });
       fetchData();
       showToast(`Isu '${d.issue}' berhasil diperbarui`, "success");
     } catch (e) {
