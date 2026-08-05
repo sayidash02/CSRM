@@ -20,6 +20,7 @@ import dashboardRouter from './routes/dashboard';
 import importRoutes from './routes/import';
 import archiveRoutes from './routes/archive';
 import yearsRouter from './routes/years';
+import devRoutes from './routes/dev';
 
 const app = express();
 app.use(cors());
@@ -42,5 +43,6 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/import', importRoutes);
 app.use('/api/archive', archiveRoutes);
 app.use('/api/years', yearsRouter);
+app.use('/api/dev', devRoutes);
 
 export default app;
