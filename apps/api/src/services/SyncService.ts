@@ -16,24 +16,24 @@ export class SyncService {
     if (lastSync) {
       const lastSyncDate = lastSync.synced_at;
       const counts = await Promise.all([
-        prisma.daily_activities.count({ where: { updated_at: { gt: lastSyncDate } } }),
-        prisma.stakeholder_engagement.count({ where: { updated_at: { gt: lastSyncDate } } }),
-        prisma.top_issues.count({ where: { updated_at: { gt: lastSyncDate } } }),
-        prisma.proposals.count({ where: { updated_at: { gt: lastSyncDate } } }),
-        prisma.csr_projects.count({ where: { updated_at: { gt: lastSyncDate } } }),
-        prisma.grievance.count({ where: { updated_at: { gt: lastSyncDate } } }),
-        prisma.lrp.count({ where: { updated_at: { gt: lastSyncDate } } }),
+        prisma.daily_activities.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
+        prisma.stakeholder_engagement.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
+        prisma.top_issues.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
+        prisma.proposals.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
+        prisma.csr_projects.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
+        prisma.grievance.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
+        prisma.lrp.count({ where: { updated_at: { gt: lastSyncDate }, is_deleted: false, is_archived: false } }),
       ]);
       unsyncedCount = counts.reduce((a, b) => a + b, 0);
     } else {
       const counts = await Promise.all([
-        prisma.daily_activities.count({ where: { is_deleted: false } }),
-        prisma.stakeholder_engagement.count({ where: { is_deleted: false } }),
-        prisma.top_issues.count({ where: { is_deleted: false } }),
-        prisma.proposals.count({ where: { is_deleted: false } }),
-        prisma.csr_projects.count({ where: { is_deleted: false } }),
-        prisma.grievance.count({ where: { is_deleted: false } }),
-        prisma.lrp.count({ where: { is_deleted: false } }),
+        prisma.daily_activities.count({ where: { is_deleted: false, is_archived: false } }),
+        prisma.stakeholder_engagement.count({ where: { is_deleted: false, is_archived: false } }),
+        prisma.top_issues.count({ where: { is_deleted: false, is_archived: false } }),
+        prisma.proposals.count({ where: { is_deleted: false, is_archived: false } }),
+        prisma.csr_projects.count({ where: { is_deleted: false, is_archived: false } }),
+        prisma.grievance.count({ where: { is_deleted: false, is_archived: false } }),
+        prisma.lrp.count({ where: { is_deleted: false, is_archived: false } }),
       ]);
       unsyncedCount = counts.reduce((a, b) => a + b, 0);
     }
@@ -43,6 +43,30 @@ export class SyncService {
       unsynced_count: unsyncedCount,
       is_syncing: isSyncing
     };
+  }
+
+  public async generateWorkbookBuffer(
+    da: any[],
+    se: any[],
+    ti: any[],
+    pr: any[],
+    cp: any[],
+    gr: any[],
+    lrp: any[]
+  ): Promise<Buffer> {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'CRMS System';
+    workbook.created = new Date();
+
+    this.addDailyActivitiesSheet(workbook, da);
+    this.addStakeholdersSheet(workbook, se);
+    this.addTopIssuesSheet(workbook, ti);
+    this.addProposalsSheet(workbook, pr);
+    this.addCsrProjectsSheet(workbook, cp);
+    this.addGrievanceSheet(workbook, gr);
+    this.addLrpSheet(workbook, lrp);
+
+    return (await workbook.xlsx.writeBuffer()) as any as Buffer;
   }
 
   public async executeSync(triggeredBy: string = 'System'): Promise<void> {
@@ -59,37 +83,32 @@ export class SyncService {
         grievances,
         lrps
       ] = await Promise.all([
-        prisma.daily_activities.findMany({ where: { is_deleted: false }, include: { pic: true, category: true, sub_category: true } }),
-        prisma.stakeholder_engagement.findMany({ where: { is_deleted: false } }),
-        prisma.top_issues.findMany({ where: { is_deleted: false } }),
-        prisma.proposals.findMany({ where: { is_deleted: false } }),
-        prisma.csr_projects.findMany({ where: { is_deleted: false } }),
-        prisma.grievance.findMany({ where: { is_deleted: false } }),
-        prisma.lrp.findMany({ where: { is_deleted: false } }),
+        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false }, include: { pic: true, category: true, sub_category: true } }),
+        prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false } }),
+        prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false } }),
+        prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false } }),
+        prisma.csr_projects.findMany({ where: { is_deleted: false, is_archived: false } }),
+        prisma.grievance.findMany({ where: { is_deleted: false, is_archived: false } }),
+        prisma.lrp.findMany({ where: { is_deleted: false, is_archived: false } }),
       ]);
 
-      // 2. Create Workbook and Sheets
-      const workbook = new ExcelJS.Workbook();
-      workbook.creator = 'CRMS System';
-      workbook.created = new Date();
+      // 2. Generate Workbook Buffer
+      const buffer = await this.generateWorkbookBuffer(
+        dailyActivities,
+        stakeholders,
+        topIssues,
+        proposals,
+        csrProjects,
+        grievances,
+        lrps
+      );
 
-      this.addDailyActivitiesSheet(workbook, dailyActivities);
-      this.addStakeholdersSheet(workbook, stakeholders);
-      this.addTopIssuesSheet(workbook, topIssues);
-      this.addProposalsSheet(workbook, proposals);
-      this.addCsrProjectsSheet(workbook, csrProjects);
-      this.addGrievanceSheet(workbook, grievances);
-      this.addLrpSheet(workbook, lrps);
-
-      // 3. Write to Buffer
-      const buffer = (await workbook.xlsx.writeBuffer()) as any as Buffer;
-
-      // 4. Upload to SharePoint
+      // 3. Upload to SharePoint
       const masterPath = '0. Testing/Master';
       const fileName = 'CRMS_Master_Data.xlsx';
       const fileUrl = await this.sharePointClient.uploadFile(masterPath, fileName, buffer, buffer.byteLength);
 
-      // 5. Update sync_log
+      // 4. Update sync_log
       await prisma.sync_log.create({
         data: {
           synced_at: startedAt,
