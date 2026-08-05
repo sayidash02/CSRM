@@ -3,11 +3,20 @@ import { UploadCloud, CheckCircle, AlertTriangle } from "lucide-react";
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { apiClient } from "../../lib/apiClient";
 
-export function ImportExcelModal({ onClose, onSuccess, refs }: { onClose: () => void; onSuccess: () => void; refs: any }) {
+interface ParsedRow {
+  tempId: string;
+  activity_date: string;
+  activity: string;
+  category_name: string;
+  pic_name: string;
+  errors?: string[];
+}
+
+export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [parsedData, setParsedData] = useState<{ validRows: any[]; errorRows: any[] } | null>(null);
+  const [parsedData, setParsedData] = useState<{ validRows: ParsedRow[]; errorRows: ParsedRow[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = async () => {
@@ -59,6 +68,7 @@ export function ImportExcelModal({ onClose, onSuccess, refs }: { onClose: () => 
               accept=".xlsx, .xls" 
               className="hidden" 
               ref={fileRef} 
+              aria-label="Upload File Excel"
               onChange={e => {
                 const f = e.target.files?.[0];
                 if (f) setFile(f);
@@ -116,7 +126,7 @@ export function ImportExcelModal({ onClose, onSuccess, refs }: { onClose: () => 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {parsedData.errorRows.map((r: any) => (
+                  {parsedData.errorRows.map((r: ParsedRow) => (
                     <tr key={r.tempId} className="bg-red-50/40 hover:bg-red-50/70">
                       <td className="p-2 text-center text-red-600"><AlertTriangle size={14} className="mx-auto" /></td>
                       <td className="p-2 whitespace-nowrap font-mono">{String(r.activity_date || "").split('T')[0] || "-"}</td>
@@ -126,7 +136,7 @@ export function ImportExcelModal({ onClose, onSuccess, refs }: { onClose: () => 
                       <td className="p-2 text-red-600">{r.errors?.join(', ')}</td>
                     </tr>
                   ))}
-                  {parsedData.validRows.map((r: any) => (
+                  {parsedData.validRows.map((r: ParsedRow) => (
                     <tr key={r.tempId} className="hover:bg-muted/40">
                       <td className="p-2 text-center text-green-600"><CheckCircle size={14} className="mx-auto" /></td>
                       <td className="p-2 whitespace-nowrap font-mono">{String(r.activity_date || "").split('T')[0]}</td>

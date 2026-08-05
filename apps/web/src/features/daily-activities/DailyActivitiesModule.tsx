@@ -172,7 +172,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
   
   return (
     <Modal title={initial ? "Edit Kegiatan" : "Tambah Kegiatan Baru"} onClose={onClose}>
-      <div className="px-6 py-4 grid grid-cols-3 gap-4">
+      <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="Tanggal Kegiatan" required><input type="date" value={String(f.activity_date).split('T')[0]} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
         <div className="col-span-2"><Field label="Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Deskripsi kegiatan" className={inputCls} /></Field></div>
         <Field label="Institusi / Kelompok"><input type="text" value={f.institution_group} onChange={e => set("institution_group", e.target.value)} placeholder="Nama institusi" className={inputCls} /></Field>
@@ -396,7 +396,6 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
       {toDelete && <DeleteConfirmModal label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.activity); setToDelete(null); }} />}
       {showImport && (
         <ImportExcelModal 
-          refs={references} 
           onClose={() => setShowImport(false)} 
           onSuccess={() => { 
             setShowImport(false); 

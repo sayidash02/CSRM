@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { X, Check, Edit2 } from 'lucide-react';
 
 export function Modal({
@@ -14,6 +14,14 @@ export function Modal({
 }) {
   const mouseDownOnBackdrop = useRef(false);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
@@ -24,6 +32,9 @@ export function Modal({
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`}
         onMouseDown={(e) => { e.stopPropagation(); mouseDownOnBackdrop.current = false; }}
       >
@@ -31,6 +42,7 @@ export function Modal({
           <h2 className="text-sm font-semibold">{title}</h2>
           <button
             onClick={onClose}
+            aria-label="Tutup modal"
             className="p-1 rounded hover:bg-muted text-muted-foreground"
           >
             <X size={15} />
