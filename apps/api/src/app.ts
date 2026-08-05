@@ -16,6 +16,9 @@ import picsRouter from './routes/pics';
 
 import uploadRouter from './routes/upload';
 import exportRouter from './routes/export';
+import dashboardRouter from './routes/dashboard';
+import importRoutes from './routes/import';
+import archiveRoutes from './routes/archive';
 
 const app = express();
 app.use(cors());
@@ -34,5 +37,8 @@ import syncRouter from './routes/sync';
 app.use('/api/sync', syncRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/pics', picsRouter);
+app.use('/api/dashboard', dashboardRouter);
+app.use('/api/import', importRoutes);
+app.use('/api/archive', archiveRoutes);
 
 export default app;
