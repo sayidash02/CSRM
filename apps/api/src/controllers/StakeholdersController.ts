@@ -34,8 +34,17 @@ export const createStakeholder = async (req: Request, res: Response): Promise<vo
 
 export const getStakeholders = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { year } = req.query;
+    const where: any = { is_deleted: false, is_archived: false };
+    if (year) {
+      const y = year as string;
+      where.date = {
+        gte: new Date(`${y}-01-01T00:00:00.000Z`),
+        lte: new Date(`${y}-12-31T23:59:59.999Z`)
+      };
+    }
     const stakeholders = await prisma.stakeholder_engagement.findMany({
-      where: { is_deleted: false }
+      where
     });
     
     const serialized = stakeholders.map(s => ({

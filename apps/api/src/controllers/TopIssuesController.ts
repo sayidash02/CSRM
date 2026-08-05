@@ -31,8 +31,17 @@ export const createTopIssue = async (req: Request, res: Response): Promise<void>
 
 export const getTopIssues = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { year } = req.query;
+    const where: any = { is_deleted: false, is_archived: false };
+    if (year) {
+      const y = year as string;
+      where.created_at = {
+        gte: new Date(`${y}-01-01T00:00:00.000Z`),
+        lte: new Date(`${y}-12-31T23:59:59.999Z`)
+      };
+    }
     const issues = await prisma.top_issues.findMany({
-      where: { is_deleted: false }
+      where
     });
     
     const serialized = issues.map(a => ({
