@@ -48,12 +48,14 @@ export function ModalFooter({
   onClear,
   saveLabel = "Simpan",
   isEdit,
+  disableSave,
 }: {
   onClose: () => void;
   onSave: () => void;
   onClear?: () => void;
   saveLabel?: string;
   isEdit?: boolean;
+  disableSave?: boolean;
 }) {
   return (
     <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
@@ -73,8 +75,13 @@ export function ModalFooter({
       </button>
       <button
         onClick={onSave}
+        disabled={disableSave}
         className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${
-          isEdit ? "bg-amber-500 hover:bg-amber-600" : "bg-primary hover:bg-blue-700"
+          disableSave
+            ? "bg-gray-300 cursor-not-allowed text-gray-500"
+            : isEdit
+            ? "bg-amber-500 hover:bg-amber-600"
+            : "bg-primary hover:bg-blue-700"
         }`}
       >
         {isEdit ? <Edit2 size={13} /> : <Check size={13} />}

@@ -5,6 +5,7 @@ import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
+import { ImportExcelModal } from "./ImportExcelModal";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
@@ -288,6 +289,7 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
   const [subCatFilter, setSubCatFilter] = useState("All");
   const [dateRange, setDateRange] = useState<DateRange>({ start: "", end: "" });
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
   
@@ -374,6 +376,14 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
         onSubCatFilterChange={setSubCatFilter}
       >
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <button 
+          type="button" 
+          onClick={() => setShowImport(true)} 
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white text-foreground border border-border rounded-md hover:bg-muted transition-colors"
+        >
+          <Download size={13} className="rotate-180" />
+          Import Excel
+        </button>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
         <div className="flex-1 min-h-0">
@@ -384,6 +394,17 @@ export default function DailyActivitiesModule({ onExport, showToast }: { onExpor
       {showForm && <DailyForm defaultValues={addDraft} onDraftChange={setAddDraft} refs={references} onRefreshReferences={fetchReferences} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
       {editing && <DailyForm refs={references} onRefreshReferences={fetchReferences} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirmModal label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.activity); setToDelete(null); }} />}
+      {showImport && (
+        <ImportExcelModal 
+          refs={references} 
+          onClose={() => setShowImport(false)} 
+          onSuccess={() => { 
+            setShowImport(false); 
+            fetchData(); 
+            showToast("Data kegiatan berhasil diimport dari Excel", "success"); 
+          }} 
+        />
+      )}
     </div>
   );
 }
