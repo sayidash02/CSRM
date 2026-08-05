@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Modal } from "../../components/ui/Modal";
 import { apiClient } from "../../lib/apiClient";
 import { toast } from "sonner";
 import {
@@ -12,7 +13,68 @@ import {
   Loader2,
 } from "lucide-react";
 
+function ResetModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [challenge, setChallenge] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (challenge !== "RESET") return;
+    setLoading(true);
+    try {
+      await apiClient.delete('/dev/reset');
+      onSuccess();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to reset database");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Modal title="Peringatan Berbahaya!" onClose={onClose}>
+      <div className="p-4 space-y-4">
+        <p className="text-sm text-red-600 font-semibold">
+          Apakah Anda yakin ingin menghapus semua data?
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Ini akan menghapus seluruh data dari 7 modul, daftar PIC, dan riwayat sinkronisasi. 
+          Kategori akan dikembalikan ke nilai default. Aksi ini tidak dapat dibatalkan.
+        </p>
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-foreground">
+            Ketik <strong>RESET</strong> untuk melanjutkan:
+          </label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+            value={challenge}
+            onChange={(e) => setChallenge(e.target.value)}
+            placeholder="RESET"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end p-4 border-t border-border bg-muted/30 gap-2">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          disabled={loading}
+        >
+          Batal
+        </button>
+        <button
+          onClick={handleReset}
+          disabled={challenge !== "RESET" || loading}
+          className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {loading ? "Menghapus..." : "Hapus Semua"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 export default function ArchiveSettings() {
+  const [showResetModal, setShowResetModal] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [customYearInput, setCustomYearInput] = useState<string>("");
   const [useCustomYear, setUseCustomYear] = useState<boolean>(false);
@@ -309,6 +371,40 @@ export default function ArchiveSettings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Danger Zone - Development Only */}
+      {import.meta.env.DEV && (
+        <div className="mt-8 border border-red-200 bg-red-50/50 rounded-lg overflow-hidden">
+          <div className="p-4 border-b border-red-200">
+            <h3 className="text-sm font-semibold text-red-800">Danger Zone (Development Only)</h3>
+            <p className="text-xs text-red-600 mt-1">Aksi di bawah ini bersifat destruktif dan hanya muncul saat development.</p>
+          </div>
+          <div className="p-4 bg-white/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-medium text-foreground">Reset Database</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">Hapus seluruh data operasional dan kembalikan ke state awal.</p>
+              </div>
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+              >
+                Reset Database
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetModal && (
+        <ResetModal
+          onClose={() => setShowResetModal(false)}
+          onSuccess={() => {
+            setShowResetModal(false);
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );
