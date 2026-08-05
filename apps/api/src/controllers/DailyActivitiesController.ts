@@ -1,5 +1,9 @@
 import { Request, Response } from 'express';
+import multer from 'multer';
 import prisma from '../lib/prisma';
+import { parseDailyActivitiesExcel } from '../services/ExcelImportService';
+
+const upload = multer({ limits: { fileSize: 5 * 1024 * 1024 } });
 
 export const createDailyActivity = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -117,3 +121,55 @@ export const updateDailyActivity = async (req: Request, res: Response): Promise<
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const importParseExcel = (req: Request, res: Response) => {
+  upload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ status: 400, message: 'Upload error: ' + err.message });
+    if (!req.file) return res.status(400).json({ status: 400, message: 'File is required' });
+
+    try {
+      const result = await parseDailyActivitiesExcel(req.file.buffer);
+      res.json({ status: 200, data: result });
+    } catch (error: any) {
+      console.error(error);
+      res.status(500).json({ status: 500, message: 'Failed to parse Excel: ' + error.message });
+    }
+  });
+};
+
+export const importCommitExcel = async (req: Request, res: Response) => {
+  try {
+    const { rows } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ status: 400, message: 'No valid rows provided' });
+    }
+
+    const dataToInsert = rows.map((r: any) => ({
+      activity_date: new Date(r.activity_date),
+      activity: r.activity,
+      institution_group: r.institution_group || '',
+      address: r.address || '',
+      category_id: BigInt(r.category_id),
+      sub_category_id: BigInt(r.sub_category_id),
+      focus: r.focus || '',
+      location: r.location || '',
+      cost: Number(r.cost) || 0,
+      description_result: r.description_result || '',
+      document_link: r.document_link || '',
+      pic_id: BigInt(r.pic_id),
+      is_deleted: false,
+      created_at: new Date(),
+      updated_at: new Date()
+    }));
+
+    const result = await prisma.daily_activities.createMany({
+      data: dataToInsert
+    });
+
+    res.json({ status: 200, data: { count: result.count } });
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ status: 500, message: 'Internal Server Error: ' + error.message });
+  }
+};
+
