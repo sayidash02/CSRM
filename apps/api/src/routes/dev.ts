@@ -1,18 +1,14 @@
 import { Router } from 'express';
+import { devReset } from '../controllers/DevController';
 
 const router = Router();
 
-router.use((req, res, next) => {
-  if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production') {
+  router.all('*', (req, res) => {
     res.status(404).json({ error: 'Not found' });
-    return;
-  }
-  next();
-});
-
-// Placeholder for controller
-router.delete('/reset', (req, res) => {
-  res.status(200).json({ message: 'Reset successful' });
-});
+  });
+} else {
+  router.delete('/reset', devReset);
+}
 
 export default router;
