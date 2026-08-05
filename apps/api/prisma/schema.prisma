@@ -45,6 +45,7 @@ model daily_activities {
   category_id        BigInt
   sub_category_id    BigInt
   is_deleted         Boolean        @default(false)
+  is_archived        Boolean        @default(false)
   created_at         DateTime       @default(now())
   updated_at         DateTime       @updatedAt
   cost               Decimal?       @db.Decimal(15, 2)
@@ -55,6 +56,7 @@ model daily_activities {
 
   @@index([activity_date])
   @@index([is_deleted])
+  @@index([is_archived])
   @@index([category_id], map: "daily_activities_category_id_fkey")
   @@index([pic_id], map: "daily_activities_pic_id_fkey")
   @@index([sub_category_id], map: "daily_activities_sub_category_id_fkey")
@@ -68,10 +70,12 @@ model stakeholder_engagement {
   concern_issue String?  @db.Text
   document_link String?  @db.Text
   is_deleted    Boolean  @default(false)
+  is_archived   Boolean  @default(false)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
 
   @@index([is_deleted])
+  @@index([is_archived])
 }
 
 model top_issues {
@@ -82,12 +86,14 @@ model top_issues {
   follow_up           String?  @db.Text
   next_plan           String?  @db.Text
   is_deleted          Boolean  @default(false)
+  is_archived         Boolean  @default(false)
   created_at          DateTime @default(now())
   updated_at          DateTime @updatedAt
   main_document       String?  @db.Text
   supporting_document String?  @db.Text
 
   @@index([is_deleted])
+  @@index([is_archived])
 }
 
 model proposals {
@@ -101,11 +107,13 @@ model proposals {
   assessment_file      String?  @db.Text
   status               String   @default("Under Review") @db.VarChar(20)
   is_deleted           Boolean  @default(false)
+  is_archived          Boolean  @default(false)
   created_at           DateTime @default(now())
   updated_at           DateTime @updatedAt
 
   @@index([status])
   @@index([is_deleted])
+  @@index([is_archived])
 }
 
 model csr_projects {
@@ -123,12 +131,14 @@ model csr_projects {
   documentation_image   String?  @db.Text
   document              String?  @db.Text
   is_deleted            Boolean  @default(false)
+  is_archived           Boolean  @default(false)
   created_at            DateTime @default(now())
   updated_at            DateTime @updatedAt
 
   @@index([project_year])
   @@index([status])
   @@index([is_deleted])
+  @@index([is_archived])
 }
 
 model grievance {
@@ -150,12 +160,14 @@ model grievance {
   remarks          String?   @db.Text
   supporting_files String?   @db.Text
   is_deleted       Boolean   @default(false)
+  is_archived      Boolean   @default(false)
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
 
   @@index([status])
   @@index([significance])
   @@index([is_deleted])
+  @@index([is_archived])
 }
 
 model lrp {
@@ -163,10 +175,12 @@ model lrp {
   program         String   @db.VarChar(255)
   sharepoint_link String   @db.Text
   is_deleted      Boolean  @default(false)
+  is_archived     Boolean  @default(false)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 
   @@index([is_deleted])
+  @@index([is_archived])
 }
 
 model sync_log {
