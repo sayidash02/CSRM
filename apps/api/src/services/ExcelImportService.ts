@@ -262,14 +262,18 @@ export class ExcelImportService {
 
       if (detection.sheetType === 'dailyActivities') {
         const headerRow = worksheet.getRow(detection.headerRowIndex);
-        const colMap = new Map<string, number>();
+        let picCol = -1;
+        let catCol = -1;
+
         headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
           const text = extractCellString(cell.value).trim().toLowerCase();
-          if (text) colMap.set(text, colNumber);
+          if (text === 'pic' || text.includes('pic')) {
+            picCol = colNumber;
+          }
+          if (text === 'kategori' || text === 'category' || text.includes('kategori')) {
+            catCol = colNumber;
+          }
         });
-
-        const picCol = findColIndex(colMap, ['pic', 'pic name', 'nama pic']);
-        const catCol = findColIndex(colMap, ['category', 'kategori']);
 
         if (picCol !== -1 || catCol !== -1) {
           for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
@@ -277,11 +281,13 @@ export class ExcelImportService {
             if (!isRowNonEmpty(row)) continue;
 
             if (picCol !== -1) {
-              const picVal = extractCellString(row.getCell(picCol).value).trim();
+              let picVal = extractCellString(row.getCell(picCol).value).trim();
+              if (picVal.length > 50) picVal = ''; // Filter out obviously invalid PIC names (e.g. huge text)
               if (picVal) excelPics.add(picVal);
             }
             if (catCol !== -1) {
-              const catVal = extractCellString(row.getCell(catCol).value).trim();
+              let catVal = extractCellString(row.getCell(catCol).value).trim();
+              if (catVal.length > 50) catVal = ''; // Filter out obviously invalid Categories
               if (catVal) excelCategories.add(catVal);
             }
           }
@@ -442,9 +448,14 @@ export class ExcelImportService {
           const location = locCol !== -1 ? trunc(extractCellString(row.getCell(locCol).value), 255) : null;
           const cost = costCol !== -1 ? parseCellNumber(row.getCell(costCol).value) : null;
           const document_link = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
-          const pic_name = picCol !== -1 ? truncStr(extractCellString(row.getCell(picCol).value), 100, 'Umum') : 'Umum';
-          const category_name = catCol !== -1 ? truncStr(extractCellString(row.getCell(catCol).value), 50, 'Umum') : 'Umum';
-          const sub_category_name = subCatCol !== -1 ? truncStr(extractCellString(row.getCell(subCatCol).value), 100, 'Umum') : 'Umum';
+          let pic_name = picCol !== -1 ? extractCellString(row.getCell(picCol).value).trim() : '';
+          if (!pic_name || pic_name.length > 50) pic_name = 'Umum';
+          
+          let category_name = catCol !== -1 ? extractCellString(row.getCell(catCol).value).trim() : '';
+          if (!category_name || category_name.length > 50) category_name = 'Umum';
+          
+          let sub_category_name = subCatCol !== -1 ? extractCellString(row.getCell(subCatCol).value).trim() : '';
+          if (!sub_category_name || sub_category_name.length > 100) sub_category_name = 'Umum';
 
           let description_result: string | null = null;
           if (descCol !== -1) {
