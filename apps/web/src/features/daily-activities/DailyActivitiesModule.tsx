@@ -22,12 +22,13 @@ export interface DailyActivity {
   focus: string;
   location: string;
   cost: number;
-  pic_id: string | number;
+  pic_ids: (string | number)[];
   category_id: string | number;
   sub_category_id: string | number;
   description_result: string;
   document_link: string | null;
   // Included relations from backend
+  pics?: any[];
   pic?: any;
   category?: any;
   sub_category?: any;
@@ -110,7 +111,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 
 const emptyDailyDraft = {
   activity_date: "", activity: "", institution_group: "", address: "",
-  focus: "", location: "", cost: "", pic_id: "", category_id: "",
+  focus: "", location: "", cost: "", pic_ids: [] as (string | number)[], category_id: "",
   sub_category_id: "", description_result: "", document_link: ""
 };
 
@@ -125,8 +126,8 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           address: initial.address ?? "",
           focus: initial.focus ?? "",
           location: initial.location ?? "",
-          cost: String(initial.cost ?? ""),
-          pic_id: initial.pic_id != null ? String(initial.pic_id) : "",
+          cost: initial.cost != null ? String(initial.cost) : "",
+          pic_ids: initial.pic_ids ? initial.pic_ids.map(id => String(id)) : [],
           category_id: initial.category_id != null ? String(initial.category_id) : "",
           sub_category_id: initial.sub_category_id != null ? String(initial.sub_category_id) : "",
           description_result: initial.description_result ?? "",
@@ -135,10 +136,10 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
       : { ...emptyDailyDraft, ...defaultValues }
   );
   
-  const set = (k: string, v: string) => {
+  const set = (k: string, v: string | (string | number)[]) => {
     const next = { ...f, [k]: v };
     setF(next);
-    if (!initial) onDraftChange?.(next);
+    if (!initial) onDraftChange?.(next as any);
   };
   
   const handleClear = () => {
@@ -150,8 +151,8 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
     const missing: string[] = (
       [
         [!f.activity_date, "Tanggal Kegiatan"],
-        [!f.activity, "Kegiatan"],
-        [!f.pic_id, "PIC"],
+        [!f.activity, "Aktivitas"],
+        [!f.pic_ids || f.pic_ids.length === 0, "PIC"],
         [!f.category_id, "Kategori"],
         [!f.sub_category_id, "Sub Kategori"],
       ] as [boolean, string][]
@@ -165,7 +166,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
       }
       return;
     }
-    onSave({ ...f, cost: Number(f.cost) || 0, document_link: f.document_link || null });
+    onSave({ ...f, cost: Number(f.cost) || 0, document_link: f.document_link || null } as any);
     if (!initial) onDraftChange?.({ ...emptyDailyDraft });
     onClose();
   };
@@ -180,14 +181,24 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
         <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi kegiatan" className={inputCls} /></Field>
         <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
-        <Field label="Category" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next); }} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+        <Field label="Category" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
         <Field label="PIC" required>
-          <div className="flex gap-2 items-center">
-            <select value={f.pic_id} onChange={e => set("pic_id", e.target.value)} className={`${inputCls} flex-1`}>
-              <option value="">Pilih PIC</option>
-              {refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+          <div className="flex gap-2 items-start">
+            <div className="flex-1 flex flex-col gap-1">
+              <select 
+                multiple 
+                value={f.pic_ids.map(String)} 
+                onChange={e => {
+                  const opts = Array.from(e.target.selectedOptions, option => option.value);
+                  set("pic_ids", opts);
+                }} 
+                className={`${inputCls} h-24`}
+              >
+                {refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              <p className="text-[10px] text-muted-foreground">Tahan Ctrl/Cmd untuk memilih banyak PIC</p>
+            </div>
             <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0" title="Atur PIC"><Settings size={14} /></button>
           </div>
         </Field>
@@ -196,9 +207,9 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           <Field label="Dokumen Lampiran" hint="Pilih file dokumen (maks 5MB). Pastikan Tanggal dan PIC sudah terisi.">
             <FileInput 
               value={f.document_link || null} 
-              onChange={url => set("document_link", url)}
+              onChange={(fData: any) => set("document_link", typeof fData === 'string' ? fData : fData?.url || "")}
+              picName={refs.pics.filter(p => f.pic_ids.map(String).includes(String(p.id))).map(p => p.name).join(", ")}
               activityDate={f.activity_date}
-              picName={refs.pics.find(p => String(p.id) === String(f.pic_id))?.name}
             />
           </Field>
         </div>
@@ -210,7 +221,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
         saveLabel={initial ? "Simpan Perubahan" : "Simpan Kegiatan"}
         isEdit={!!initial}
       />
-      {showPicManager && <PicManagementModal onClose={() => { setShowPicManager(false); onRefreshReferences(); }} />}
+      {showPicManager && <PicManagementModal onClose={() => { setShowPicManager(false); onRefreshReferences(); }} showToast={showToast} />}
     </Modal>
   );
 }
@@ -326,10 +337,10 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       institution: a.institution_group || '-',
       address: a.address || '-',
       location: a.location || '-',
-      kategori: a.category_name,
+      kategori: a.category?.name || '-',
       sub_kategori: a.sub_category_name,
-      pic: a.pic?.name || a.pic_id,
-      cost: a.cost,
+      biaya: a.cost ? Number(a.cost) : null,
+      pic: a.pics?.map(p => p.name).join(', ') || a.pic_ids?.join(', ') || '-',
       description: a.description_result || '-'
     }));
 
@@ -348,10 +359,10 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       </div>
     )},
     { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
-    { header: "Kategori", accessor: "category_name", sortable: true },
+    { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
+    { header: "PIC", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.map(p => p.name).join(', ') || a.pic_ids?.join(', ') || '-'}</span> },
+    { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || '-'}</span> },
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
-    { header: "PIC", accessor: "pic.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pic?.name || a.pic_id}</span> },
-    { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <div className="text-xs text-right font-mono whitespace-nowrap">{a.cost > 0 ? formatIDR(a.cost) : <span className="text-muted-foreground">—</span>}</div> },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span> },
     { header: "", render: (a) => (

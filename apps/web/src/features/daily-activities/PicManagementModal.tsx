@@ -5,7 +5,7 @@ import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
-export function PicManagementModal({ onClose }: { onClose: () => void }) {
+export function PicManagementModal({ onClose, showToast }: { onClose: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
   const [pics, setPics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
