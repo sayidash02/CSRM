@@ -5,9 +5,10 @@ import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
-export function PicManagementModal({ onClose, showToast }: { onClose: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
+export function PicManagementModal({ onClose, showToast = () => {} }: { onClose: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
   const [pics, setPics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
