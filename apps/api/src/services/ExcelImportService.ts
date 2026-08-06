@@ -262,18 +262,14 @@ export class ExcelImportService {
 
       if (detection.sheetType === 'dailyActivities') {
         const headerRow = worksheet.getRow(detection.headerRowIndex);
-        let picCol = -1;
-        let catCol = -1;
-
+        const colMap = new Map<string, number>();
         headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
           const text = extractCellString(cell.value).trim().toLowerCase();
-          if (text === 'pic' || text.includes('pic')) {
-            picCol = colNumber;
-          }
-          if (text === 'kategori' || text === 'category' || text.includes('kategori')) {
-            catCol = colNumber;
-          }
+          if (text) colMap.set(text, colNumber);
         });
+
+        const picCol = findColIndex(colMap, ['pic', 'pic name', 'nama pic']);
+        const catCol = findColIndex(colMap, ['category', 'kategori']);
 
         if (picCol !== -1 || catCol !== -1) {
           for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
