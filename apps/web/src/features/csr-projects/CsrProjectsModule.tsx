@@ -191,29 +191,29 @@ function CsrForm({
       <div className="px-6 py-4 space-y-4">
         <div className="grid grid-cols-3 gap-4">
           <Field label="Tahun" required><input type="number" value={f.project_year} onChange={e => set("project_year", e.target.value)} className={`${inputCls} font-mono`} /></Field>
-          <div className="col-span-2"><Field label="Nama Program" required><input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama program CSR" className={inputCls} /></Field></div>
+          <div className="col-span-2"><Field label="Program" required><input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama program CSR" className={inputCls} /></Field></div>
         </div>
-        <Field label="Aktivitas / Kegiatan"><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Deskripsi aktivitas program" className={inputCls} /></Field>
+        <Field label="Kegiatan"><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Deskripsi aktivitas program" className={inputCls} /></Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Jenis Kegiatan"><input type="text" value={f.type_of_activity} onChange={e => set("type_of_activity", e.target.value)} placeholder="Infrastruktur, Pendidikan, Ekonomi…" className={inputCls} /></Field>
+          <Field label="Bentuk Kegiatan"><input type="text" value={f.type_of_activity} onChange={e => set("type_of_activity", e.target.value)} placeholder="Infrastruktur, Pendidikan, Ekonomi…" className={inputCls} /></Field>
           <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Nama desa / kecamatan" className={inputCls} /></Field>
-          <Field label="Target Penerima Manfaat"><input type="text" value={f.target_beneficiaries} onChange={e => set("target_beneficiaries", e.target.value)} placeholder="cth: 500 KK" className={inputCls} /></Field>
+          <Field label="Target/Sasaran"><input type="text" value={f.target_beneficiaries} onChange={e => set("target_beneficiaries", e.target.value)} placeholder="cth: 500 KK" className={inputCls} /></Field>
           <Field label="Periode Pelaksanaan"><input type="text" value={f.implementation_period} onChange={e => set("implementation_period", e.target.value)} placeholder="Jan – Des 2026" className={inputCls} /></Field>
         </div>
-        <Field label="Tujuan / Objektif"><textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} /></Field>
+        <Field label="Tujuan"><textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} /></Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Planning</option><option>On Going</option><option>Completed</option><option>Cancelled</option></select></Field>
-          <Field label="Budget (Rp)"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
+          <Field label="Realisasi (Biaya dalam Rupiah)"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Dokumen">
+          <Field label="Docx">
             <FileInput 
               value={f.document || null} 
               onChange={url => set("document", url)}
               picName="CSR Project"
             />
           </Field>
-          <Field label="Gambar Dokumentasi">
+          <Field label="Image Dokumentasi">
             <FileInput 
               value={f.documentation_image || null} 
               onChange={url => set("documentation_image", url)}
@@ -287,19 +287,22 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
   const displayed = statusFilter === "All" ? filtered : filtered.filter(c => c.status === statusFilter);
 
   const columns: ColumnDef<CsrProject>[] = useMemo(() => [
-    { header: "Status & Jenis", render: (p) => <div className="flex flex-col gap-1 items-start"><StatusBadge status={p.status} /><span className="text-xs font-mono text-muted-foreground">{p.type_of_activity}</span></div> },
-    { header: "Program", accessor: "program", sortable: true, render: (p) => <div><h3 className="text-sm font-semibold text-foreground whitespace-normal">{p.program}</h3><p className="text-xs text-muted-foreground mt-0.5 whitespace-normal">{p.activity}</p></div> },
-    { header: "Lokasi", accessor: "location", sortable: true, render: (p) => <div className="text-xs text-foreground mt-0.5 whitespace-normal">{p.location || "—"}</div> },
-    { header: "Target", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-foreground mt-0.5 whitespace-normal">{p.target_beneficiaries || "—"}</div> },
-    { header: "Periode", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-foreground mt-0.5 whitespace-nowrap">{p.implementation_period || "—"}</div> },
-    { header: "Budget", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
-    { header: "Objektif", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-muted-foreground italic leading-relaxed max-w-[200px] whitespace-normal">{p.objective || "—"}</div> },
-    { header: "Docs", className: "whitespace-nowrap", render: (p) => (
-      <div className="flex flex-col gap-1">
-        {p.document && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Dokumen</span>}
-        {p.documentation_image && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Gambar</span>}
-        {!p.document && !p.documentation_image && <span className="text-muted-foreground text-xs">—</span>}
-      </div>
+    { header: "No", render: (_, i) => <div className="text-xs text-muted-foreground">{i + 1}</div> },
+    { header: "Tahun", accessor: "project_year", sortable: true, render: (p) => <div className="text-sm text-foreground">{p.project_year}</div> },
+    { header: "Program", accessor: "program", sortable: true, render: (p) => <div className="text-sm font-semibold text-foreground whitespace-normal">{p.program}</div> },
+    { header: "Kegiatan", accessor: "activity", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.activity || "—"}</div> },
+    { header: "Bentuk Kegiatan", accessor: "type_of_activity", sortable: true, render: (p) => <div className="text-xs text-foreground">{p.type_of_activity || "—"}</div> },
+    { header: "Lokasi", accessor: "location", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.location || "—"}</div> },
+    { header: "Target/Sasaran", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.target_beneficiaries || "—"}</div> },
+    { header: "Tujuan", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-muted-foreground italic leading-relaxed max-w-[200px] whitespace-normal">{p.objective || "—"}</div> },
+    { header: "Status", accessor: "status", sortable: true, render: (p) => <StatusBadge status={p.status} /> },
+    { header: "Realisasi(Biaya dalam bentuk Rupiah)", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
+    { header: "Periode Pelaksanaan", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-foreground whitespace-nowrap">{p.implementation_period || "—"}</div> },
+    { header: "Image Dokumentasi", render: (p) => (
+      p.documentation_image ? <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Gambar</span> : <span className="text-muted-foreground text-xs">—</span>
+    )},
+    { header: "Docx", render: (p) => (
+      p.document ? <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Dokumen</span> : <span className="text-muted-foreground text-xs">—</span>
     )},
     { header: "", render: (p) => (
       <div className="flex items-center gap-1 justify-end">
