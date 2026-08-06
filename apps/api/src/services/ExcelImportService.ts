@@ -370,6 +370,8 @@ export class ExcelImportService {
       status: string;
       budget: number | null;
       implementation_period: string | null;
+      documentation_image: string | null;
+      document: string | null;
     }> = [];
 
     const rawGrievance: Array<{
@@ -563,13 +565,15 @@ export class ExcelImportService {
         const yearCol = findColIndex(colMap, ['tahun', 'project_year', 'year']);
         const progCol = findColIndex(colMap, ['nama program', 'program']);
         const actCol = findColIndex(colMap, ['kegiatan', 'activity']);
-        const typeCol = findColIndex(colMap, ['jenis kegiatan', 'tipe kegiatan', 'type_of_activity', 'jenis']);
+        const typeCol = findColIndex(colMap, ['bentuk kegiatan', 'bentuk', 'jenis kegiatan', 'tipe kegiatan', 'type_of_activity', 'jenis']);
         const locCol = findColIndex(colMap, ['lokasi', 'location']);
-        const benCol = findColIndex(colMap, ['penerima manfaat', 'target penerima', 'target_beneficiaries', 'penerima']);
-        const objCol = findColIndex(colMap, ['tujuan', 'objective', 'sasaran']);
+        const benCol = findColIndex(colMap, ['target/sasaran', 'sasaran', 'target', 'penerima manfaat', 'target penerima', 'target_beneficiaries', 'penerima']);
+        const objCol = findColIndex(colMap, ['tujuan', 'objective']);
         const statusCol = findColIndex(colMap, ['status']);
-        const budCol = findColIndex(colMap, ['anggaran', 'budget', 'biaya']);
-        const periodCol = findColIndex(colMap, ['periode pelaksanaan', 'waktu pelaksanaan', 'implementation_period', 'durasi']);
+        const budCol = findColIndex(colMap, ['realisasi', 'realisasi(biaya dalam bentuk rupiah)', 'anggaran', 'budget', 'biaya']);
+        const periodCol = findColIndex(colMap, ['periode pelaksanaan', 'waktu pelaksanaan', 'implementation_period', 'durasi', 'periode']);
+        const imgCol = findColIndex(colMap, ['image dokumentasi', 'image', 'dokumentasi', 'gambar']);
+        const docCol = findColIndex(colMap, ['docx', 'document', 'dokumen']);
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
@@ -589,6 +593,8 @@ export class ExcelImportService {
           const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Planning') : 'Planning';
           const budget = budCol !== -1 ? parseCellNumber(row.getCell(budCol).value) : null;
           const implementation_period = periodCol !== -1 ? trunc(extractCellString(row.getCell(periodCol).value), 100) : null;
+          const documentation_image = imgCol !== -1 ? (extractCellString(row.getCell(imgCol).value) || null) : null;
+          const document = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
 
           rawCsr.push({
             project_year,
@@ -600,7 +606,9 @@ export class ExcelImportService {
             objective,
             status,
             budget,
-            implementation_period
+            implementation_period,
+            documentation_image,
+            document
           });
         }
       } else if (sheetType === 'grievance') {
