@@ -105,13 +105,37 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                     <td className="py-2 text-right w-20">
                       {editingId === p.id ? (
                         <div className="flex justify-end gap-1">
-                          <button onClick={() => handleUpdate(p.id)} className="p-1 text-green-600 hover:bg-green-50 rounded"><Check size={14} /></button>
-                          <button onClick={() => setEditingId(null)} className="p-1 text-muted-foreground hover:bg-muted rounded"><X size={14} /></button>
+                          <button
+                            disabled={isSubmitting}
+                            onClick={() => handleUpdate(p.id)}
+                            className={`p-1 text-green-600 hover:bg-green-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            disabled={isSubmitting}
+                            onClick={() => setEditingId(null)}
+                            className={`p-1 text-muted-foreground hover:bg-muted rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <X size={14} />
+                          </button>
                         </div>
                       ) : (
                         <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => { setEditingId(p.id); setEditName(p.name); }} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Edit2 size={13} /></button>
-                          <button onClick={() => setPicToDelete(p)} className="p-1 text-red-500 hover:bg-red-50 rounded"><Trash2 size={13} /></button>
+                          <button
+                            disabled={isSubmitting}
+                            onClick={() => { setEditingId(p.id); setEditName(p.name); }}
+                            className={`p-1 text-blue-600 hover:bg-blue-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button
+                            disabled={isSubmitting}
+                            onClick={() => setPicToDelete(p)}
+                            className={`p-1 text-red-500 hover:bg-red-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       )}
                     </td>
@@ -123,8 +147,23 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
           )}
         </div>
         <div className="px-6 py-4 border-t border-border flex gap-2 items-center bg-muted/20 shrink-0 rounded-b-2xl">
-          <input type="text" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} placeholder="Nama PIC baru..." className={`${inputCls} flex-1`} />
-          <button onClick={handleAdd} className="px-3 py-2 bg-primary text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center gap-1"><Plus size={14} />Tambah</button>
+          <input
+            disabled={isSubmitting}
+            type="text"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+            placeholder="Nama PIC baru..."
+            className={`${inputCls} flex-1 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
+          <button
+            disabled={isSubmitting}
+            onClick={handleAdd}
+            className={`px-3 py-2 bg-primary text-white text-sm rounded-md hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-1 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <Plus size={14} />
+            {isSubmitting ? "Memproses..." : "Tambah"}
+          </button>
         </div>
       </div>
       {picToDelete && (
