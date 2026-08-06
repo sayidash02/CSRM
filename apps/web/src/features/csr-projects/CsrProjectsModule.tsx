@@ -203,7 +203,7 @@ function CsrForm({
         <Field label="Tujuan"><textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} /></Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Planning</option><option>On Going</option><option>Completed</option><option>Cancelled</option></select></Field>
-          <Field label="Realisasi (Biaya dalam Rupiah)"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
+          <Field label="Realisasi"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Docx">
@@ -296,7 +296,7 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     { header: "Target/Sasaran", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.target_beneficiaries || "—"}</div> },
     { header: "Tujuan", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-muted-foreground italic leading-relaxed max-w-[200px] whitespace-normal">{p.objective || "—"}</div> },
     { header: "Status", accessor: "status", sortable: true, render: (p) => <StatusBadge status={p.status} /> },
-    { header: "Realisasi(Biaya dalam bentuk Rupiah)", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
+    { header: "Realisasi", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
     { header: "Periode Pelaksanaan", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-foreground whitespace-nowrap">{p.implementation_period || "—"}</div> },
     { header: "Image Dokumentasi", render: (p) => (
       p.documentation_image ? <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Gambar</span> : <span className="text-muted-foreground text-xs">—</span>
