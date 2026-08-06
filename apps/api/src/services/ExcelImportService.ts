@@ -103,7 +103,12 @@ function parseCellNumber(val: any): number | null {
     const num = Number(val.result);
     return isNaN(num) ? null : num;
   }
-  const str = extractCellString(val).replace(/[^0-9.-]/g, '');
+  let str = extractCellString(val).toLowerCase();
+  str = str.replace(/(rp|idr|\s)/g, '');
+  str = str.replace(/[,.]00$/, '');
+  str = str.replace(/[.,]/g, '');
+  str = str.replace(/[^0-9-]/g, '');
+  
   if (!str) return null;
   const num = Number(str);
   return isNaN(num) ? null : num;
