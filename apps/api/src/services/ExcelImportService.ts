@@ -138,7 +138,12 @@ function isRowNonEmpty(row: ExcelJS.Row): boolean {
 }
 
 function detectSheetHeader(worksheet: ExcelJS.Worksheet): { sheetType: keyof ImportPreviewSummary; headerRowIndex: number } | null {
-  const sheetNameLower = worksheet.name.toLowerCase();
+  const sheetNameLower = worksheet.name.toLowerCase().trim();
+
+  // Ignore sheets that are typically raw dumps, pivot tables, or references
+  if (['raw', 'master', 'reference', 'sheet1', 'sheet2', 'sheet3', 'data'].includes(sheetNameLower) || sheetNameLower.startsWith('raw ')) {
+    return null;
+  }
 
   const maxCheckRow = Math.min(10, worksheet.rowCount);
   for (let r = 1; r <= maxCheckRow; r++) {
