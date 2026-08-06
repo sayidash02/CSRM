@@ -5,14 +5,19 @@ import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
+interface PicItem {
+  id: string;
+  name: string;
+}
+
 export function PicManagementModal({ onClose, showToast = () => {} }: { onClose: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
-  const [pics, setPics] = useState<any[]>([]);
+  const [pics, setPics] = useState<PicItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [picToDelete, setPicToDelete] = useState<any | null>(null);
+  const [picToDelete, setPicToDelete] = useState<PicItem | null>(null);
 
   const loadPics = async () => {
     setLoading(true);
@@ -30,34 +35,50 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
   }, []);
 
   const handleAdd = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await apiClient.post('/pics', { name: newName });
       setNewName("");
+      showToast(`PIC '${newName}' berhasil ditambahkan`, "success");
       loadPics();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast(e.response?.data?.error || "Gagal menambahkan PIC", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleUpdate = async (id: string) => {
-    if (!editName.trim()) return;
+    if (!editName.trim() || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await apiClient.put(`/pics/${id}`, { name: editName });
       setEditingId(null);
+      showToast(`PIC '${editName}' berhasil diperbarui`, "success");
       loadPics();
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast(e.response?.data?.error || "Gagal memperbarui PIC", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       await apiClient.delete(`/pics/${id}`);
+      showToast("PIC berhasil dihapus", "success");
       loadPics();
       setPicToDelete(null);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast(e.response?.data?.error || "Gagal menghapus PIC", "error");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -72,7 +93,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
           {loading ? <p className="text-sm text-muted-foreground text-center py-4">Memuat data...</p> : (
             <table className="w-full text-sm">
               <tbody className="divide-y divide-border">
-                {pics.map((p: any) => (
+                {pics.map((p) => (
                   <tr key={p.id} className="group">
                     <td className="py-2">
                       {editingId === p.id ? (
