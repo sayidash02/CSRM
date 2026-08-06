@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 
 export const getPics = async (req: Request, res: Response): Promise<void> => {
@@ -13,13 +14,39 @@ export const getPics = async (req: Request, res: Response): Promise<void> => {
 export const createPic = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name } = req.body;
-    if (!name) {
+    if (!name || !name.trim()) {
       res.status(400).json({ error: 'Name is required' });
       return;
     }
-    const pic = await prisma.pics.create({ data: { name, is_active: true } });
+
+    const cleanName = name.trim();
+
+    // Check if PIC with this name already exists in database
+    const existingPic = await prisma.pics.findFirst({
+      where: { name: cleanName }
+    });
+
+    if (existingPic) {
+      if (existingPic.is_active) {
+        res.status(409).json({ error: 'PIC dengan nama tersebut sudah ada' });
+        return;
+      }
+      // Reactivate soft-deleted PIC
+      const reactivated = await prisma.pics.update({
+        where: { id: existingPic.id },
+        data: { is_active: true }
+      });
+      res.status(200).json({ data: { ...reactivated, id: reactivated.id.toString() } });
+      return;
+    }
+
+    const pic = await prisma.pics.create({ data: { name: cleanName, is_active: true } });
     res.status(201).json({ data: { ...pic, id: pic.id.toString() } });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      res.status(409).json({ error: 'PIC dengan nama tersebut sudah ada' });
+      return;
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -28,16 +55,22 @@ export const updatePic = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { name } = req.body;
-    if (!name) {
+    if (!name || !name.trim()) {
       res.status(400).json({ error: 'Name is required' });
       return;
     }
+    const cleanName = name.trim();
+
     const pic = await prisma.pics.update({
       where: { id: BigInt(id as string) },
-      data: { name }
+      data: { name: cleanName }
     });
     res.status(200).json({ data: { ...pic, id: pic.id.toString() } });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      res.status(409).json({ error: 'PIC dengan nama tersebut sudah ada' });
+      return;
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -54,3 +87,4 @@ export const deletePic = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
