@@ -97,7 +97,17 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                   <tr key={p.id} className="group">
                     <td className="py-2">
                       {editingId === p.id ? (
-                        <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className={inputCls} autoFocus />
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={e => setEditName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') handleUpdate(p.id);
+                            else if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className={inputCls}
+                          autoFocus
+                        />
                       ) : (
                         <span className="text-foreground">{p.name}</span>
                       )}
@@ -108,6 +118,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           <button
                             disabled={isSubmitting}
                             onClick={() => handleUpdate(p.id)}
+                            title="Simpan Perubahan"
                             className={`p-1 text-green-600 hover:bg-green-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <Check size={14} />
@@ -115,6 +126,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           <button
                             disabled={isSubmitting}
                             onClick={() => setEditingId(null)}
+                            title="Batal"
                             className={`p-1 text-muted-foreground hover:bg-muted rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <X size={14} />
@@ -125,6 +137,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           <button
                             disabled={isSubmitting}
                             onClick={() => { setEditingId(p.id); setEditName(p.name); }}
+                            title="Edit PIC"
                             className={`p-1 text-blue-600 hover:bg-blue-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <Edit2 size={13} />
@@ -132,6 +145,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           <button
                             disabled={isSubmitting}
                             onClick={() => setPicToDelete(p)}
+                            title="Hapus PIC"
                             className={`p-1 text-red-500 hover:bg-red-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <Trash2 size={13} />
