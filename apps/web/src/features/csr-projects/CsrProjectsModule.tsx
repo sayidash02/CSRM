@@ -340,7 +340,7 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
         </select>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
-        <div className="mb-4 text-xs text-muted-foreground font-mono shrink-0">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + (c.budget || 0), 0))}</span></div>
+        <div className="mb-4 text-xs text-muted-foreground font-mono shrink-0">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + Number(c.budget || 0), 0))}</span></div>
         <div className="flex-1 min-h-0">
           <DataTable columns={columns} data={displayed} />
         </div>
