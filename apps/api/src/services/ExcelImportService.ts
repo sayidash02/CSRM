@@ -137,6 +137,20 @@ function isRowNonEmpty(row: ExcelJS.Row): boolean {
   });
 }
 
+function isRowIdentical(row1: ExcelJS.Row, row2: ExcelJS.Row): boolean {
+  if (!row1 || !row2 || !row1.values || !row2.values) return false;
+  const v1 = Array.isArray(row1.values) ? row1.values : Object.values(row1.values);
+  const v2 = Array.isArray(row2.values) ? row2.values : Object.values(row2.values);
+  
+  const maxLen = Math.max(v1.length, v2.length);
+  for (let i = 1; i < maxLen; i++) {
+    const s1 = extractCellString(v1[i]).toLowerCase();
+    const s2 = extractCellString(v2[i]).toLowerCase();
+    if (s1 !== s2) return false;
+  }
+  return true;
+}
+
 function detectSheetHeader(worksheet: ExcelJS.Worksheet): { sheetType: keyof ImportPreviewSummary; headerRowIndex: number } | null {
   const sheetNameLower = worksheet.name.toLowerCase().trim();
 
@@ -410,6 +424,7 @@ export class ExcelImportService {
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
           if (!isRowNonEmpty(row)) continue;
+          if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const activity_date = dateCol !== -1 && row.getCell(dateCol).value ? (parseCellDate(row.getCell(dateCol).value) || new Date()) : new Date();
           const activity = actCol !== -1 ? truncStr(extractCellString(row.getCell(actCol).value), 255, 'Kegiatan') : 'Kegiatan';
@@ -457,6 +472,7 @@ export class ExcelImportService {
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
           if (!isRowNonEmpty(row)) continue;
+          if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const stakeholder = stkCol !== -1 ? truncStr(extractCellString(row.getCell(stkCol).value), 255) : '';
           if (!stakeholder) continue;
@@ -486,6 +502,7 @@ export class ExcelImportService {
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
           if (!isRowNonEmpty(row)) continue;
+          if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const issue = issueCol !== -1 ? truncStr(extractCellString(row.getCell(issueCol).value), 255) : '';
           if (!issue) continue;
@@ -518,6 +535,7 @@ export class ExcelImportService {
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
           if (!isRowNonEmpty(row)) continue;
+          if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           let registration_no = regCol !== -1 ? extractCellString(row.getCell(regCol).value) : '';
           if (!registration_no || usedProposalRegNos.has(registration_no.toLowerCase())) {
@@ -556,6 +574,7 @@ export class ExcelImportService {
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
           if (!isRowNonEmpty(row)) continue;
+          if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const program = progCol !== -1 ? truncStr(extractCellString(row.getCell(progCol).value), 255) : '';
           if (!program) continue;
@@ -597,6 +616,7 @@ export class ExcelImportService {
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
           if (!isRowNonEmpty(row)) continue;
+          if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           let register_no = regCol !== -1 ? extractCellString(row.getCell(regCol).value) : '';
           if (!register_no || usedGrievanceRegNos.has(register_no.toLowerCase())) {
