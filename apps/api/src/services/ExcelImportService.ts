@@ -164,6 +164,8 @@ function detectSheetHeader(worksheet: ExcelJS.Worksheet): { sheetType: keyof Imp
     return null;
   }
 
+  let bestMatch: { sheetType: keyof ImportPreviewSummary; headerRowIndex: number, colCount: number } | null = null;
+
   const maxCheckRow = Math.min(10, worksheet.rowCount);
   for (let r = 1; r <= maxCheckRow; r++) {
     const row = worksheet.getRow(r);
@@ -185,39 +187,35 @@ function detectSheetHeader(worksheet: ExcelJS.Worksheet): { sheetType: keyof Imp
     const hasNoReg = cellTexts.some(t => t.includes('no registrasi') || t.includes('registrasi'));
     const hasInstansi = cellTexts.some(t => t.includes('instansi'));
     const hasProgram = cellTexts.some(t => t.includes('program'));
-    const hasGrievance = cellTexts.some(t => t.includes('grievance') || t.includes('keluhan'));
+    const hasGrievance = cellTexts.some(t => t.includes('grievance') || t.includes('keluhan') || t.includes('investigation') || t.includes('resolution') || t.includes('significance'));
     const hasNo = cellTexts.some(t => t === 'no' || t === 'no.' || t === 'no ' || t === 'nomor');
     const hasDocs = cellTexts.some(t => t.includes('dokumen') || t.includes('docs') || t.includes('document'));
 
-    // 1. dailyActivities: header keywords "Tanggal", "Kegiatan"
+    let matchedType: keyof ImportPreviewSummary | null = null;
+
     if (hasTanggal && hasKegiatan) {
-      return { sheetType: 'dailyActivities', headerRowIndex: r };
+      matchedType = 'dailyActivities';
+    } else if (hasStakeholder && (hasTanggal || hasIssue || hasDocs || hasNo || cellTexts.some(t => t.includes('venue')))) {
+      matchedType = 'stakeholders';
+    } else if (hasIssue && (hasTop || hasNo || hasDocs || cellTexts.some(t => t.includes('tindak') || t.includes('follow')))) {
+      matchedType = 'topIssues';
+    } else if (hasNoReg || hasInstansi) {
+      matchedType = 'proposals';
+    } else if ((hasProgram && hasNo) || (sheetNameLower.includes('csr') && (hasProgram || hasKegiatan || hasNo))) {
+      matchedType = 'csr';
+    } else if (hasGrievance && (hasNo || hasTanggal || hasIssue)) {
+      matchedType = 'grievance';
     }
 
-    // 2. stakeholders: header keywords "Stakeholder" AND ("Date" OR "Venue" OR "Issue" OR "Docs" OR "No")
-    if (hasStakeholder && (hasTanggal || hasIssue || hasDocs || hasNo || cellTexts.some(t => t.includes('venue')))) {
-      return { sheetType: 'stakeholders', headerRowIndex: r };
+    if (matchedType) {
+      if (!bestMatch || cellTexts.length >= bestMatch.colCount) {
+        bestMatch = { sheetType: matchedType, headerRowIndex: r, colCount: cellTexts.length };
+      }
     }
+  }
 
-    // 3. topIssues: header keywords "Issue" and ("Top" or "No" or "Docs" or "Tindak Lanjut")
-    if (hasIssue && (hasTop || hasNo || hasDocs || cellTexts.some(t => t.includes('tindak') || t.includes('follow')))) {
-      return { sheetType: 'topIssues', headerRowIndex: r };
-    }
-
-    // 4. proposals: header keywords "NO REGISTRASI" or "INSTANSI"
-    if (hasNoReg || hasInstansi) {
-      return { sheetType: 'proposals', headerRowIndex: r };
-    }
-
-    // 5. csr: header keywords "PROGRAM" or "KEGIATAN"
-    if ((hasProgram && hasNo) || (sheetNameLower.includes('csr') && (hasProgram || hasKegiatan || hasNo))) {
-      return { sheetType: 'csr', headerRowIndex: r };
-    }
-
-    // 6. grievance: header keywords "GRIEVANCE" or "KELUHAN"
-    if (hasGrievance && (hasNo || hasTanggal || hasIssue)) {
-      return { sheetType: 'grievance', headerRowIndex: r };
-    }
+  if (bestMatch) {
+    return { sheetType: bestMatch.sheetType, headerRowIndex: bestMatch.headerRowIndex };
   }
 
   // Fallback sheet name matching if keywords weren't explicitly found in rows 1..10
