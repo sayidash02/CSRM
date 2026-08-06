@@ -384,10 +384,17 @@ export class ExcelImportService {
       log_date: Date;
       complainant_name: string;
       address: string | null;
+      phone: string | null;
       category: string | null;
       significance: string;
       description: string | null;
+      location: string | null;
+      investigation: string | null;
+      resolution: string | null;
+      feedback: string | null;
       status: string;
+      remarks: string | null;
+      supporting_files: string | null;
     }> = [];
 
     const existingProposals = await prisma.proposals.findMany({ select: { registration_no: true } });
@@ -617,14 +624,21 @@ export class ExcelImportService {
           });
         }
       } else if (sheetType === 'grievance') {
-        const regCol = findColIndex(colMap, ['no registrasi', 'no reg', 'register_no', 'nomor registrasi', 'no. reg', 'no.']);
-        const dateCol = findColIndex(colMap, ['tanggal log', 'log_date', 'tanggal', 'date']);
-        const compCol = findColIndex(colMap, ['nama pelapor', 'complainant_name', 'pelapor', 'complainant']);
+        const regCol = findColIndex(colMap, ['no registrasi', 'no reg', 'register_no', 'nomor registrasi', 'no. reg', 'no.', 'register no.', 'register no']);
+        const dateCol = findColIndex(colMap, ['tanggal log', 'log_date', 'tanggal', 'date', 'log date']);
+        const compCol = findColIndex(colMap, ['nama pelapor', 'complainant_name', 'pelapor', 'complainant', 'name']);
         const addrCol = findColIndex(colMap, ['alamat', 'address']);
+        const phoneCol = findColIndex(colMap, ['phone', 'no hp', 'telepon', 'no telepon']);
         const catCol = findColIndex(colMap, ['kategori', 'category']);
         const sigCol = findColIndex(colMap, ['signifikansi', 'significance', 'tingkat']);
         const descCol = findColIndex(colMap, ['deskripsi', 'description', 'keluhan', 'rincian']);
+        const locCol = findColIndex(colMap, ['location', 'lokasi']);
+        const invCol = findColIndex(colMap, ['investigation', 'investigasi']);
+        const resCol = findColIndex(colMap, ['resolution', 'resolusi', 'penyelesaian']);
+        const feedCol = findColIndex(colMap, ['complainant feedback', 'feedback', 'umpan balik']);
         const statusCol = findColIndex(colMap, ['status']);
+        const remCol = findColIndex(colMap, ['remarks', 'catatan', 'keterangan']);
+        const docCol = findColIndex(colMap, ['related supporting docs (photo, settlement note etc)', 'related supporting docs', 'supporting docs', 'dokumen pendukung', 'supporting_files', 'docs']);
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
@@ -641,20 +655,34 @@ export class ExcelImportService {
           const log_date = dateCol !== -1 && row.getCell(dateCol).value ? (parseCellDate(row.getCell(dateCol).value) || new Date()) : new Date();
           const complainant_name = compCol !== -1 ? truncStr(extractCellString(row.getCell(compCol).value), 255, 'Anonim') : 'Anonim';
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
+          const phone = phoneCol !== -1 ? trunc(extractCellString(row.getCell(phoneCol).value), 30) : null;
           const category = catCol !== -1 ? trunc(extractCellString(row.getCell(catCol).value), 100) : null;
           const significance = sigCol !== -1 ? truncStr(extractCellString(row.getCell(sigCol).value), 20, 'Low') : 'Low';
           const description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
+          const location = locCol !== -1 ? trunc(extractCellString(row.getCell(locCol).value), 255) : null;
+          const investigation = invCol !== -1 ? (extractCellString(row.getCell(invCol).value) || null) : null;
+          const resolution = resCol !== -1 ? (extractCellString(row.getCell(resCol).value) || null) : null;
+          const feedback = feedCol !== -1 ? (extractCellString(row.getCell(feedCol).value) || null) : null;
           const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Open') : 'Open';
+          const remarks = remCol !== -1 ? (extractCellString(row.getCell(remCol).value) || null) : null;
+          const supporting_files = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
 
           rawGrievance.push({
             register_no,
             log_date,
             complainant_name,
             address,
+            phone,
             category,
             significance,
             description,
-            status
+            location,
+            investigation,
+            resolution,
+            feedback,
+            status,
+            remarks,
+            supporting_files
           });
         }
       }
