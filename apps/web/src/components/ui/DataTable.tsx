@@ -7,6 +7,7 @@ export type ColumnDef<T> = {
   sortable?: boolean;
   className?: string;
   render?: (item: T, idx: number) => React.ReactNode;
+  filterOptions?: { label: string; value: string }[];
 };
 
 interface DataTableProps<T> {
@@ -16,6 +17,7 @@ interface DataTableProps<T> {
 
 export function DataTable<T>({ data, columns }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
   const getNestedValue = (obj: any, path: string) => {
     return path.split('.').reduce((acc, part) => acc && acc[part], obj);
@@ -23,6 +25,20 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
 
   const sortedData = React.useMemo(() => {
     let sortableItems = [...data];
+
+    if (Object.keys(activeFilters).length > 0) {
+      sortableItems = sortableItems.filter(item => {
+        for (const [key, filterValue] of Object.entries(activeFilters)) {
+          if (filterValue === 'All') continue;
+          const itemValue = getNestedValue(item, key);
+          if (String(itemValue) !== String(filterValue)) {
+            return false;
+          }
+        }
+        return true;
+      });
+    }
+
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aValue = getNestedValue(a, sortConfig.key);
@@ -50,7 +66,7 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
       });
     }
     return sortableItems;
-  }, [data, sortConfig]);
+  }, [data, sortConfig, activeFilters]);
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
