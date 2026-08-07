@@ -238,7 +238,7 @@ export default function App() {
     apiClient.get('/years/available')
       .then(res => setAvailableYears(res.data.data))
       .catch(() => setAvailableYears([new Date().getFullYear()]));
-  }, []);
+  }, [activeModule]);
 
   // Re-fetch sync status when active year changes
   useEffect(() => {
