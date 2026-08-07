@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
@@ -239,7 +239,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
     try {
       await apiClient.post('/grievance', d);
       fetchData();
-      showToast(`Keluhan dari '${(d as any).name || d.complainant_name}' berhasil ditambahkan`, "success");
+      showToast(`Keluhan dari '${d.complainant_name}' berhasil ditambahkan`, "success");
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
@@ -250,18 +250,18 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
     try {
       await apiClient.put(`/grievance/${id}`, d);
       fetchData();
-      showToast(`Keluhan dari '${(d as any).name || d.complainant_name}' berhasil diperbarui`, "success");
+      showToast(`Keluhan dari '${d.complainant_name}' berhasil diperbarui`, "success");
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
-  const handleDelete = async (id: string | number) => {
+  const handleDelete = async (id: string | number, name?: string) => {
     try {
       await apiClient.delete(`/grievance/${id}`);
       fetchData();
-      showToast(`Keluhan dari '${(toDelete as any)?.name || toDelete?.complainant_name || ''}' berhasil dihapus`, "success");
+      showToast(`Keluhan dari '${name || ''}' berhasil dihapus`, "success");
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal menghapus data", "error");
@@ -282,13 +282,6 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [sigFilter, setSigFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [selected, setSelected] = useState<string | number | null>(items[0]?.id ?? null);
-  
-  useEffect(() => {
-    if (items.length > 0 && selected === null) {
-      setSelected(items[0].id);
-    }
-  }, [items, selected]);
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Grievance | null>(null);
@@ -324,7 +317,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
         <button onClick={() => setToDelete(g)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
       </div>
     )}
-  ], [showDeleted]);
+  ], [showDeleted, activeYear]);
 
   const handleExportClick = () => {
     const exportData = displayed.map(g => ({
@@ -378,7 +371,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       </div>
       {showForm && <GrievanceForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
       {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} showToast={showToast} />}
-      {toDelete && <DeleteConfirm label={`${toDelete.register_no} — ${toDelete.complainant_name}`} onCancel={() => setToDelete(null)} onConfirm={() => { if (selected === toDelete.id) setSelected(null); handleDelete(toDelete.id); setToDelete(null); }} />}
+      {toDelete && <DeleteConfirm label={`${toDelete.register_no} — ${toDelete.complainant_name}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.complainant_name); setToDelete(null); }} />}
     </div>
   );
 }
