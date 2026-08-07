@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
@@ -52,10 +52,10 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, showDeleted }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
-  onExport?: () => void; children?: React.ReactNode;
+  onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -73,7 +73,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
           </div>
         )}
         <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
       </div>
     </div>
   );
@@ -183,15 +183,18 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
 export default function ProposalsModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Proposal[]>([]);
   const [addDraft, setAddDraft] = useState({ ...emptyProposalDraft });
+  const [showDeleted, setShowDeleted] = useState(false);
   
   useEffect(() => {
     fetchData();
-  }, [activeYear]);
+  }, [activeYear, showDeleted]);
 
   const fetchData = async () => {
     try {
-      const yearParam = activeYear ? `?year=${activeYear}` : '';
-      const res = await apiClient.get(`/proposals${yearParam}`);
+      const yearParam = activeYear ? `year=${activeYear}` : '';
+      const isDeletedParam = `is_deleted=${showDeleted}`;
+      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
+      const res = await apiClient.get(`/proposals${queryParams ? `?${queryParams}` : ''}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);
@@ -231,6 +234,17 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
     }
   };
 
+  const handleRestore = async (id: string | number) => {
+    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    try {
+      await apiClient.patch(`/proposals/${id}/restore`);
+      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      fetchData();
+    } catch (e: any) {
+      if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
+    }
+  };
+
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
@@ -252,13 +266,23 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
         {p.assessment_file && <span className="text-xs text-violet-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Assess</span>}
       </div>
     )},
-    { header: "", render: (p) => (
+    { header: "", render: (p) => showDeleted ? (
+      <div className="flex items-center justify-end">
+        <button 
+          onClick={() => handleRestore(p.id)} 
+          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+        >
+          <RotateCcw size={12} />
+          Restore
+        </button>
+      </div>
+    ) : (
       <div className="flex items-center gap-1 justify-end">
         <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
       </div>
     )}
-  ], []);
+  ], [showDeleted]);
 
   const handleExportClick = () => {
     const exportData = displayed.map(p => ({
@@ -269,12 +293,21 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       "Proposal Description": p.proposal_description || "",
       "Status": p.status
     }));
-    onExport("Proposals", exportData);
+    onExport("Proposal", exportData);
   };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Proposals" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="Proposal" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <div className="flex items-center gap-2 mr-2">
+          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <input 
+            type="checkbox" 
+            checked={showDeleted} 
+            onChange={(e) => setShowDeleted(e.target.checked)} 
+            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+          />
+        </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
           <option value="All">Semua Status</option>
           {Array.from(new Set(items.map(i => i.status))).map(s => (
@@ -294,4 +327,5 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
     </div>
   );
 }
+
 
