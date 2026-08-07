@@ -185,19 +185,35 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
         <Field label="PIC" required>
           <div className="flex gap-2 items-start">
-            <div className="flex-1 flex flex-col gap-1">
-              <select 
-                multiple 
-                value={f.pic_ids.map(String)} 
-                onChange={e => {
-                  const opts = Array.from(e.target.selectedOptions, option => option.value);
-                  set("pic_ids", opts);
-                }} 
-                className={`${inputCls} h-24`}
-              >
-                {refs.pics.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <p className="text-[10px] text-muted-foreground">Tahan Ctrl/Cmd untuk memilih banyak PIC</p>
+            <div className="flex-1">
+              <div className="flex flex-wrap gap-1.5 p-2 bg-input-background border border-border rounded-md min-h-[42px]">
+                {refs.pics.length === 0 && <span className="text-xs text-muted-foreground self-center">Belum ada PIC</span>}
+                {refs.pics.map(p => {
+                  const isSelected = f.pic_ids.map(String).includes(String(p.id));
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        let newIds = [...f.pic_ids.map(String)];
+                        if (isSelected) {
+                          newIds = newIds.filter(id => id !== String(p.id));
+                        } else {
+                          newIds.push(String(p.id));
+                        }
+                        set("pic_ids", newIds);
+                      }}
+                      className={`px-3 py-1 text-xs font-medium rounded-full border transition-all active:scale-95 ${
+                        isSelected 
+                          ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+                          : 'bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      {p.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
             <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0" title="Atur PIC"><Settings size={14} /></button>
           </div>
