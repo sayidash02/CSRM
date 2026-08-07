@@ -25,17 +25,17 @@ export const createStakeholder = async (req: Request, res: Response): Promise<vo
       }
     });
 
-    res.status(201).json({ data: { ...result, id: result.id.toString() } });
-  } catch (error) {
-    console.error(error);
+    res.status(201).json({ data: result });
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 export const getStakeholders = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
-    const where: any = { is_deleted: false, is_archived: false };
+    const { year, is_deleted } = req.query;
+    const isDeletedFilter = is_deleted === 'true';
+    const where: any = { is_deleted: isDeletedFilter, is_archived: false };
     if (year) {
       const y = year as string;
       where.date = {
@@ -47,14 +47,8 @@ export const getStakeholders = async (req: Request, res: Response): Promise<void
       where
     });
     
-    const serialized = stakeholders.map(s => ({
-      ...s,
-      id: s.id.toString(),
-      date: s.date ? s.date.toISOString().split('T')[0] : null
-    }));
-    res.status(200).json({ data: serialized });
-  } catch (error) {
-    console.error(error);
+    res.status(200).json({ data: stakeholders });
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -66,8 +60,12 @@ export const deleteStakeholder = async (req: Request, res: Response): Promise<vo
       where: { id: BigInt(id as string) },
       data: { is_deleted: true }
     });
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
-  } catch (error) {
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'Stakeholder record not found' });
+      return;
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -93,9 +91,29 @@ export const updateStakeholder = async (req: Request, res: Response): Promise<vo
       }
     });
 
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
-  } catch (error) {
-    console.error(error);
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'Stakeholder record not found' });
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const restoreStakeholder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await prisma.stakeholder_engagement.update({
+      where: { id: BigInt(id as string) },
+      data: { is_deleted: false }
+    });
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'Stakeholder record not found' });
+      return;
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 };
