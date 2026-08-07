@@ -15,10 +15,10 @@ export interface ParsedDailyActivityRow {
   cost: number;
   description_result: string;
   document_link: string;
-  pic_id: string | null;
+  pic_ids: string[];
   category_name: string;
   sub_category_name: string;
-  pic_name: string;
+  pic_names: string[];
 }
 
 export interface ExcelImportErrorRow extends ParsedDailyActivityRow {
@@ -74,7 +74,7 @@ function extractCellString(val: any): string {
   return String(val).trim();
 }
 
-function parseCellDate(val: any): Date | null {
+export function parseCellDate(val: any): Date | null {
   if (!val) return null;
   if (val instanceof Date) return val;
   if (typeof val === 'number') {
@@ -84,13 +84,19 @@ function parseCellDate(val: any): Date | null {
   const str = extractCellString(val);
   if (!str) return null;
   const parsed = Date.parse(str);
-  if (!isNaN(parsed)) return new Date(parsed);
+  if (!isNaN(parsed)) {
+    const d = new Date(parsed);
+    return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  }
 
   // Extract date-like substring e.g., "15 Jan 2026" from "15 Jan 2026, Meeting Room A"
   const dateMatch = str.match(/\d{1,2}\s+[a-zA-Z]+\s+\d{2,4}/);
   if (dateMatch) {
     const parsed2 = Date.parse(dateMatch[0]);
-    if (!isNaN(parsed2)) return new Date(parsed2);
+    if (!isNaN(parsed2)) {
+      const d2 = new Date(parsed2);
+      return new Date(Date.UTC(d2.getFullYear(), d2.getMonth(), d2.getDate()));
+    }
   }
 
   return null;
@@ -174,7 +180,8 @@ function detectSheetHeader(worksheet: ExcelJS.Worksheet): { sheetType: keyof Imp
     const cellTexts: string[] = [];
     row.eachCell({ includeEmpty: false }, (cell) => {
       const str = extractCellString(cell.value).toLowerCase();
-      if (str) cellTexts.push(str);
+      // Ignore long texts which are likely data paragraphs, not headers
+      if (str && str.length <= 100) cellTexts.push(str);
     });
 
     if (cellTexts.length === 0) continue;
@@ -282,8 +289,11 @@ export class ExcelImportService {
 
             if (picCol !== -1) {
               let picVal = extractCellString(row.getCell(picCol).value).trim();
-              if (picVal.length > 50) picVal = ''; // Filter out obviously invalid PIC names (e.g. huge text)
-              if (picVal) excelPics.add(picVal);
+              if (picVal.length > 255) picVal = ''; 
+              if (picVal) {
+                const names = picVal.split(/[,&]|\bdan\b/i).map(n => n.trim()).filter(Boolean);
+                for (const n of names) excelPics.add(n);
+              }
             }
             if (catCol !== -1) {
               let catVal = extractCellString(row.getCell(catCol).value).trim();
@@ -332,7 +342,7 @@ export class ExcelImportService {
       description_result: string | null;
       cost: number | null;
       document_link: string | null;
-      pic_name: string;
+      pic_names: string[];
       category_name: string;
       sub_category_name: string;
     }> = [];
@@ -448,8 +458,10 @@ export class ExcelImportService {
           const location = locCol !== -1 ? trunc(extractCellString(row.getCell(locCol).value), 255) : null;
           const cost = costCol !== -1 ? parseCellNumber(row.getCell(costCol).value) : null;
           const document_link = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
-          let pic_name = picCol !== -1 ? extractCellString(row.getCell(picCol).value).trim() : '';
-          if (!pic_name || pic_name.length > 50) pic_name = 'Umum';
+          let raw_pic_name = picCol !== -1 ? extractCellString(row.getCell(picCol).value).trim() : '';
+          if (!raw_pic_name || raw_pic_name.length > 255) raw_pic_name = 'Umum';
+          let pic_names = raw_pic_name.split(/[,&]|\bdan\b/i).map(n => n.trim()).filter(Boolean);
+          if (pic_names.length === 0) pic_names = ['Umum'];
           
           let category_name = catCol !== -1 ? extractCellString(row.getCell(catCol).value).trim() : '';
           if (!category_name || category_name.length > 50) category_name = 'Umum';
@@ -476,7 +488,7 @@ export class ExcelImportService {
             description_result,
             cost,
             document_link,
-            pic_name,
+            pic_names,
             category_name,
             sub_category_name
           });
@@ -712,10 +724,12 @@ export class ExcelImportService {
 
         const uniquePicsToCreate = new Map<string, string>();
         for (const item of rawDailyActivities) {
-          const trimmed = item.pic_name.trim();
-          const norm = trimmed.toLowerCase();
-          if (norm && !picMap.has(norm) && !uniquePicsToCreate.has(norm)) {
-            uniquePicsToCreate.set(norm, trimmed);
+          for (const p of item.pic_names) {
+            const trimmed = p.trim();
+            const norm = trimmed.toLowerCase();
+            if (norm && !picMap.has(norm) && !uniquePicsToCreate.has(norm)) {
+              uniquePicsToCreate.set(norm, trimmed);
+            }
           }
         }
         for (const [norm, name] of uniquePicsToCreate.entries()) {
@@ -772,31 +786,31 @@ export class ExcelImportService {
 
         // 4. Insert Daily Activities
         if (rawDailyActivities.length > 0) {
-          const dailyActivitiesToInsert = rawDailyActivities.map((item) => {
+          for (const item of rawDailyActivities) {
             const catId = categoryMap.get(item.category_name.trim().toLowerCase())!;
             const subKey = `${catId}:${item.sub_category_name.trim().toLowerCase()}`;
             const subCatId = subCategoryMap.get(subKey)!;
-            const picId = picMap.get(item.pic_name.trim().toLowerCase())!;
+            const pIds = item.pic_names.map(p => picMap.get(p.trim().toLowerCase())!);
 
-            return {
-              activity_date: item.activity_date,
-              activity: item.activity,
-              institution_group: item.institution_group,
-              address: item.address,
-              focus: item.focus,
-              location: item.location,
-              description_result: item.description_result,
-              pic_id: picId,
-              category_id: catId,
-              sub_category_id: subCatId,
-              cost: item.cost,
-              document_link: item.document_link
-            };
-          });
-
-          await tx.daily_activities.createMany({
-            data: dailyActivitiesToInsert
-          });
+            await tx.daily_activities.create({
+              data: {
+                activity_date: item.activity_date,
+                activity: item.activity,
+                institution_group: item.institution_group,
+                address: item.address,
+                focus: item.focus,
+                location: item.location,
+                description_result: item.description_result,
+                category_id: catId,
+                sub_category_id: subCatId,
+                cost: item.cost,
+                document_link: item.document_link,
+                daily_activity_pics: {
+                  create: pIds.map(id => ({ pic_id: id }))
+                }
+              }
+            });
+          }
         }
 
         // 5. Insert Stakeholders
@@ -909,11 +923,12 @@ export async function parseDailyActivitiesExcel(buffer: Buffer): Promise<ExcelIm
 
     const catName = rawCat.toLowerCase();
     const subCatName = rawSubCat.toLowerCase();
-    const picName = rawPic.toLowerCase();
+    const rawPicNames = rawPic.split(/[,&]|\bdan\b/i).map(n => n.trim()).filter(Boolean);
+    const picNames = rawPicNames.map(n => n.toLowerCase());
 
     const categoryMatch = categories.find(c => c.name.toLowerCase().trim() === catName);
     const subCategoryMatch = subCategories.find(s => s.name.toLowerCase().trim() === subCatName);
-    const picMatch = pics.find(p => p.name.toLowerCase().trim() === picName);
+    const picMatches = picNames.map(pName => pics.find(p => p.name.toLowerCase().trim() === pName));
 
     const errors: string[] = [];
     if (!activity_date) errors.push("Tanggal kosong atau salah format");
@@ -921,9 +936,14 @@ export async function parseDailyActivitiesExcel(buffer: Buffer): Promise<ExcelIm
     if (costError) errors.push(`Biaya '${values[10]}' bukan berupa angka`);
     if (rawCat && !categoryMatch) errors.push(`Kategori '${rawCat}' tidak ditemukan`);
     if (rawSubCat && !subCategoryMatch) errors.push(`Sub Category '${rawSubCat}' tidak ditemukan`);
-    if (rawPic && !picMatch) errors.push(`PIC '${rawPic}' tidak ditemukan`);
+    if (rawPicNames.length > 0) {
+      rawPicNames.forEach((name, i) => {
+        if (!picMatches[i]) errors.push(`PIC '${name}' tidak ditemukan`);
+      });
+    } else {
+      errors.push("PIC wajib diisi");
+    }
     if (!rawCat) errors.push("Kategori wajib diisi");
-    if (!rawPic) errors.push("PIC wajib diisi");
 
     const mappedData: ParsedDailyActivityRow = {
       tempId: `row-${rowNumber}`,
@@ -938,10 +958,10 @@ export async function parseDailyActivitiesExcel(buffer: Buffer): Promise<ExcelIm
       cost,
       description_result,
       document_link,
-      pic_id: picMatch ? String(picMatch.id) : null,
+      pic_ids: picMatches.filter(Boolean).map(p => String(p!.id)),
       category_name: rawCat,
       sub_category_name: rawSubCat,
-      pic_name: rawPic
+      pic_names: rawPicNames
     };
 
     if (errors.length > 0) {
