@@ -75,6 +75,11 @@ describe('DELETE /api/top-issues/:id', () => {
     const listAfter = await request(testApp).get('/api/top-issues');
     expect(listAfter.body.data.length).toBe(0);
   });
+
+  it('Should return 404 when deleting non-existent top issue', async () => {
+    const res = await request(testApp).delete('/api/top-issues/999999');
+    expect(res.status).toBe(404);
+  });
 });
 
 describe('PATCH /api/top-issues/:id/restore', () => {
@@ -104,7 +109,6 @@ describe('PUT /api/top-issues/:id', () => {
       issue: 'Air Quality',
     };
     const createRes = await request(testApp).post('/api/top-issues').send(payload);
-    if (createRes.status !== 201) console.log(createRes.body);
     const id = createRes.body.data.id;
     
     const updatePayload = {
@@ -116,5 +120,14 @@ describe('PUT /api/top-issues/:id', () => {
     const res = await request(testApp).put(`/api/top-issues/${id}`).send(updatePayload);
     expect(res.status).toBe(200);
     expect(res.body.data.issue).toBe('Air Quality Updated');
+  });
+
+  it('Should return 404 when updating non-existent top issue', async () => {
+    const res = await request(testApp).put('/api/top-issues/999999').send({
+      period: 'Q2 2026',
+      year: 2026,
+      issue: 'Air Quality Updated',
+    });
+    expect(res.status).toBe(404);
   });
 });
