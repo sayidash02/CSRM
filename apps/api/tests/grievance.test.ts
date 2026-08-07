@@ -1,15 +1,6 @@
 import request from 'supertest';
-import express from 'express';
-import grievanceRouter from '../src/routes/grievance';
-import { PrismaClient } from '@prisma/client';
-
-(BigInt.prototype as any).toJSON = function() { return this.toString(); };
-
-const testApp = express();
-testApp.use(express.json());
-testApp.use('/api/grievance', grievanceRouter);
-
-const prisma = new PrismaClient();
+import app from '../src/app';
+import prisma from '../src/lib/prisma';
 
 beforeAll(async () => {
   await prisma.grievance.deleteMany();
@@ -27,7 +18,7 @@ describe('POST /api/grievance', () => {
       complainant_name: 'John Doe',
       significance: 'High'
     };
-    const res = await request(testApp).post('/api/grievance').send(payload);
+    const res = await request(app).post('/api/grievance').send(payload);
     expect(res.status).toBe(201);
     expect(res.body.data.register_no).toBe('GRV-2026-001');
     expect(res.body.data.complainant_name).toBe('John Doe');
@@ -35,7 +26,7 @@ describe('POST /api/grievance', () => {
 
   it('Negative: Should fail if required field missing', async () => {
     const payload = { register_no: 'GRV-2026-002' };
-    const res = await request(testApp).post('/api/grievance').send(payload);
+    const res = await request(app).post('/api/grievance').send(payload);
     expect(res.status).toBe(400);
   });
 
@@ -46,50 +37,85 @@ describe('POST /api/grievance', () => {
       complainant_name: 'Jane Doe',
       significance: 'Medium'
     };
-    const res = await request(testApp).post('/api/grievance').send(payload);
+    const res = await request(app).post('/api/grievance').send(payload);
     expect(res.status).toBe(409);
   });
 });
 
 describe('GET /api/grievance', () => {
   it('Should return list of grievances not deleted', async () => {
-    const res = await request(testApp).get('/api/grievance');
+    const res = await request(app).get('/api/grievance');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeGreaterThan(0);
   });
-});
 
-describe('PUT /api/grievance/:id', () => {
-  it('Should update an existing grievance', async () => {
-    const list = await request(testApp).get('/api/grievance');
-    const id = list.body.data[0].id;
-    
-    const updatePayload = {
-      register_no: 'GRV-2026-001-UPD',
-      log_date: '2026-07-26',
-      complainant_name: 'John Doe Updated',
-      significance: 'Low'
-    };
-    
-    const res = await request(testApp).put(`/api/grievance/${id}`).send(updatePayload);
+  it('Should return deleted grievances when is_deleted=true', async () => {
+    const res = await request(app).get('/api/grievance?is_deleted=true');
     expect(res.status).toBe(200);
-    expect(res.body.data.register_no).toBe('GRV-2026-001-UPD');
-    expect(res.body.data.complainant_name).toBe('John Doe Updated');
-    expect(res.body.data.significance).toBe('Low');
+    expect(Array.isArray(res.body.data)).toBe(true);
   });
 });
 
 describe('DELETE /api/grievance/:id', () => {
   it('Should soft delete a grievance', async () => {
-    const list = await request(testApp).get('/api/grievance');
+    const list = await request(app).get('/api/grievance');
     const id = list.body.data[0].id;
     
-    const res = await request(testApp).delete(`/api/grievance/${id}`);
+    const res = await request(app).delete(`/api/grievance/${id}`);
     expect(res.status).toBe(200);
     expect(res.body.data.is_deleted).toBe(true);
 
-    const listAfter = await request(testApp).get('/api/grievance');
+    const listAfter = await request(app).get('/api/grievance');
     expect(listAfter.body.data.length).toBe(0);
+
+    const listDeleted = await request(app).get('/api/grievance?is_deleted=true');
+    expect(listDeleted.status).toBe(200);
+    expect(listDeleted.body.data.length).toBe(1);
+    expect(listDeleted.body.data[0].id).toBe(id);
+  });
+
+  it('Should return 404 when deleting non-existent grievance', async () => {
+    const res = await request(app).delete('/api/grievance/999999');
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PATCH /api/grievance/:id/restore', () => {
+  it('Should restore a deleted grievance', async () => {
+    const listDeleted = await request(app).get('/api/grievance?is_deleted=true');
+    const id = listDeleted.body.data[0].id;
+
+    const res = await request(app).patch(`/api/grievance/${id}/restore`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.is_deleted).toBe(false);
+
+    const listAfter = await request(app).get('/api/grievance');
+    expect(listAfter.body.data.length).toBe(1);
+  });
+
+  it('Should return 404 when restoring non-existent grievance', async () => {
+    const res = await request(app).patch('/api/grievance/999999/restore');
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /api/grievance/:id', () => {
+  it('Should update an existing grievance', async () => {
+    const list = await request(app).get('/api/grievance');
+    const id = list.body.data[0].id;
+    
+    const updatePayload = {
+      register_no: 'GRV-2026-003-UPD',
+      log_date: '2026-07-26',
+      complainant_name: 'John Doe Updated',
+      significance: 'Low'
+    };
+    
+    const res = await request(app).put(`/api/grievance/${id}`).send(updatePayload);
+    expect(res.status).toBe(200);
+    expect(res.body.data.register_no).toBe('GRV-2026-003-UPD');
+    expect(res.body.data.complainant_name).toBe('John Doe Updated');
+    expect(res.body.data.significance).toBe('Low');
   });
 });

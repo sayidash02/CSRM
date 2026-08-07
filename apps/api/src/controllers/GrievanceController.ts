@@ -48,10 +48,9 @@ export const createGrievance = async (req: Request, res: Response): Promise<void
       }
     });
 
-    res.status(201).json({ data: { ...result, id: result.id.toString() } });
-  } catch (error) {
-    console.error(error);
-    if ((error as any).code === 'P2002') {
+    res.status(201).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2002') {
       res.status(409).json({ error: 'Duplicate register_no' });
       return;
     }
@@ -61,8 +60,9 @@ export const createGrievance = async (req: Request, res: Response): Promise<void
 
 export const getGrievances = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
-    const where: any = { is_deleted: false, is_archived: false };
+    const { year, is_deleted } = req.query;
+    const isDeletedFilter = is_deleted === 'true';
+    const where: any = { is_deleted: isDeletedFilter, is_archived: false };
     if (year) {
       const y = year as string;
       where.log_date = {
@@ -74,13 +74,8 @@ export const getGrievances = async (req: Request, res: Response): Promise<void> 
       where
     });
     
-    const serialized = grievances.map(a => ({
-      ...a,
-      id: a.id.toString(),
-    }));
-    res.status(200).json({ data: serialized });
+    res.status(200).json({ data: grievances });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -134,14 +129,13 @@ export const updateGrievance = async (req: Request, res: Response): Promise<void
       }
     });
 
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
-  } catch (error) {
-    console.error(error);
-    if ((error as any).code === 'P2025') {
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
       res.status(404).json({ error: 'Grievance not found' });
       return;
     }
-    if ((error as any).code === 'P2002') {
+    if (error.code === 'P2002') {
       res.status(409).json({ error: 'Duplicate register_no' });
       return;
     }
@@ -156,10 +150,27 @@ export const deleteGrievance = async (req: Request, res: Response): Promise<void
       where: { id: BigInt(id as string) },
       data: { is_deleted: true }
     });
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
-  } catch (error) {
-    if ((error as any).code === 'P2025') {
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
       res.status(404).json({ error: 'Grievance not found' });
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const restoreGrievance = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await prisma.grievance.update({
+      where: { id: BigInt(id as string) },
+      data: { is_deleted: false }
+    });
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'Grievance record not found' });
       return;
     }
     res.status(500).json({ error: 'Internal server error' });
