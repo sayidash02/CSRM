@@ -294,13 +294,12 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
   };
 
   const { q, setQ, filtered } = useGlobalSearch(items);
-  const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CsrProject | null>(null);
   const [toDelete, setToDelete] = useState<CsrProject | null>(null);
   const [toRestore, setToRestore] = useState<CsrProject | null>(null);
   
-  const displayed = statusFilter === "All" ? filtered : filtered.filter(c => c.status === statusFilter);
+  const displayed = filtered;
 
   const columns: ColumnDef<CsrProject>[] = useMemo(() => [
     { header: "No", render: (_, i) => <div className="text-xs text-muted-foreground">{i + 1}</div> },
@@ -311,7 +310,19 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     { header: "Lokasi", accessor: "location", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.location || "—"}</div> },
     { header: "Target/Sasaran", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.target_beneficiaries || "—"}</div> },
     { header: "Tujuan", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-muted-foreground italic leading-relaxed max-w-[200px] whitespace-normal">{p.objective || "—"}</div> },
-    { header: "Status", accessor: "status", sortable: true, render: (p) => <StatusBadge status={p.status} /> },
+    { 
+      header: "Status", 
+      accessor: "status", 
+      sortable: true, 
+      filterOptions: [
+        { label: "Semua Status", value: "All" },
+        { label: "Planning", value: "Planning" },
+        { label: "On Going", value: "On Going" },
+        { label: "Completed", value: "Completed" },
+        { label: "Cancelled", value: "Cancelled" }
+      ],
+      render: (p) => <StatusBadge status={p.status} /> 
+    },
     { header: "Realisasi", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
     { header: "Periode Pelaksanaan", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-foreground whitespace-nowrap">{p.implementation_period || "—"}</div> },
     { header: "Image Dokumentasi", render: (p) => (
@@ -366,13 +377,6 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
             className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
           />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
-          <option value="All">Semua Status</option>
-          <option value="Planning">Planning</option>
-          <option value="On Going">On Going</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
-        </select>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="mb-4 text-xs text-muted-foreground font-mono shrink-0">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + Number(c.budget || 0), 0))}</span></div>
