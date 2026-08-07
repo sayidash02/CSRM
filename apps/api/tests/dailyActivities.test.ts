@@ -24,7 +24,7 @@ describe('POST /api/daily-activities', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_id: 1,
+      pic_ids: [1],
       category_id: 1,
       sub_category_id: 1
     };
@@ -43,7 +43,7 @@ describe('POST /api/daily-activities', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_id: 999, // Doesn't exist
+      pic_ids: [999], // Doesn't exist
       category_id: 1,
       sub_category_id: 1
     };
@@ -60,8 +60,8 @@ describe('GET /api/daily-activities', () => {
   });
 });
 
-describe('DELETE /api/daily-activities/:id', () => {
-  it('Should soft delete an activity', async () => {
+describe('DELETE and RESTORE /api/daily-activities/:id', () => {
+  it('Should soft delete and then restore an activity', async () => {
     const list = await request(app).get('/api/daily-activities');
     const id = list.body.data[0].id;
     
@@ -71,6 +71,18 @@ describe('DELETE /api/daily-activities/:id', () => {
 
     const listAfter = await request(app).get('/api/daily-activities');
     expect(listAfter.body.data.length).toBe(0);
+
+    const listDeleted = await request(app).get('/api/daily-activities?is_deleted=true');
+    expect(listDeleted.status).toBe(200);
+    expect(listDeleted.body.data.length).toBe(1);
+    expect(listDeleted.body.data[0].id).toBe(id);
+
+    const restoreRes = await request(app).patch(`/api/daily-activities/${id}/restore`);
+    expect(restoreRes.status).toBe(200);
+    expect(restoreRes.body.data.is_deleted).toBe(false);
+
+    const listRestored = await request(app).get('/api/daily-activities');
+    expect(listRestored.body.data.length).toBe(1);
   });
 });
 
@@ -80,7 +92,7 @@ describe('PUT /api/daily-activities/:id', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_id: 1,
+      pic_ids: [1],
       category_id: 1,
       sub_category_id: 1
     };
@@ -90,7 +102,7 @@ describe('PUT /api/daily-activities/:id', () => {
     const updatePayload = {
       activity_date: '2026-07-26',
       activity: 'Kunjungan Lapangan Updated',
-      pic_id: 1,
+      pic_ids: [1],
       category_id: 1,
       sub_category_id: 1,
       cost: 500000
