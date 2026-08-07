@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
@@ -76,6 +76,23 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 
 const emptyStakeholderDraft = {
   stakeholder: "", date: "", venue: "", concern_issue: "", document_link: ""
+};
+
+const parseDocumentLinks = (link?: string | null): string[] => {
+  if (!link) return [];
+  const trimmed = link.trim();
+  if (!trimmed || trimmed === "[]") return [];
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((u): u is string => typeof u === "string" && u.trim() !== "");
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return [trimmed];
 };
 
 function StakeholderForm({ 
@@ -167,7 +184,7 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
   const [addDraft, setAddDraft] = useState({ ...emptyStakeholderDraft });
   const [showDeleted, setShowDeleted] = useState(false);
   
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       const yearParam = activeYear ? `year=${activeYear}` : '';
@@ -181,11 +198,11 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeYear, showDeleted, showToast]);
 
   useEffect(() => {
     fetchData();
-  }, [activeYear, showDeleted]);
+  }, [fetchData]);
 
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [showForm, setShowForm] = useState(false);
@@ -218,18 +235,19 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (item: Stakeholder) => {
+    const name = item.stakeholder;
     try {
-      await apiClient.delete(`/stakeholders/${id}`);
-      setItems(prev => prev.filter(i => i.id !== id));
-      showToast(`Stakeholder '${toDelete?.stakeholder || ''}' berhasil dihapus`, "success");
+      await apiClient.delete(`/stakeholders/${item.id}`);
+      setItems(prev => prev.filter(i => i.id !== item.id));
+      showToast(`Stakeholder '${name}' berhasil dihapus`, "success");
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal menghapus data", "error");
     }
   };
 
-  const handleRestore = async (id: string) => {
+  const handleRestore = useCallback(async (id: string) => {
     if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
     try {
       await apiClient.patch(`/stakeholders/${id}/restore`);
@@ -238,7 +256,7 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
     } catch (e: any) {
       if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
     }
-  };
+  }, [showToast, fetchData]);
 
   const handleExportClick = () => {
     const exportData = filtered.map(s => ({
@@ -255,7 +273,31 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
     { header: "Stakeholder", accessor: "stakeholder", sortable: true, render: (s) => <span className="text-sm font-medium text-foreground">{s.stakeholder}</span> },
     { header: "Date & Venue", accessor: "date", sortable: true, render: (s) => <span className="text-xs text-muted-foreground font-mono">{(s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || "")}</span> },
     { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
-    { header: "Docs", className: "text-center", render: (s) => s.document_link ? <a href={s.document_link} target="_blank" rel="noreferrer" className="text-blue-600 cursor-pointer inline-flex"><ExternalLink size={13} /></a> : <span className="text-muted-foreground text-xs">—</span> },
+    { 
+      header: "Docs", 
+      className: "text-center", 
+      render: (s) => {
+        const links = parseDocumentLinks(s.document_link);
+        if (links.length === 0) {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
+        return (
+          <div className="flex items-center justify-center gap-1.5 flex-wrap">
+            {links.map((link, idx) => (
+              <a
+                key={idx}
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 hover:text-blue-800 cursor-pointer inline-flex items-center"
+              >
+                <ExternalLink size={13} />
+              </a>
+            ))}
+          </div>
+        );
+      }
+    },
     { header: "", render: (s) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
@@ -309,7 +351,7 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
       </div>
       {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} defaultValues={addDraft} onDraftChange={setAddDraft} />}
       {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
-      {toDelete && <DeleteConfirm label={toDelete.stakeholder} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
+      {toDelete && <DeleteConfirm label={toDelete.stakeholder} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete); setToDelete(null); }} />}
     </div>
   );
 }
