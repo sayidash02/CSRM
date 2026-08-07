@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, AlertTriangle } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, AlertTriangle, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
@@ -44,10 +44,10 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, showDeleted }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
-  onExport?: () => void; children?: React.ReactNode;
+  onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -65,7 +65,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
           </div>
         )}
         <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
       </div>
     </div>
   );
@@ -148,18 +148,22 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
   const [editing, setEditing] = useState<LrpProgram | null>(null);
   const [toDelete, setToDelete] = useState<LrpProgram | null>(null);
   const [addDraft, setAddDraft] = useState({ ...emptyLrpDraft });
+  const [showDeleted, setShowDeleted] = useState(false);
 
   const fetchData = async () => {
     try {
-      const yearParam = activeYear ? `?year=${activeYear}` : '';
-      const res = await apiClient.get(`/lrp${yearParam}`);
+      const yearParam = activeYear ? `year=${activeYear}` : '';
+      const isDeletedParam = `is_deleted=${showDeleted}`;
+      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
+      const res = await apiClient.get(`/lrp${queryParams ? `?${queryParams}` : ''}`);
       setItems(res.data.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast?.(e.response?.data?.error || "Gagal memuat data LRP", "error");
     }
   };
 
-  useEffect(() => { fetchData(); }, [activeYear]);
+  useEffect(() => { fetchData(); }, [activeYear, showDeleted]);
 
   const onAdd = async (d: Omit<LrpProgram, "id">) => {
     try {
@@ -167,9 +171,9 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
       await apiClient.post('/lrp', { ...d, year });
       fetchData();
       showToast?.(`Program LRP '${d.program}' berhasil ditambahkan`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast?.("Gagal menyimpan data", "error");
+      showToast?.(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
@@ -179,9 +183,9 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
       const res = await apiClient.put(`/lrp/${id}`, { ...d, year });
       setItems(items.map(i => i.id === id ? res.data.data : i));
       showToast?.(`Program LRP '${d.program}' berhasil diperbarui`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast?.("Gagal memperbarui data", "error");
+      showToast?.(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
@@ -190,9 +194,20 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
       await apiClient.delete(`/lrp/${id}`);
       setItems(items.filter(i => i.id !== id));
       showToast?.(`Program LRP '${toDelete?.program || ''}' berhasil dihapus`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast?.("Gagal menghapus data", "error");
+      showToast?.(e.response?.data?.error || "Gagal menghapus data", "error");
+    }
+  };
+
+  const handleRestore = async (id: string | number) => {
+    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    try {
+      await apiClient.patch(`/lrp/${id}/restore`);
+      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      fetchData();
+    } catch (e: any) {
+      if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
     }
   };
 
@@ -200,13 +215,23 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
     { header: "Nama Program", accessor: "program", sortable: true, render: (p) => <span className="text-sm font-medium text-foreground">{p.program}</span> },
     { header: "SharePoint Link", accessor: "sharepoint_link", sortable: true, render: (p) => <span className="text-xs text-blue-600 font-mono flex items-center gap-1.5 cursor-pointer hover:underline"><ExternalLink size={10} className="shrink-0" />{p.sharepoint_link}</span> },
-    { header: "", render: (p) => (
+    { header: "", render: (p) => showDeleted ? (
+      <div className="flex items-center justify-end">
+        <button 
+          onClick={() => handleRestore(p.id)} 
+          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+        >
+          <RotateCcw size={12} />
+          Restore
+        </button>
+      </div>
+    ) : (
       <div className="flex items-center gap-1 justify-end">
         <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
       </div>
     )}
-  ], []);
+  ], [showDeleted, activeYear]);
 
   const handleExportClick = () => {
     const exportData = filtered.map(p => ({
@@ -218,7 +243,17 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="LRP — Livelihood Restoration Program" subtitle="Program community development & pemulihan mata pencaharian" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick} />
+      <TopBar title="LRP — Livelihood Restoration Program" subtitle="Program community development & pemulihan mata pencaharian" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <div className="flex items-center gap-2 mr-2">
+          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <input 
+            type="checkbox" 
+            checked={showDeleted} 
+            onChange={(e) => setShowDeleted(e.target.checked)} 
+            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+          />
+        </div>
+      </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3 shrink-0">
           <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
@@ -234,3 +269,4 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
     </div>
   );
 }
+
