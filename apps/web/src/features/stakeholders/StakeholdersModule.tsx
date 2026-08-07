@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
@@ -14,8 +14,6 @@ export interface Stakeholder {
   concern_issue: string | null;
   document_link: string | null;
 }
-
-
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -49,10 +47,10 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, showDeleted }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
-  onExport?: () => void; children?: React.ReactNode;
+  onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -70,7 +68,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
           </div>
         )}
         <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
       </div>
     </div>
   );
@@ -167,15 +165,19 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
   const [items, setItems] = useState<Stakeholder[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDraft, setAddDraft] = useState({ ...emptyStakeholderDraft });
+  const [showDeleted, setShowDeleted] = useState(false);
   
   const fetchData = async () => {
     try {
       setLoading(true);
-      const yearParam = activeYear ? `?year=${activeYear}` : '';
-      const res = await apiClient.get(`/stakeholders${yearParam}`);
+      const yearParam = activeYear ? `year=${activeYear}` : '';
+      const isDeletedParam = `is_deleted=${showDeleted}`;
+      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
+      const res = await apiClient.get(`/stakeholders${queryParams ? `?${queryParams}` : ''}`);
       setItems(res.data.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast(e.response?.data?.error || "Gagal memuat data stakeholder", "error");
     } finally {
       setLoading(false);
     }
@@ -183,7 +185,7 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
 
   useEffect(() => {
     fetchData();
-  }, [activeYear]);
+  }, [activeYear, showDeleted]);
 
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [showForm, setShowForm] = useState(false);
@@ -192,34 +194,49 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
 
   const handleAdd = async (d: Omit<Stakeholder, "id">) => {
     try {
-      await apiClient.post('/stakeholders', d);
-      fetchData();
+      const res = await apiClient.post('/stakeholders', d);
+      if (res.data?.data) {
+        setItems(prev => [res.data.data, ...prev]);
+      } else {
+        fetchData();
+      }
       showToast(`Stakeholder '${d.stakeholder}' berhasil ditambahkan`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menyimpan data", "error");
+      showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
   const handleEdit = async (id: string, d: Omit<Stakeholder, "id">) => {
     try {
-      await apiClient.put(`/stakeholders/${id}`, d);
-      fetchData();
+      const res = await apiClient.put(`/stakeholders/${id}`, d);
+      setItems(prev => prev.map(i => i.id === id ? res.data.data : i));
       showToast(`Stakeholder '${d.stakeholder}' berhasil diperbarui`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal memperbarui data", "error");
+      showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await apiClient.delete(`/stakeholders/${id}`);
-      fetchData();
+      setItems(prev => prev.filter(i => i.id !== id));
       showToast(`Stakeholder '${toDelete?.stakeholder || ''}' berhasil dihapus`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menghapus data", "error");
+      showToast(e.response?.data?.error || "Gagal menghapus data", "error");
+    }
+  };
+
+  const handleRestore = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    try {
+      await apiClient.patch(`/stakeholders/${id}/restore`);
+      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      fetchData();
+    } catch (e: any) {
+      if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
     }
   };
 
@@ -239,13 +256,23 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
     { header: "Date & Venue", accessor: "date", sortable: true, render: (s) => <span className="text-xs text-muted-foreground font-mono">{(s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || "")}</span> },
     { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
     { header: "Docs", className: "text-center", render: (s) => s.document_link ? <a href={s.document_link} target="_blank" rel="noreferrer" className="text-blue-600 cursor-pointer inline-flex"><ExternalLink size={13} /></a> : <span className="text-muted-foreground text-xs">—</span> },
-    { header: "", render: (s) => (
+    { header: "", render: (s) => showDeleted ? (
+      <div className="flex items-center justify-end">
+        <button 
+          onClick={() => handleRestore(s.id)} 
+          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+        >
+          <RotateCcw size={12} />
+          Restore
+        </button>
+      </div>
+    ) : (
       <div className="flex items-center gap-1 justify-end">
         <button onClick={() => setEditing(s)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
       </div>
     )}
-  ], []);
+  ], [showDeleted, handleRestore]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -258,7 +285,18 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
         addLabel="Tambah" 
         onAdd={() => setShowForm(true)} 
         onExport={handleExportClick} 
-      />
+        showDeleted={showDeleted}
+      >
+        <div className="flex items-center gap-2 mr-2">
+          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <input 
+            type="checkbox" 
+            checked={showDeleted} 
+            onChange={(e) => setShowDeleted(e.target.checked)} 
+            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+          />
+        </div>
+      </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         {loading ? (
           <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
@@ -275,4 +313,3 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
     </div>
   );
 }
-
