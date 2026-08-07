@@ -247,13 +247,12 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
   };
 
   const { q, setQ, filtered } = useGlobalSearch(items);
-  const [statusFilter, setStatusFilter] = useState("All");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Proposal | null>(null);
   const [toDelete, setToDelete] = useState<Proposal | null>(null);
   const [toRestore, setToRestore] = useState<Proposal | null>(null);
   
-  const displayed = statusFilter === "All" ? filtered : filtered.filter(p => p.status === statusFilter);
+  const displayed = filtered;
   const nextRegNo = `PRP-${activeYear || '2026'}-${String(items.length + 1).padStart(4, "0")}`;
 
   const columns: ColumnDef<Proposal>[] = useMemo(() => [
@@ -261,7 +260,18 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
     { header: "Tgl Terima", accessor: "date_received", sortable: true, render: (p) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(p.date_received)}</span> },
     { header: "Institusi", accessor: "institution", sortable: true, render: (p) => <div><div className="text-sm font-medium text-foreground truncate max-w-[150px]">{p.institution}</div><div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[150px]">{p.address}</div></div> },
     { header: "Keterangan", accessor: "proposal_description", sortable: true, render: (p) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{p.proposal_description}</div></div> },
-    { header: "Status", accessor: "status", sortable: true, render: (p) => <StatusBadge status={p.status} /> },
+    { 
+      header: "Status", 
+      accessor: "status", 
+      sortable: true, 
+      filterOptions: [
+        { label: "Semua Status", value: "All" },
+        { label: "Under Review", value: "Under Review" },
+        { label: "Approved", value: "Approved" },
+        { label: "Declined", value: "Declined" }
+      ],
+      render: (p) => <StatusBadge status={p.status} /> 
+    },
     { header: "Files", render: (p) => (
       <div className="flex items-center gap-1.5 flex-wrap">
         {p.proposal_file && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Prop</span>}
@@ -310,12 +320,6 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
             className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
           />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
-          <option value="All">Semua Status</option>
-          {Array.from(new Set(items.map(i => i.status))).map(s => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="flex-1 min-h-0">
