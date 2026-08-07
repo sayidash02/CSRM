@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
@@ -56,12 +57,13 @@ function Field({ label, required, hint, children }: { label: string; required?: 
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, categories, catFilter, onCatFilterChange, subCategories, subCatFilter, onSubCatFilterChange }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, categories, catFilter, onCatFilterChange, subCategories, subCatFilter, onSubCatFilterChange, showDeleted }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
   onExport?: () => void; children?: React.ReactNode;
   categories?: any[]; catFilter?: string; onCatFilterChange?: (v: string) => void;
   subCategories?: any[]; subCatFilter?: string; onSubCatFilterChange?: (v: string) => void;
+  showDeleted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -103,7 +105,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
           </>
         )}
         <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
       </div>
     </div>
   );
@@ -246,11 +248,12 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const [items, setItems] = useState<DailyActivity[]>([]);
   const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   const [addDraft, setAddDraft] = useState({ ...emptyDailyDraft });
+  const [showDeleted, setShowDeleted] = useState(false);
   
   useEffect(() => {
     fetchData();
     fetchReferences();
-  }, [activeYear]);
+  }, [activeYear, showDeleted]);
 
   const fetchReferences = async () => {
     try {
@@ -263,8 +266,10 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
 
   const fetchData = async () => {
     try {
-      const yearParam = activeYear ? `?year=${activeYear}` : '';
-      const res = await apiClient.get(`/daily-activities${yearParam}`);
+      const yearParam = activeYear ? `year=${activeYear}` : '';
+      const isDeletedParam = `is_deleted=${showDeleted}`;
+      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
+      const res = await apiClient.get(`/daily-activities?${queryParams}`);
       setItems(res.data.data);
     } catch (e) {
       console.error(e);
@@ -301,6 +306,19 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     } catch (e) {
       console.error(e);
       showToast("Gagal menghapus data", "error");
+    }
+  };
+
+  const handleRestore = async (id: string | number) => {
+    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    try {
+      await apiClient.patch(`/daily-activities/${id}/restore`);
+      toast.success("Data berhasil dipulihkan");
+      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      fetchData();
+    } catch (error) {
+      toast.error("Gagal memulihkan data");
+      if (showToast) showToast("Gagal memulihkan data", "error");
     }
   };
 
@@ -381,19 +399,30 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span> },
-    { header: "", render: (a) => (
+    { header: "", render: (a) => showDeleted ? (
+      <div className="flex items-center justify-end">
+        <button 
+          onClick={() => handleRestore(a.id)} 
+          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+        >
+          <RotateCcw size={12} />
+          Restore
+        </button>
+      </div>
+    ) : (
       <div className="flex items-center gap-1 justify-end">
         <button onClick={() => setEditing(a)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(a)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
       </div>
     )}
-  ], []);
+  ], [showDeleted]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar 
         title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" 
-        onAdd={() => setShowForm(true)} addLabel="Tambah Kegiatan" 
+        onAdd={!showDeleted ? () => setShowForm(true) : undefined} addLabel="Tambah Kegiatan" 
+        showDeleted={showDeleted}
         showSearch searchValue={q} onSearch={setQ} 
         onExport={handleExportClick}
         categories={references.categories}
@@ -403,6 +432,15 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         subCatFilter={subCatFilter}
         onSubCatFilterChange={setSubCatFilter}
       >
+        <div className="flex items-center gap-2 mr-2">
+          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <input 
+            type="checkbox" 
+            checked={showDeleted} 
+            onChange={(e) => setShowDeleted(e.target.checked)} 
+            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+          />
+        </div>
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
         <button 
           type="button" 
