@@ -289,7 +289,9 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
     { header: "Pelapor & Kontak", accessor: "complainant_name", sortable: true, render: (g) => <div><div className="text-sm font-medium text-foreground">{g.complainant_name}</div><div className="text-xs text-muted-foreground mt-0.5">{g.phone}</div><div className="text-xs text-muted-foreground mt-0.5">{g.address}</div></div> },
     { header: "Tanggal & Kategori", accessor: "log_date", sortable: true, render: (g) => <div><div className="text-xs text-muted-foreground font-mono">{formatDate(g.log_date)}</div><div className="text-xs text-muted-foreground mt-0.5">{g.category}</div></div> },
     { header: "Deskripsi & Lokasi", accessor: "description", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal"><div className="text-sm text-foreground line-clamp-2">{g.description}</div><div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{g.location}</div></div> },
-    { header: "Penyelesaian", accessor: "resolution", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal"><div className="text-xs text-muted-foreground line-clamp-2">Investigasi: {g.investigation || "—"}</div><div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">Resolusi: {g.resolution || "—"}</div></div> },
+    { header: "Investigasi", accessor: "investigation", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground line-clamp-2">{g.investigation || "—"}</div> },
+    { header: "Resolusi", accessor: "resolution", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground line-clamp-2">{g.resolution || "—"}</div> },
+    { header: "Feedback Pelapor", accessor: "feedback", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground line-clamp-2">{g.feedback || "—"}</div> },
     { header: "Status", accessor: "status", sortable: true, render: (g) => <div><StatusBadge status={g.status} />{g.completion_date && <div className="text-xs text-muted-foreground font-mono mt-1">Selesai: {formatDate(g.completion_date)}</div>}</div> },
     { header: "Docs", render: (g) => g.supporting_files ? <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-2 py-1 cursor-pointer"><ExternalLink size={11} /> Dok</span> : <span className="text-muted-foreground text-xs">—</span> },
     { header: "", render: (g) => (
@@ -310,7 +312,9 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       "Description": g.description,
       "Location": g.location,
       "Status": g.status,
+      "Investigation": g.investigation || "",
       "Resolution": g.resolution || "",
+      "Complainant Feedback": g.feedback || "",
       "Remarks": g.remarks || ""
     }));
     onExport("Grievance", exportData);
