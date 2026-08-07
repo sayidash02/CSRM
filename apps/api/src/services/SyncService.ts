@@ -98,7 +98,7 @@ export class SyncService {
         grievances,
         lrps
       ] = await Promise.all([
-        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { pic: true, category: true, sub_category: true } }),
+        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true } }),
         prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false, date: dateRange } }),
         prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
         prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false, date_received: dateRange } }),
@@ -209,7 +209,7 @@ export class SyncService {
       sheet.addRow({
         no: idx + 1,
         stakeholder: row.stakeholder,
-        date_venue: row.date_venue,
+        date_venue: row.date ? `${this.formatDate(row.date)}\n${row.venue || ''}`.trim() : (row.venue || ''),
         concern_issue: row.concern_issue,
         document_link: this.hyperlink(row.document_link)
       });
