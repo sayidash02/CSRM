@@ -20,7 +20,8 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
   const getNestedValue = (obj: any, path: string) => {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+    if (!path || obj == null) return undefined;
+    return path.split('.').reduce((acc: any, part) => (acc != null ? acc[part] : undefined), obj);
   };
 
   const sortedData = React.useMemo(() => {
@@ -46,6 +47,9 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
 
         if (aValue === bValue) return 0;
         
+        if (aValue == null && bValue != null) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (aValue != null && bValue == null) return sortConfig.direction === 'asc' ? -1 : 1;
+
         if (typeof aValue === 'string' && typeof bValue === 'string') {
           return sortConfig.direction === 'asc' 
             ? aValue.localeCompare(bValue, undefined, { numeric: true })
@@ -58,9 +62,6 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
         if (aValue > bValue) {
           return sortConfig.direction === 'asc' ? 1 : -1;
         }
-        
-        if (aValue == null && bValue != null) return sortConfig.direction === 'asc' ? 1 : -1;
-        if (aValue != null && bValue == null) return sortConfig.direction === 'asc' ? -1 : 1;
 
         return 0;
       });
