@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, AlertTriangle, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, AlertTriangle, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
@@ -72,6 +72,23 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 }
 
 const emptyLrpDraft = { program: "", sharepoint_link: "" };
+
+const parseSharepointUrls = (link?: string | null): string[] => {
+  if (!link) return [];
+  const trimmed = link.trim();
+  if (!trimmed || trimmed === "[]") return [];
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((u): u is string => typeof u === "string" && u.trim() !== "");
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return [trimmed];
+};
 
 function LrpForm({
   initial,
@@ -168,8 +185,12 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
   const onAdd = async (d: Omit<LrpProgram, "id">) => {
     try {
       const year = parseInt(activeYear) || new Date().getFullYear();
-      await apiClient.post('/lrp', { ...d, year });
-      fetchData();
+      const res = await apiClient.post('/lrp', { ...d, year });
+      if (res.data?.data) {
+        setItems(prev => [res.data.data, ...prev]);
+      } else {
+        fetchData();
+      }
       showToast?.(`Program LRP '${d.program}' berhasil ditambahkan`, "success");
     } catch (e: any) {
       console.error(e);
@@ -181,7 +202,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
     try {
       const year = parseInt(activeYear) || new Date().getFullYear();
       const res = await apiClient.put(`/lrp/${id}`, { ...d, year });
-      setItems(items.map(i => i.id === id ? res.data.data : i));
+      setItems(prev => prev.map(i => i.id === id ? res.data.data : i));
       showToast?.(`Program LRP '${d.program}' berhasil diperbarui`, "success");
     } catch (e: any) {
       console.error(e);
@@ -192,7 +213,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
   const onDelete = async (id: string | number) => {
     try {
       await apiClient.delete(`/lrp/${id}`);
-      setItems(items.filter(i => i.id !== id));
+      setItems(prev => prev.filter(i => i.id !== id));
       showToast?.(`Program LRP '${toDelete?.program || ''}' berhasil dihapus`, "success");
     } catch (e: any) {
       console.error(e);
@@ -214,7 +235,33 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
   const columns: ColumnDef<LrpProgram>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
     { header: "Nama Program", accessor: "program", sortable: true, render: (p) => <span className="text-sm font-medium text-foreground">{p.program}</span> },
-    { header: "SharePoint Link", accessor: "sharepoint_link", sortable: true, render: (p) => <span className="text-xs text-blue-600 font-mono flex items-center gap-1.5 cursor-pointer hover:underline"><ExternalLink size={10} className="shrink-0" />{p.sharepoint_link}</span> },
+    {
+      header: "SharePoint Link",
+      accessor: "sharepoint_link",
+      sortable: true,
+      render: (p) => {
+        const urls = parseSharepointUrls(p.sharepoint_link);
+        if (urls.length === 0) {
+          return <span className="text-muted-foreground text-xs">—</span>;
+        }
+        return (
+          <div className="flex flex-col gap-1">
+            {urls.map((url, i) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 hover:underline flex items-center gap-1 text-xs font-mono"
+              >
+                <ExternalLink size={10} className="shrink-0" />
+                <span className="truncate max-w-[200px]">{url}</span>
+              </a>
+            ))}
+          </div>
+        );
+      },
+    },
     { header: "", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
@@ -231,7 +278,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
         <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
       </div>
     )}
-  ], [showDeleted, activeYear]);
+  ], [showDeleted, handleRestore]);
 
   const handleExportClick = () => {
     const exportData = filtered.map(p => ({
