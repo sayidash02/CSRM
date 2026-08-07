@@ -196,8 +196,9 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
       const res = await apiClient.get(`/proposals${queryParams ? `?${queryParams}` : ''}`);
       setItems(res.data.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast?.(e.response?.data?.error || "Gagal memuat data proposal", "error");
     }
   };
 
@@ -205,10 +206,10 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
     try {
       await apiClient.post('/proposals', d);
       fetchData();
-      showToast(`Proposal dari '${d.institution}' berhasil ditambahkan`, "success");
-    } catch (e) {
+      showToast?.(`Proposal dari '${d.institution}' berhasil ditambahkan`, "success");
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menyimpan data", "error");
+      showToast?.(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
@@ -216,10 +217,10 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
     try {
       await apiClient.put(`/proposals/${id}`, d);
       fetchData();
-      showToast(`Proposal dari '${d.institution}' berhasil diperbarui`, "success");
-    } catch (e) {
+      showToast?.(`Proposal dari '${d.institution}' berhasil diperbarui`, "success");
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal memperbarui data", "error");
+      showToast?.(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
@@ -227,10 +228,10 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
     try {
       await apiClient.delete(`/proposals/${id}`);
       fetchData();
-      showToast(`Proposal dari '${toDelete?.institution || ''}' berhasil dihapus`, "success");
-    } catch (e) {
+      showToast?.(`Proposal dari '${toDelete?.institution || ''}' berhasil dihapus`, "success");
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menghapus data", "error");
+      showToast?.(e.response?.data?.error || "Gagal menghapus data", "error");
     }
   };
 
@@ -252,7 +253,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
   const [toDelete, setToDelete] = useState<Proposal | null>(null);
   
   const displayed = statusFilter === "All" ? filtered : filtered.filter(p => p.status === statusFilter);
-  const nextRegNo = `PRP-2026-${String(items.length + 1).padStart(4, "0")}`;
+  const nextRegNo = `PRP-${activeYear || '2026'}-${String(items.length + 1).padStart(4, "0")}`;
 
   const columns: ColumnDef<Proposal>[] = useMemo(() => [
     { header: "No. Reg", accessor: "registration_no", sortable: true, render: (p) => <span className="text-xs font-mono text-blue-600">{p.registration_no}</span> },
