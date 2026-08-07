@@ -15,7 +15,8 @@ describe('SyncService', () => {
     }]);
 
     const ws = wb.getWorksheet('Stakeholder Engagement');
-    const row = ws.getRow(2);
+    expect(ws).toBeDefined();
+    const row = ws!.getRow(2);
     expect(row.getCell(3).value).toBe('2026-06-06\nKaranganyar');
   });
 });
