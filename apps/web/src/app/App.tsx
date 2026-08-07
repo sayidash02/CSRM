@@ -235,7 +235,7 @@ export default function App() {
 
   // Fetch available years from API
   useEffect(() => {
-    apiClient.get('/years/available')
+    apiClient.get('/years')
       .then(res => setAvailableYears(res.data.data))
       .catch(() => setAvailableYears([new Date().getFullYear()]));
   }, [activeModule]);
