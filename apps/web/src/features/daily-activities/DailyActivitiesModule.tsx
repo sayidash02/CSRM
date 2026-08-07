@@ -8,6 +8,7 @@ import { PicManagementModal } from './PicManagementModal';
 import { ImportExcelModal } from "./ImportExcelModal";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
+import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter";
 import { filterByDateRange } from "../../utils/dateFilter";
@@ -316,7 +317,6 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   };
 
   const handleRestore = async (id: string | number) => {
-    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
     try {
       await apiClient.patch(`/daily-activities/${id}/restore`);
       showToast("Data berhasil dipulihkan", "success");
@@ -343,6 +343,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
+  const [toRestore, setToRestore] = useState<DailyActivity | null>(null);
   
   const displayed = useMemo(() => {
     let result = filtered;
@@ -407,7 +408,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     { header: "", render: (a) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
-          onClick={() => handleRestore(a.id)} 
+          onClick={() => setToRestore(a)} 
           className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
         >
           <RotateCcw size={12} />
@@ -475,6 +476,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
           }} 
         />
       )}
+      {toRestore && <RestoreConfirmModal label={toRestore.activity || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
+import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 
 export interface Proposal {
   id: string | number;
@@ -236,7 +237,6 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
   };
 
   const handleRestore = async (id: string | number) => {
-    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
     try {
       await apiClient.patch(`/proposals/${id}/restore`);
       if (showToast) showToast("Data berhasil dipulihkan", "success");
@@ -251,6 +251,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Proposal | null>(null);
   const [toDelete, setToDelete] = useState<Proposal | null>(null);
+  const [toRestore, setToRestore] = useState<Proposal | null>(null);
   
   const displayed = statusFilter === "All" ? filtered : filtered.filter(p => p.status === statusFilter);
   const nextRegNo = `PRP-${activeYear || '2026'}-${String(items.length + 1).padStart(4, "0")}`;
@@ -270,7 +271,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
     { header: "", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
-          onClick={() => handleRestore(p.id)} 
+          onClick={() => setToRestore(p)} 
           className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
         >
           <RotateCcw size={12} />
@@ -325,6 +326,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       {showForm && <ProposalForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
       {editing && <ProposalForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.registration_no} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.registration_no} — ${toDelete.institution}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
+      {toRestore && <RestoreConfirmModal label={`${toRestore.registration_no} — ${toRestore.institution}`} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
     </div>
   );
 }

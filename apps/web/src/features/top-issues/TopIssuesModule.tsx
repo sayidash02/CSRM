@@ -5,6 +5,7 @@ import { Edit2, Trash2, Search, Plus, Download, FileText, RotateCcw } from "luci
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
+import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 
 export interface TopIssue {
   id: number | string;
@@ -240,7 +241,6 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
   };
 
   const handleRestore = useCallback(async (id: string | number) => {
-    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
     try {
       await apiClient.patch(`/top-issues/${id}/restore`);
       if (showToast) showToast("Data berhasil dipulihkan", "success");
@@ -254,6 +254,7 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TopIssue | null>(null);
   const [toDelete, setToDelete] = useState<TopIssue | null>(null);
+  const [toRestore, setToRestore] = useState<TopIssue | null>(null);
   const [periodFilter, setPeriodFilter] = useState("All");
   const [addDraft, setAddDraft] = useState({ ...emptyTopIssueDraft });
   
@@ -283,7 +284,7 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
     { header: "", render: (issue) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
-          onClick={() => handleRestore(issue.id)} 
+          onClick={() => setToRestore(issue)} 
           className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
         >
           <RotateCcw size={12} />
@@ -336,6 +337,7 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       {showForm && <TopIssueForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
       {editing && <TopIssueForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.issue} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.issue); setToDelete(null); }} />}
+      {toRestore && <RestoreConfirmModal label={(toRestore as any).issue_name || toRestore.issue || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
     </div>
   );
 }
