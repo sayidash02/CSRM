@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
@@ -68,10 +68,10 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, showDeleted }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
-  onExport?: () => void; children?: React.ReactNode;
+  onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -89,7 +89,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
           </div>
         )}
         <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
       </div>
     </div>
   );
@@ -230,18 +230,22 @@ function CsrForm({
 export default function CsrProjectsModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<CsrProject[]>([]);
   const [addDraft, setAddDraft] = useState({ ...emptyCsrDraft });
+  const [showDeleted, setShowDeleted] = useState(false);
   
   useEffect(() => {
     fetchData();
-  }, [activeYear]);
+  }, [activeYear, showDeleted]);
 
   const fetchData = async () => {
     try {
-      const yearParam = activeYear ? `?year=${activeYear}` : '';
-      const res = await apiClient.get(`/csr-projects${yearParam}`);
+      const yearParam = activeYear ? `year=${activeYear}` : '';
+      const isDeletedParam = `is_deleted=${showDeleted}`;
+      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
+      const res = await apiClient.get(`/csr-projects${queryParams ? `?${queryParams}` : ''}`);
       setItems(res.data.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      if (showToast) showToast(e.response?.data?.error || "Gagal memuat data", "error");
     }
   };
 
@@ -250,9 +254,9 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       await apiClient.post('/csr-projects', d);
       fetchData();
       showToast(`Program '${d.program}' berhasil ditambahkan`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menyimpan data", "error");
+      showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
@@ -261,9 +265,9 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       await apiClient.put(`/csr-projects/${id}`, d);
       fetchData();
       showToast(`Program '${d.program}' berhasil diperbarui`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal memperbarui data", "error");
+      showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
@@ -272,9 +276,20 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       await apiClient.delete(`/csr-projects/${id}`);
       fetchData();
       showToast(`Program '${toDelete?.program || ''}' berhasil dihapus`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menghapus data", "error");
+      showToast(e.response?.data?.error || "Gagal menghapus data", "error");
+    }
+  };
+
+  const handleRestore = async (id: string | number) => {
+    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    try {
+      await apiClient.patch(`/csr-projects/${id}/restore`);
+      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      fetchData();
+    } catch (e: any) {
+      if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
     }
   };
 
@@ -304,13 +319,23 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     { header: "Docx", render: (p) => (
       p.document ? <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Dokumen</span> : <span className="text-muted-foreground text-xs">—</span>
     )},
-    { header: "", render: (p) => (
+    { header: "", render: (p) => showDeleted ? (
+      <div className="flex items-center justify-end">
+        <button 
+          onClick={() => handleRestore(p.id)} 
+          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+        >
+          <RotateCcw size={12} />
+          Restore
+        </button>
+      </div>
+    ) : (
       <div className="flex items-center gap-1 justify-end">
         <button onClick={() => setEditing(p)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
         <button onClick={() => setToDelete(p)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
       </div>
     )}
-  ], []);
+  ], [showDeleted]);
 
   const handleExportClick = () => {
     const exportData = displayed.map(p => ({
@@ -325,12 +350,21 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       "Budget": p.budget || 0,
       "Period": p.implementation_period || ""
     }));
-    onExport("CSR Projects", exportData);
+    onExport("CSR Project", exportData);
   };
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="CSR Projects" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="CSR Project" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <div className="flex items-center gap-2 mr-2">
+          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <input 
+            type="checkbox" 
+            checked={showDeleted} 
+            onChange={(e) => setShowDeleted(e.target.checked)} 
+            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+          />
+        </div>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
           <option value="All">Semua Status</option>
           <option value="Planning">Planning</option>
@@ -351,4 +385,5 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     </div>
   );
 }
+
 
