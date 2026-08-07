@@ -52,6 +52,12 @@ describe('GET /api/proposals', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
   });
+
+  it('Should return deleted proposals when is_deleted=true', async () => {
+    const res = await request(app).get('/api/proposals?is_deleted=true');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+  });
 });
 
 describe('DELETE /api/proposals/:id', () => {
@@ -65,6 +71,24 @@ describe('DELETE /api/proposals/:id', () => {
 
     const listAfter = await request(app).get('/api/proposals');
     expect(listAfter.body.data.length).toBe(0);
+
+    const listDeleted = await request(app).get('/api/proposals?is_deleted=true');
+    expect(listDeleted.body.data.length).toBe(1);
+    expect(listDeleted.body.data[0].id).toBe(id);
+  });
+});
+
+describe('PATCH /api/proposals/:id/restore', () => {
+  it('Should restore a deleted proposal', async () => {
+    const listDeleted = await request(app).get('/api/proposals?is_deleted=true');
+    const id = listDeleted.body.data[0].id;
+
+    const res = await request(app).patch(`/api/proposals/${id}/restore`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.is_deleted).toBe(false);
+
+    const listAfter = await request(app).get('/api/proposals');
+    expect(listAfter.body.data.length).toBe(1);
   });
 });
 

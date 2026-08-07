@@ -45,8 +45,9 @@ export const createProposal = async (req: Request, res: Response): Promise<void>
 
 export const getProposals = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
-    const where: any = { is_deleted: false, is_archived: false };
+    const { year, is_deleted } = req.query;
+    const isDeletedFilter = is_deleted === 'true';
+    const where: any = { is_deleted: isDeletedFilter, is_archived: false };
     if (year) {
       const y = year as string;
       where.date_received = {
@@ -119,6 +120,24 @@ export const deleteProposal = async (req: Request, res: Response): Promise<void>
     const result = await prisma.proposals.update({
       where: { id: BigInt(id as string) },
       data: { is_deleted: true }
+    });
+    res.status(200).json({ data: { ...result, id: result.id.toString() } });
+  } catch (error: any) {
+    console.error(error);
+    if (error.code === 'P2025') {
+       res.status(404).json({ error: 'Proposal not found' });
+       return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const restoreProposal = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await prisma.proposals.update({
+      where: { id: BigInt(id as string) },
+      data: { is_deleted: false }
     });
     res.status(200).json({ data: { ...result, id: result.id.toString() } });
   } catch (error: any) {
