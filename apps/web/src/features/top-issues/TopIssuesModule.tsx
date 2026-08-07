@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, ChevronDown, FileText, RotateCcw } from "lucide-react";
+import { Edit2, Trash2, Search, Plus, Download, FileText, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
@@ -191,7 +191,6 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       const res = await apiClient.get(`/top-issues?${queryParams}`);
       setItems(res.data.data);
     } catch (e: any) {
-      console.error(e);
       if (showToast) showToast(e.response?.data?.error || "Gagal mengambil data", "error");
     }
   }, [activeYear, showDeleted, showToast]);
@@ -211,7 +210,6 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       }
       if (showToast) showToast(`Isu '${d.issue}' berhasil ditambahkan`, "success");
     } catch (e: any) {
-      console.error(e);
       if (showToast) showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
@@ -227,18 +225,16 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       }
       if (showToast) showToast(`Isu '${d.issue}' berhasil diperbarui`, "success");
     } catch (e: any) {
-      console.error(e);
       if (showToast) showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
-  const handleDelete = async (id: string | number) => {
+  const handleDelete = async (id: string | number, title?: string) => {
     try {
       await apiClient.delete(`/top-issues/${id}`);
       setItems(prev => prev.filter(i => i.id !== id));
-      if (showToast) showToast(`Isu '${toDelete?.issue || ''}' berhasil dihapus`, "success");
+      if (showToast) showToast(`Isu '${title || ''}' berhasil dihapus`, "success");
     } catch (e: any) {
-      console.error(e);
       if (showToast) showToast(e.response?.data?.error || "Gagal menghapus data", "error");
     }
   };
@@ -255,7 +251,6 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
   }, [showToast, fetchData]);
 
   const { q, setQ, filtered } = useGlobalSearch(items);
-  const [expanded, setExpanded] = useState<number | string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TopIssue | null>(null);
   const [toDelete, setToDelete] = useState<TopIssue | null>(null);
@@ -340,7 +335,7 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       </div>
       {showForm && <TopIssueForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
       {editing && <TopIssueForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
-      {toDelete && <DeleteConfirm label={toDelete.issue} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
+      {toDelete && <DeleteConfirm label={toDelete.issue} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.issue); setToDelete(null); }} />}
     </div>
   );
 }
