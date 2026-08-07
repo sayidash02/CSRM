@@ -18,8 +18,8 @@ export const createCsrProject = async (req: Request, res: Response): Promise<voi
       document 
     } = req.body;
 
-    if (!project_year || !program) {
-      res.status(400).json({ error: 'Missing required fields' });
+    if (!project_year || isNaN(Number(project_year)) || !program) {
+      res.status(400).json({ error: 'Missing or invalid required fields' });
       return;
     }
 
@@ -40,17 +40,17 @@ export const createCsrProject = async (req: Request, res: Response): Promise<voi
       }
     });
 
-    res.status(201).json({ data: { ...result, id: result.id.toString(), budget: result.budget?.toString() } });
-  } catch (error) {
-    console.error(error);
+    res.status(201).json({ data: result });
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 export const getCsrProjects = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
-    const where: any = { is_deleted: false, is_archived: false };
+    const { year, is_deleted } = req.query;
+    const isDeletedFilter = is_deleted === 'true';
+    const where: any = { is_deleted: isDeletedFilter, is_archived: false };
     if (year) {
       const y = year as string;
       where.project_year = Number(y);
@@ -59,14 +59,8 @@ export const getCsrProjects = async (req: Request, res: Response): Promise<void>
       where
     });
     
-    const serialized = projects.map(a => ({
-      ...a,
-      id: a.id.toString(),
-      budget: a.budget?.toString()
-    }));
-    res.status(200).json({ data: serialized });
-  } catch (error) {
-    console.error(error);
+    res.status(200).json({ data: projects });
+  } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -112,9 +106,12 @@ export const updateCsrProject = async (req: Request, res: Response): Promise<voi
       }
     });
 
-    res.status(200).json({ data: { ...result, id: result.id.toString(), budget: result.budget?.toString() } });
-  } catch (error) {
-    console.error(error);
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'CSR project not found' });
+      return;
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -126,8 +123,30 @@ export const deleteCsrProject = async (req: Request, res: Response): Promise<voi
       where: { id: BigInt(id as string) },
       data: { is_deleted: true }
     });
-    res.status(200).json({ data: { ...result, id: result.id.toString(), budget: result.budget?.toString() } });
-  } catch (error) {
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'CSR project not found' });
+      return;
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+export const restoreCsrProject = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await prisma.csr_projects.update({
+      where: { id: BigInt(id as string) },
+      data: { is_deleted: false }
+    });
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      res.status(404).json({ error: 'CSR project not found' });
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
