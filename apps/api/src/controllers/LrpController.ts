@@ -24,17 +24,17 @@ export const createLrp = async (req: Request, res: Response): Promise<void> => {
       }
     });
 
-    res.status(201).json({ data: { ...result, id: result.id.toString() } });
+    res.status(201).json({ data: result });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
 export const getLrps = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year } = req.query;
-    const where: any = { is_deleted: false, is_archived: false };
+    const { year, is_deleted } = req.query;
+    const isDeletedFilter = is_deleted === 'true';
+    const where: any = { is_deleted: isDeletedFilter, is_archived: false };
     if (year) {
       const parsedYear = parseInt(year as string);
       if (isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
@@ -46,14 +46,9 @@ export const getLrps = async (req: Request, res: Response): Promise<void> => {
     const records = await prisma.lrp.findMany({
       where
     });
-    
-    const serialized = records.map(a => ({
-      ...a,
-      id: a.id.toString()
-    }));
-    res.status(200).json({ data: serialized });
+
+    res.status(200).json({ data: records });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -84,9 +79,8 @@ export const updateLrp = async (req: Request, res: Response): Promise<void> => {
       data: updateData
     });
 
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
+    res.status(200).json({ data: result });
   } catch (error: any) {
-    console.error(error);
     if (error.code === 'P2025') {
       res.status(404).json({ error: 'Record not found' });
       return;
@@ -102,12 +96,28 @@ export const deleteLrp = async (req: Request, res: Response): Promise<void> => {
       where: { id: BigInt(id as string) },
       data: { is_deleted: true }
     });
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
+    res.status(200).json({ data: result });
   } catch (error: any) {
-    console.error(error);
     if (error.code === 'P2025') {
       res.status(404).json({ error: 'Record not found' });
       return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const restoreLrp = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await prisma.lrp.update({
+      where: { id: BigInt(id as string) },
+      data: { is_deleted: false }
+    });
+    res.status(200).json({ data: result });
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+       res.status(404).json({ error: 'LRP record not found' });
+       return;
     }
     res.status(500).json({ error: 'Internal server error' });
   }
