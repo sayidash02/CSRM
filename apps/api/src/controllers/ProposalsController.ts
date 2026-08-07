@@ -32,9 +32,8 @@ export const createProposal = async (req: Request, res: Response): Promise<void>
       }
     });
 
-    res.status(201).json({ data: { ...result, id: result.id.toString() } });
+    res.status(201).json({ data: result });
   } catch (error: any) {
-    console.error(error);
     if (error.code === 'P2002') {
        res.status(409).json({ error: 'Registration number already exists' });
        return;
@@ -58,14 +57,9 @@ export const getProposals = async (req: Request, res: Response): Promise<void> =
     const proposals = await prisma.proposals.findMany({
       where
     });
-    
-    const serialized = proposals.map(p => ({
-      ...p,
-      id: p.id.toString()
-    }));
-    res.status(200).json({ data: serialized });
+
+    res.status(200).json({ data: proposals });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -103,9 +97,8 @@ export const updateProposal = async (req: Request, res: Response): Promise<void>
       }
     });
 
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
+    res.status(200).json({ data: result });
   } catch (error: any) {
-    console.error(error);
     if (error.code === 'P2025') {
        res.status(404).json({ error: 'Proposal not found' });
        return;
@@ -121,9 +114,8 @@ export const deleteProposal = async (req: Request, res: Response): Promise<void>
       where: { id: BigInt(id as string) },
       data: { is_deleted: true }
     });
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
+    res.status(200).json({ data: result });
   } catch (error: any) {
-    console.error(error);
     if (error.code === 'P2025') {
        res.status(404).json({ error: 'Proposal not found' });
        return;
@@ -139,9 +131,8 @@ export const restoreProposal = async (req: Request, res: Response): Promise<void
       where: { id: BigInt(id as string) },
       data: { is_deleted: false }
     });
-    res.status(200).json({ data: { ...result, id: result.id.toString() } });
+    res.status(200).json({ data: result });
   } catch (error: any) {
-    console.error(error);
     if (error.code === 'P2025') {
        res.status(404).json({ error: 'Proposal not found' });
        return;

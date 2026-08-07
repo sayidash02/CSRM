@@ -1,18 +1,12 @@
 import request from 'supertest';
 import app from '../src/app';
 import proposalsRouter from '../src/routes/proposals';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../src/lib/prisma';
 
 app.use('/api/proposals', proposalsRouter);
 
-const prisma = new PrismaClient();
-
 beforeAll(async () => {
   await prisma.proposals.deleteMany();
-});
-
-afterAll(async () => {
-  await prisma.$disconnect();
 });
 
 describe('POST /api/proposals', () => {
@@ -76,6 +70,11 @@ describe('DELETE /api/proposals/:id', () => {
     expect(listDeleted.body.data.length).toBe(1);
     expect(listDeleted.body.data[0].id).toBe(id);
   });
+
+  it('Should return 404 when deleting non-existent proposal', async () => {
+    const res = await request(app).delete('/api/proposals/999999');
+    expect(res.status).toBe(404);
+  });
 });
 
 describe('PATCH /api/proposals/:id/restore', () => {
@@ -89,6 +88,11 @@ describe('PATCH /api/proposals/:id/restore', () => {
 
     const listAfter = await request(app).get('/api/proposals');
     expect(listAfter.body.data.length).toBe(1);
+  });
+
+  it('Should return 404 when restoring non-existent proposal', async () => {
+    const res = await request(app).patch('/api/proposals/999999/restore');
+    expect(res.status).toBe(404);
   });
 });
 
