@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw } from "lucide-react";
-import { toast } from "sonner";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
@@ -39,7 +38,12 @@ export interface DailyActivity {
 
 // Helpers
 const formatIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
-const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+const formatDate = (d?: string | Date | null) => {
+  if (!d) return "-";
+  const dateObj = new Date(d);
+  if (isNaN(dateObj.getTime())) return "-";
+  return dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+};
 
 
 
@@ -259,8 +263,9 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     try {
       const res = await apiClient.get('/references');
       setReferences(res.data.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast?.(e.response?.data?.error || "Gagal mengambil data referensi", "error");
     }
   };
 
@@ -271,8 +276,9 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
       const res = await apiClient.get(`/daily-activities?${queryParams}`);
       setItems(res.data.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast?.(e.response?.data?.error || "Gagal mengambil data kegiatan", "error");
     }
   };
 
@@ -281,9 +287,9 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       await apiClient.post('/daily-activities', d);
       fetchData();
       showToast(`Kegiatan '${d.activity}' berhasil ditambahkan`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menyimpan data", "error");
+      showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
@@ -292,9 +298,9 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       await apiClient.put(`/daily-activities/${id}`, d);
       fetchData();
       showToast(`Kegiatan '${d.activity}' berhasil diperbarui`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal memperbarui data", "error");
+      showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
@@ -303,9 +309,9 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       await apiClient.delete(`/daily-activities/${id}`);
       fetchData();
       showToast(`Kegiatan '${activityName || ''}' berhasil dihapus`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menghapus data", "error");
+      showToast(e.response?.data?.error || "Gagal menghapus data", "error");
     }
   };
 
@@ -313,12 +319,11 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
     try {
       await apiClient.patch(`/daily-activities/${id}/restore`);
-      toast.success("Data berhasil dipulihkan");
-      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      showToast("Data berhasil dipulihkan", "success");
       fetchData();
-    } catch (error) {
-      toast.error("Gagal memulihkan data");
-      if (showToast) showToast("Gagal memulihkan data", "error");
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
     }
   };
 
@@ -371,9 +376,9 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       institution: a.institution_group || '-',
       address: a.address || '-',
       location: a.location || '-',
-      kategori: a.category?.name || '-',
+      kategori: a.category?.name || a.category_name || '-',
       sub_kategori: a.sub_category_name,
-      biaya: a.cost ? Number(a.cost) : null,
+      cost: a.cost ? Number(a.cost) : null,
       pic: a.pics?.map(p => p.name).join(', ') || a.pic_ids?.join(', ') || '-',
       description: a.description_result || '-'
     }));
@@ -395,7 +400,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
     { header: "PIC", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.map(p => p.name).join(', ') || a.pic_ids?.join(', ') || '-'}</span> },
-    { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || '-'}</span> },
+    { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span> },
