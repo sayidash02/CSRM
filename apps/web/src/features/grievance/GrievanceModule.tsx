@@ -280,8 +280,6 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   };
 
   const { q, setQ, filtered } = useGlobalSearch(items);
-  const [sigFilter, setSigFilter] = useState("All");
-  const [statusFilter, setStatusFilter] = useState("All");
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Grievance | null>(null);
@@ -290,17 +288,41 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const [addDraft, setAddDraft] = useState({ ...emptyGrievanceDraft });
   
   const nextRegNo = `GRV-2026-${String(items.length + 1).padStart(4, "0")}`;
-  const displayed = filtered.filter(g => sigFilter === "All" || g.significance === sigFilter).filter(g => statusFilter === "All" || g.status === statusFilter);
+  const displayed = filtered;
 
   const columns: ColumnDef<Grievance>[] = useMemo(() => [
-    { header: "No. Reg", accessor: "register_no", sortable: true, render: (g) => <div><span className="text-xs font-mono text-blue-600">{g.register_no}</span><div className="mt-1"><SignificanceBadge level={g.significance} /></div></div> },
+    { 
+      header: "No. Reg & Sig.", 
+      accessor: "significance", 
+      sortable: true, 
+      filterOptions: [
+        { label: "Semua Signifikansi", value: "All" },
+        { label: "Low", value: "Low" },
+        { label: "Medium", value: "Medium" },
+        { label: "High", value: "High" },
+        { label: "Critical", value: "Critical" }
+      ],
+      render: (g) => <div><span className="text-xs font-mono text-blue-600">{g.register_no}</span><div className="mt-1"><SignificanceBadge level={g.significance} /></div></div> 
+    },
     { header: "Pelapor & Kontak", accessor: "complainant_name", sortable: true, render: (g) => <div><div className="text-sm font-medium text-foreground">{g.complainant_name}</div><div className="text-xs text-muted-foreground mt-0.5">{g.phone}</div><div className="text-xs text-muted-foreground mt-0.5">{g.address}</div></div> },
     { header: "Tanggal & Kategori", accessor: "log_date", sortable: true, render: (g) => <div><div className="text-xs text-muted-foreground font-mono">{formatDate(g.log_date)}</div><div className="text-xs text-muted-foreground mt-0.5">{g.category}</div></div> },
     { header: "Deskripsi & Lokasi", accessor: "description", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal"><div className="text-sm text-foreground line-clamp-2">{g.description}</div><div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{g.location}</div></div> },
     { header: "Investigasi", accessor: "investigation", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground line-clamp-2">{g.investigation || "—"}</div> },
     { header: "Resolusi", accessor: "resolution", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground line-clamp-2">{g.resolution || "—"}</div> },
     { header: "Feedback Pelapor", accessor: "feedback", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground line-clamp-2">{g.feedback || "—"}</div> },
-    { header: "Status", accessor: "status", sortable: true, render: (g) => <div><StatusBadge status={g.status} />{g.completion_date && <div className="text-xs text-muted-foreground font-mono mt-1">Selesai: {formatDate(g.completion_date)}</div>}</div> },
+    { 
+      header: "Status", 
+      accessor: "status", 
+      sortable: true, 
+      filterOptions: [
+        { label: "Semua Status", value: "All" },
+        { label: "Open", value: "Open" },
+        { label: "On Progress", value: "On Progress" },
+        { label: "Resolved", value: "Resolved" },
+        { label: "Closed", value: "Closed" }
+      ],
+      render: (g) => <div><StatusBadge status={g.status} />{g.completion_date && <div className="text-xs text-muted-foreground font-mono mt-1">Selesai: {formatDate(g.completion_date)}</div>}</div> 
+    },
     { header: "Docs", render: (g) => g.supporting_files ? <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-2 py-1 cursor-pointer"><ExternalLink size={11} /> Dok</span> : <span className="text-muted-foreground text-xs">—</span> },
     { header: "", render: (g) => showDeleted ? (
       <div className="flex items-center justify-end">
@@ -350,20 +372,6 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
             className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring cursor-pointer"
           />
         </div>
-        <select value={sigFilter} onChange={(e) => setSigFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
-          <option value="All">Semua Signifikansi</option>
-          <option value="Low">Low</option>
-          <option value="Medium">Medium</option>
-          <option value="High">High</option>
-          <option value="Critical">Critical</option>
-        </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
-          <option value="All">Semua Status</option>
-          <option value="Open">Open</option>
-          <option value="On Progress">On Progress</option>
-          <option value="Resolved">Resolved</option>
-          <option value="Closed">Closed</option>
-        </select>
       </TopBar>
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="flex-1 min-h-0">
