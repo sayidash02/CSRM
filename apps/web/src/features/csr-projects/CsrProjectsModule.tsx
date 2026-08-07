@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
@@ -272,11 +272,11 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     }
   };
 
-  const handleDelete = async (id: string | number) => {
+  const handleDelete = async (id: string | number, name?: string) => {
     try {
       await apiClient.delete(`/csr-projects/${id}`);
       fetchData();
-      showToast(`Program '${toDelete?.program || ''}' berhasil dihapus`, "success");
+      showToast(`Program '${name || toDelete?.program || ''}' berhasil dihapus`, "success");
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal menghapus data", "error");
@@ -386,8 +386,8 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       </div>
       {showForm && <CsrForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
       {editing && <CsrForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
-      {toDelete && <DeleteConfirm label={toDelete.program} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
-      {toRestore && <RestoreConfirmModal label={(toRestore as any).project_name || toRestore.program || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      {toDelete && <DeleteConfirm label={toDelete.program} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.program); setToDelete(null); }} />}
+      {toRestore && <RestoreConfirmModal label={toRestore.program || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
     </div>
   );
 }
