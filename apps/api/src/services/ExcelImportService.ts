@@ -541,8 +541,18 @@ export class ExcelImportService {
           const stakeholder = stkCol !== -1 ? truncStr(extractCellString(row.getCell(stkCol).value), 255) : '';
           if (!stakeholder) continue;
 
-          const date = dateCol !== -1 && row.getCell(dateCol).value ? parseCellDate(row.getCell(dateCol).value) : null;
-          const venue = venueCol !== -1 ? trunc(extractCellString(row.getCell(venueCol).value), 255) : null;
+          let date = dateCol !== -1 && row.getCell(dateCol).value ? parseCellDate(row.getCell(dateCol).value) : null;
+          let venue = venueCol !== -1 ? trunc(extractCellString(row.getCell(venueCol).value), 255) : null;
+
+          // Split logic if Date and Venue are in the same cell
+          if (dateCol === venueCol && dateCol !== -1) {
+            const cellValue = extractCellString(row.getCell(dateCol).value);
+            if (cellValue.includes('\n')) {
+              const parts = cellValue.split('\n');
+              date = parseCellDate(parts[0]);
+              venue = trunc(parts.slice(1).join('\n').trim(), 255);
+            }
+          }
           const concern_issue = issueCol !== -1 ? (extractCellString(row.getCell(issueCol).value) || null) : null;
           const document_link = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
 
