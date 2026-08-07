@@ -120,16 +120,18 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
                         <button
                           type="button"
                           onClick={(e) => toggleFilter(col.accessor!, e)}
-                          className={`p-1 rounded hover:bg-muted ${activeFilters[col.accessor] && activeFilters[col.accessor] !== 'All' ? 'text-blue-600' : 'text-muted-foreground'}`}
+                          aria-label={`Filter ${col.header}`}
+                          aria-expanded={openFilter === col.accessor}
+                          className={`p-1 rounded hover:bg-muted ${activeFilters[col.accessor] && activeFilters[col.accessor] !== 'All' ? 'text-primary font-bold' : 'text-muted-foreground'}`}
                         >
                           <Filter className="h-3 w-3" />
                         </button>
                         {openFilter === col.accessor && (
                           <div className="absolute top-full right-0 mt-1 w-40 bg-card border border-border rounded-md shadow-lg z-50 overflow-hidden" onClick={e => e.stopPropagation()}>
                             <div className="max-h-60 overflow-y-auto py-1">
-                              {col.filterOptions.map((opt, i) => (
+                              {col.filterOptions.map((opt) => (
                                 <div
-                                  key={i}
+                                  key={opt.value}
                                   className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-muted ${activeFilters[col.accessor!] === opt.value || (!activeFilters[col.accessor!] && opt.value === 'All') ? 'bg-muted/50 font-medium text-primary' : 'text-foreground'}`}
                                   onClick={(e) => selectFilter(col.accessor!, opt.value, e)}
                                 >
@@ -149,7 +151,7 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
           <tbody className="divide-y divide-border">
             {sortedData.length > 0 ? (
               sortedData.map((item, idx) => (
-                <tr key={idx} className="hover:bg-muted/50 transition-colors">
+                <tr key={(item as any).id ?? idx} className="hover:bg-muted/50 transition-colors">
                   {columns.map((col, colIdx) => (
                     <td key={colIdx} className={`px-4 py-3 align-top ${col.className || ''}`}>
                       {col.render ? col.render(item, idx) : (col.accessor ? getNestedValue(item, col.accessor) : null)}
