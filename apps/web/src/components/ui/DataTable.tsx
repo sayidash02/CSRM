@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowUp, ArrowDown, Filter } from 'lucide-react';
 
 export type ColumnDef<T> = {
   header: string;
@@ -18,6 +18,25 @@ interface DataTableProps<T> {
 export function DataTable<T>({ data, columns }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  const [openFilter, setOpenFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!openFilter) return;
+    const handleClickOutside = () => setOpenFilter(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openFilter]);
+
+  const toggleFilter = (key: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpenFilter(openFilter === key ? null : key);
+  };
+
+  const selectFilter = (key: string, value: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveFilters(prev => ({ ...prev, [key]: value }));
+    setOpenFilter(null);
+  };
 
   const getNestedValue = (obj: any, path: string) => {
     if (!path || obj == null) return undefined;
@@ -86,13 +105,41 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
               {columns.map((col, idx) => (
                 <th
                   key={idx}
-                  className={`px-4 py-3 font-medium ${col.sortable ? 'cursor-pointer hover:bg-muted/80' : ''} ${col.className || ''}`}
+                  className={`px-4 py-3 font-medium ${col.sortable ? 'cursor-pointer hover:bg-muted/80' : ''} ${col.className || ''} relative`}
                   onClick={() => col.sortable && col.accessor ? requestSort(col.accessor) : undefined}
                 >
-                  <div className="flex items-center gap-1">
-                    {col.header}
-                    {col.sortable && col.accessor && sortConfig?.key === col.accessor && (
-                      sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  <div className="flex items-center gap-1 justify-between">
+                    <div className="flex items-center gap-1">
+                      {col.header}
+                      {col.sortable && col.accessor && sortConfig?.key === col.accessor && (
+                        sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      )}
+                    </div>
+                    {col.filterOptions && col.accessor && (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => toggleFilter(col.accessor!, e)}
+                          className={`p-1 rounded hover:bg-muted ${activeFilters[col.accessor] && activeFilters[col.accessor] !== 'All' ? 'text-blue-600' : 'text-muted-foreground'}`}
+                        >
+                          <Filter className="h-3 w-3" />
+                        </button>
+                        {openFilter === col.accessor && (
+                          <div className="absolute top-full right-0 mt-1 w-40 bg-card border border-border rounded-md shadow-lg z-50 overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="max-h-60 overflow-y-auto py-1">
+                              {col.filterOptions.map((opt, i) => (
+                                <div
+                                  key={i}
+                                  className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-muted ${activeFilters[col.accessor!] === opt.value || (!activeFilters[col.accessor!] && opt.value === 'All') ? 'bg-muted/50 font-medium text-primary' : 'text-foreground'}`}
+                                  onClick={(e) => selectFilter(col.accessor!, opt.value, e)}
+                                >
+                                  {opt.label}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </th>
@@ -123,3 +170,4 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
     </div>
   );
 }
+
