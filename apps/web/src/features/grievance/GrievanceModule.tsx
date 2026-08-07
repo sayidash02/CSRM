@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Check, X, Search, Plus, Download, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
@@ -62,10 +62,10 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children }: {
+function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, showDeleted }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
-  onExport?: () => void; children?: React.ReactNode;
+  onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
@@ -83,7 +83,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
           </div>
         )}
         <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
       </div>
     </div>
   );
@@ -216,18 +216,22 @@ function GrievanceForm({
 
 export default function GrievanceModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Grievance[]>([]);
+  const [showDeleted, setShowDeleted] = useState(false);
   
   useEffect(() => {
     fetchData();
-  }, [activeYear]);
+  }, [activeYear, showDeleted]);
 
   const fetchData = async () => {
     try {
-      const yearParam = activeYear ? `?year=${activeYear}` : '';
-      const res = await apiClient.get(`/grievance${yearParam}`);
+      const yearParam = activeYear ? `year=${activeYear}` : '';
+      const isDeletedParam = `is_deleted=${showDeleted}`;
+      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
+      const res = await apiClient.get(`/grievance?${queryParams}`);
       setItems(res.data.data);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      if (showToast) showToast(e.response?.data?.error || "Gagal mengambil data", "error");
     }
   };
 
@@ -236,9 +240,9 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       await apiClient.post('/grievance', d);
       fetchData();
       showToast(`Keluhan dari '${(d as any).name || d.complainant_name}' berhasil ditambahkan`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menyimpan data", "error");
+      showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
@@ -247,9 +251,9 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       await apiClient.put(`/grievance/${id}`, d);
       fetchData();
       showToast(`Keluhan dari '${(d as any).name || d.complainant_name}' berhasil diperbarui`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal memperbarui data", "error");
+      showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
@@ -258,9 +262,20 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       await apiClient.delete(`/grievance/${id}`);
       fetchData();
       showToast(`Keluhan dari '${(toDelete as any)?.name || toDelete?.complainant_name || ''}' berhasil dihapus`, "success");
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      showToast("Gagal menghapus data", "error");
+      showToast(e.response?.data?.error || "Gagal menghapus data", "error");
+    }
+  };
+
+  const handleRestore = async (id: string | number) => {
+    if (!confirm("Apakah Anda yakin ingin memulihkan data ini?")) return;
+    try {
+      await apiClient.patch(`/grievance/${id}/restore`);
+      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      fetchData();
+    } catch (e: any) {
+      if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
     }
   };
 
@@ -269,7 +284,6 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const [statusFilter, setStatusFilter] = useState("All");
   const [selected, setSelected] = useState<string | number | null>(items[0]?.id ?? null);
   
-  // Set selected dynamically when items arrive and selected is null
   useEffect(() => {
     if (items.length > 0 && selected === null) {
       setSelected(items[0].id);
@@ -294,13 +308,23 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
     { header: "Feedback Pelapor", accessor: "feedback", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-muted-foreground line-clamp-2">{g.feedback || "—"}</div> },
     { header: "Status", accessor: "status", sortable: true, render: (g) => <div><StatusBadge status={g.status} />{g.completion_date && <div className="text-xs text-muted-foreground font-mono mt-1">Selesai: {formatDate(g.completion_date)}</div>}</div> },
     { header: "Docs", render: (g) => g.supporting_files ? <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-2 py-1 cursor-pointer"><ExternalLink size={11} /> Dok</span> : <span className="text-muted-foreground text-xs">—</span> },
-    { header: "", render: (g) => (
+    { header: "", render: (g) => showDeleted ? (
+      <div className="flex items-center justify-end">
+        <button 
+          onClick={() => handleRestore(g.id)} 
+          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+        >
+          <RotateCcw size={12} />
+          Restore
+        </button>
+      </div>
+    ) : (
       <div className="flex items-center gap-1 justify-end">
         <button onClick={() => setEditing(g)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
         <button onClick={() => setToDelete(g)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
       </div>
     )}
-  ], []);
+  ], [showDeleted]);
 
   const handleExportClick = () => {
     const exportData = displayed.map(g => ({
@@ -322,7 +346,16 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <TopBar title="Grievance" subtitle="Penanganan pengaduan & keluhan dari masyarakat" addLabel="Tambah Pengaduan" onAdd={() => setShowForm(true)} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="Grievance" subtitle="Penanganan pengaduan & keluhan dari masyarakat" addLabel="Tambah Pengaduan" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+        <div className="flex items-center gap-2 mr-2">
+          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <input 
+            type="checkbox" 
+            checked={showDeleted} 
+            onChange={(e) => setShowDeleted(e.target.checked)} 
+            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring cursor-pointer"
+          />
+        </div>
         <select value={sigFilter} onChange={(e) => setSigFilter(e.target.value)} className="px-3 py-1.5 text-sm bg-card border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring text-foreground font-medium">
           <option value="All">Semua Signifikansi</option>
           <option value="Low">Low</option>
