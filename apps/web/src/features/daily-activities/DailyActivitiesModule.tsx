@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
@@ -7,11 +6,11 @@ import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
 import { ImportExcelModal } from "./ImportExcelModal";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
+import { Pagination } from '../../components/ui/Pagination';
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter";
-import { filterByDateRange } from "../../utils/dateFilter";
 
 // Types
 export interface DailyActivity {
@@ -251,14 +250,35 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
 
 export default function DailyActivitiesModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, payload?: any) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<DailyActivity[]>([]);
+  const [meta, setMeta] = useState({ page: 1, limit: 50, totalItems: 0, totalPages: 0 });
   const [references, setReferences] = useState({ pics: [], categories: [], sub_categories: [] });
   const [addDraft, setAddDraft] = useState({ ...emptyDailyDraft });
   const [showDeleted, setShowDeleted] = useState(false);
-  
+  const [q, setQ] = useState("");
+  const [catFilter, setCatFilter] = useState("All");
+  const [subCatFilter, setSubCatFilter] = useState("All");
+  const [dateRange, setDateRange] = useState<DateRange>({ start: "", end: "" });
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [editing, setEditing] = useState<DailyActivity | null>(null);
+  const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
+  const [toRestore, setToRestore] = useState<DailyActivity | null>(null);
+
+  // Debounce search & filters trigger fetchData
   useEffect(() => {
-    fetchData();
+    const timer = setTimeout(() => {
+      fetchData();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [activeYear, showDeleted, page, limit, catFilter, subCatFilter, dateRange.start, dateRange.end, q]);
+
+  useEffect(() => {
     fetchReferences();
-  }, [activeYear, showDeleted]);
+  }, []);
 
   const fetchReferences = async () => {
     try {
@@ -271,15 +291,27 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   };
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
-      const yearParam = activeYear ? `year=${activeYear}` : '';
-      const isDeletedParam = `is_deleted=${showDeleted}`;
-      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
-      const res = await apiClient.get(`/daily-activities?${queryParams}`);
+      const params = new URLSearchParams();
+      if (activeYear) params.append('year', activeYear);
+      params.append('is_deleted', String(showDeleted));
+      params.append('page', String(page));
+      params.append('limit', String(limit));
+      if (q) params.append('search', q);
+      if (catFilter !== 'All') params.append('cat', catFilter);
+      if (subCatFilter !== 'All') params.append('sub_cat', subCatFilter);
+      if (dateRange.start) params.append('start', dateRange.start);
+      if (dateRange.end) params.append('end', dateRange.end);
+
+      const res = await apiClient.get(`/daily-activities?${params.toString()}`);
       setItems(res.data.data);
+      if (res.data.meta) setMeta(res.data.meta);
     } catch (e: any) {
       console.error(e);
       showToast?.(e.response?.data?.error || "Gagal mengambil data kegiatan", "error");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -327,68 +359,62 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     }
   };
 
-  const enrichedItems = useMemo(() => {
-    return items.map(a => ({
-      ...a,
-      category_name: references.categories?.find((c: any) => String(c.id) === String(a.category_id))?.name || "-",
-      sub_category_name: references.sub_categories?.find((s: any) => String(s.id) === String(a.sub_category_id))?.name || "-"
-    }));
-  }, [items, references.categories, references.sub_categories]);
+  const displayed = items.map(a => ({
+    ...a,
+    category_name: references.categories?.find((c: any) => String(c.id) === String(a.category_id))?.name || "-",
+    sub_category_name: references.sub_categories?.find((s: any) => String(s.id) === String(a.sub_category_id))?.name || "-"
+  }));
 
-  const { q, setQ, filtered } = useGlobalSearch(enrichedItems);
-  const [catFilter, setCatFilter] = useState("All");
-  const [subCatFilter, setSubCatFilter] = useState("All");
-  const [dateRange, setDateRange] = useState<DateRange>({ start: "", end: "" });
-  const [showForm, setShowForm] = useState(false);
-  const [showImport, setShowImport] = useState(false);
-  const [editing, setEditing] = useState<DailyActivity | null>(null);
-  const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
-  const [toRestore, setToRestore] = useState<DailyActivity | null>(null);
-  
-  const displayed = useMemo(() => {
-    let result = filtered;
-    if (catFilter !== "All") result = result.filter(a => String(a.category_id) === String(catFilter));
-    if (subCatFilter !== "All") result = result.filter(a => String(a.sub_category_id) === String(subCatFilter));
-    result = filterByDateRange(result, 'activity_date', dateRange);
-    return result;
-  }, [filtered, catFilter, subCatFilter, dateRange]);
+  const handleExportClick = async () => {
+    try {
+      showToast("Sedang menyiapkan data export...", "info");
+      const params = new URLSearchParams();
+      if (activeYear) params.append('year', activeYear);
+      params.append('is_deleted', String(showDeleted));
+      params.append('no_paginate', 'true');
+      if (q) params.append('search', q);
+      if (catFilter !== 'All') params.append('cat', catFilter);
+      if (subCatFilter !== 'All') params.append('sub_cat', subCatFilter);
+      if (dateRange.start) params.append('start', dateRange.start);
+      if (dateRange.end) params.append('end', dateRange.end);
 
-  const handleExportClick = () => {
-    const exportColumns = [
-      { header: 'No', key: 'no', width: 5 },
-      { header: 'Tanggal', key: 'date', width: 15 },
-      { header: 'Kegiatan', key: 'activity', width: 30 },
-      { header: 'Fokus', key: 'focus', width: 20 },
-      { header: 'Institusi', key: 'institution', width: 25 },
-      { header: 'Alamat', key: 'address', width: 30 },
-      { header: 'Lokasi', key: 'location', width: 20 },
-      { header: 'Kategori', key: 'kategori', width: 20 },
-      { header: 'Sub Kategori', key: 'sub_kategori', width: 25 },
-      { header: 'PIC', key: 'pic', width: 15 },
-      { header: 'Biaya', key: 'cost', width: 15 },
-      { header: 'Keterangan', key: 'description', width: 40 }
-    ];
+      const res = await apiClient.get(`/daily-activities?${params.toString()}`);
+      const exportItems = res.data.data.map((a: any) => ({
+        ...a,
+        category_name: references.categories?.find((c: any) => String(c.id) === String(a.category_id))?.name || "-",
+        sub_category_name: references.sub_categories?.find((s: any) => String(s.id) === String(a.sub_category_id))?.name || "-"
+      }));
 
-    const exportData = displayed.map((a, i) => ({
-      no: i + 1,
-      date: formatDate(a.activity_date),
-      activity: a.activity,
-      focus: a.focus || '-',
-      institution: a.institution_group || '-',
-      address: a.address || '-',
-      location: a.location || '-',
-      kategori: a.category?.name || a.category_name || '-',
-      sub_kategori: a.sub_category_name,
-      cost: a.cost ? Number(a.cost) : null,
-      pic: a.pics?.map(p => p.name).join(', ') || a.pic_ids?.join(', ') || '-',
-      description: a.description_result || '-'
-    }));
+      const exportColumns = [
+        { header: "Tanggal", key: "activity_date", width: 15 },
+        { header: "Aktivitas", key: "activity", width: 40 },
+        { header: "Institusi/Kelompok", key: "institution_group", width: 25 },
+        { header: "Alamat", key: "address", width: 30 },
+        { header: "Lokasi", key: "location", width: 20 },
+        { header: "PIC", key: "pic_names", width: 25 },
+        { header: "Biaya", key: "cost", width: 20 },
+        { header: "Category", key: "category_name", width: 20 },
+        { header: "Sub Category", key: "sub_category_name", width: 25 },
+        { header: "Keterangan & Hasil", key: "description_result", width: 40 },
+        { header: "Dokumen", key: "document_link", width: 30 }
+      ];
 
-    onExport("Daily Activities", { sheetName: "Daily Activities Juli 2026", columns: exportColumns, data: exportData });
+      const exportData = exportItems.map((a: any) => ({
+        ...a,
+        activity_date: formatDate(a.activity_date),
+        cost: formatIDR(a.cost),
+        pic_names: a.pics?.map((p: any) => p.name).join(", ") || "-"
+      }));
+
+      onExport("Daily Activities", { sheetName: `Daily Activities ${activeYear || 'Semua'}`, columns: exportColumns, data: exportData });
+    } catch (e) {
+      console.error(e);
+      showToast("Gagal mengambil data untuk export", "error");
+    }
   };
 
   const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
-    { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
+    { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{(meta.page - 1) * meta.limit + i + 1}</span> },
     { header: "Tanggal", accessor: "activity_date", sortable: true, render: (a) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(a.activity_date)}</span> },
     { header: "Kegiatan", accessor: "activity", sortable: true, render: (a) => <div className="text-sm font-medium text-foreground whitespace-normal max-w-[200px]">{a.activity}</div> },
     { header: "Fokus", accessor: "focus", sortable: true, render: (a) => <div className="text-xs text-muted-foreground whitespace-normal max-w-[150px]">{a.focus || <span className="text-muted-foreground/50">—</span>}</div> },
@@ -400,7 +426,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     )},
     { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
-    { header: "PIC", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.map(p => p.name).join(', ') || a.pic_ids?.join(', ') || '-'}</span> },
+    { header: "PIC", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.map((p: any) => p.name).join(', ') || a.pic_ids?.join(', ') || '-'}</span> },
     { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
@@ -421,7 +447,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         <button onClick={() => setToDelete(a)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
       </div>
     )}
-  ], [showDeleted]);
+  ], [showDeleted, meta.page, meta.limit]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -429,25 +455,25 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" 
         onAdd={!showDeleted ? () => setShowForm(true) : undefined} addLabel="Tambah Kegiatan" 
         showDeleted={showDeleted}
-        showSearch searchValue={q} onSearch={setQ} 
+        showSearch searchValue={q} onSearch={(val) => { setQ(val); setPage(1); }} 
         onExport={handleExportClick}
         categories={references.categories}
         catFilter={catFilter}
-        onCatFilterChange={(val) => { setCatFilter(val); setSubCatFilter("All"); }}
+        onCatFilterChange={(val) => { setCatFilter(val); setSubCatFilter("All"); setPage(1); }}
         subCategories={references.sub_categories}
         subCatFilter={subCatFilter}
-        onSubCatFilterChange={setSubCatFilter}
+        onSubCatFilterChange={(val) => { setSubCatFilter(val); setPage(1); }}
       >
         <div className="flex items-center gap-2 mr-2">
           <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
           <input 
             type="checkbox" 
             checked={showDeleted} 
-            onChange={(e) => setShowDeleted(e.target.checked)} 
+            onChange={(e) => { setShowDeleted(e.target.checked); setPage(1); }} 
             className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
           />
         </div>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        <DateRangeFilter value={dateRange} onChange={(dr) => { setDateRange(dr); setPage(1); }} />
         <button 
           type="button" 
           onClick={() => setShowImport(true)} 
@@ -459,9 +485,17 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       </TopBar>
       <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
         <div className="flex-1 min-h-0">
-          <DataTable columns={columns} data={displayed} />
+          {isLoading && <div className="p-4 text-center text-sm text-muted-foreground">Memuat data...</div>}
+          {!isLoading && <DataTable data={displayed} columns={columns} />}
         </div>
-        <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {displayed.length} dari {items.length} kegiatan</div>
+        <Pagination 
+          page={meta.page} 
+          limit={meta.limit} 
+          totalItems={meta.totalItems} 
+          totalPages={meta.totalPages} 
+          onPageChange={setPage} 
+          onLimitChange={(newLimit) => { setLimit(newLimit); setPage(1); }} 
+        />
       </div>
       {showForm && <DailyForm defaultValues={addDraft} onDraftChange={setAddDraft} refs={references} onRefreshReferences={fetchReferences} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
       {editing && <DailyForm refs={references} onRefreshReferences={fetchReferences} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
