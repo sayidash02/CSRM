@@ -94,9 +94,10 @@ export const createDailyActivity = async (req: Request, res: Response): Promise<
 
 export const getDailyActivities = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { year, is_deleted } = req.query;
+    const { year, is_deleted, page, limit, search, cat, sub_cat, start, end, no_paginate } = req.query;
     const isDeletedFilter = is_deleted === 'true';
     const where: any = { is_deleted: isDeletedFilter, is_archived: false };
+    
     if (year) {
       const y = year as string;
       where.activity_date = {
@@ -104,10 +105,55 @@ export const getDailyActivities = async (req: Request, res: Response): Promise<v
         lte: new Date(`${y}-12-31T23:59:59.999Z`)
       };
     }
-    const activities = await prisma.daily_activities.findMany({
-      where,
-      include: { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true }
-    });
+    if (start && end) {
+      where.activity_date = {
+        gte: new Date(`${start}T00:00:00.000Z`),
+        lte: new Date(`${end}T23:59:59.999Z`)
+      };
+    }
+    if (cat && cat !== 'All') {
+      where.category_id = BigInt(cat as string);
+    }
+    if (sub_cat && sub_cat !== 'All') {
+      where.sub_category_id = BigInt(sub_cat as string);
+    }
+    if (search) {
+      const q = search as string;
+      where.OR = [
+        { activity: { contains: q } },
+        { institution_group: { contains: q } },
+        { location: { contains: q } }
+      ];
+    }
+
+    const include = { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true };
+
+    if (no_paginate === 'true') {
+      const activities = await prisma.daily_activities.findMany({ where, include, orderBy: { activity_date: 'desc' } });
+      const mappedActivities = activities.map((act: any) => ({
+        ...act,
+        pics: act.daily_activity_pics.map((p: any) => p.pic),
+        pic_ids: act.daily_activity_pics.map((p: any) => p.pic.id),
+        daily_activity_pics: undefined
+      }));
+      res.status(200).json({ data: mappedActivities });
+      return;
+    }
+
+    const pageNum = parseInt((page as string) || '1');
+    const limitNum = parseInt((limit as string) || '50');
+    const skip = (pageNum - 1) * limitNum;
+
+    const [activities, totalItems] = await Promise.all([
+      prisma.daily_activities.findMany({
+        where,
+        include,
+        skip,
+        take: limitNum,
+        orderBy: { activity_date: 'desc' }
+      }),
+      prisma.daily_activities.count({ where })
+    ]);
     
     const mappedActivities = activities.map((act: any) => ({
       ...act,
@@ -116,7 +162,15 @@ export const getDailyActivities = async (req: Request, res: Response): Promise<v
       daily_activity_pics: undefined
     }));
     
-    res.status(200).json({ data: mappedActivities });
+    res.status(200).json({ 
+      data: mappedActivities,
+      meta: {
+        page: pageNum,
+        limit: limitNum,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limitNum)
+      }
+    });
   } catch (error) {
     handleControllerError(res, error);
   }
