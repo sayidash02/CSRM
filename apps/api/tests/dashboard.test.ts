@@ -12,10 +12,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.proposals.deleteMany({ where: { registration_no: 'PRP-TEST-001' } });
+  await prisma.grievance.deleteMany({ where: { register_no: 'GRV-TEST-001' } });
   await prisma.$disconnect();
 });
 
-describe('GET /api/dashboard', () => {
+describe('GET /api/dashboard/stats', () => {
   it('Should return updated dashboard stats structure with new metrics', async () => {
     // Insert mock data for stale proposals
     const oldDate = new Date();
@@ -45,8 +47,9 @@ describe('GET /api/dashboard', () => {
       }
     });
 
-    const res = await request(app).get('/api/dashboard');
+    const res = await request(app).get('/api/dashboard/stats');
     expect(res.status).toBe(200);
+    expect(res.body.data).toBeDefined();
     
     const { actionable, trends, sync } = res.body.data;
     
