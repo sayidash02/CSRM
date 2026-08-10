@@ -46,3 +46,9 @@ export async function restoreStakeholder(id: string): Promise<StakeholderMaster>
   const response = await apiClient.patch(`/master-stakeholders/${id}/restore`);
   return response.data.data;
 }
+
+export async function getStakeholderEngagements(): Promise<any[]> {
+  const response = await apiClient.get('/stakeholders');
+  return response.data.data;
+}
+

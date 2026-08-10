@@ -6,9 +6,11 @@ import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
+import { StakeholderCombobox } from '../../components/ui/StakeholderCombobox';
 
 export interface Stakeholder {
   id: string;
+  stakeholder_id?: string | number | null;
   stakeholder: string;
   date: string | null;
   venue: string | null;
@@ -76,7 +78,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 }
 
 const emptyStakeholderDraft = {
-  stakeholder: "", date: "", venue: "", concern_issue: "", document_link: ""
+  stakeholder_id: "", stakeholder: "", date: "", venue: "", concern_issue: "", document_link: ""
 };
 
 const parseDocumentLinks = (link?: string | null): string[] => {
@@ -113,7 +115,14 @@ function StakeholderForm({
 }) {
   const [f, setF] = useState(
     initial
-      ? { stakeholder: initial.stakeholder ?? "", date: initial.date ?? "", venue: initial.venue ?? "", concern_issue: initial.concern_issue ?? "", document_link: initial.document_link ?? "" }
+      ? {
+          stakeholder_id: (initial as any).stakeholder_id ? String((initial as any).stakeholder_id) : "",
+          stakeholder: initial.stakeholder ?? "",
+          date: initial.date ?? "",
+          venue: initial.venue ?? "",
+          concern_issue: initial.concern_issue ?? "",
+          document_link: initial.document_link ?? ""
+        }
       : { ...emptyStakeholderDraft, ...defaultValues }
   );
   
@@ -131,7 +140,7 @@ function StakeholderForm({
   const handleSave = () => {
     const missing: string[] = (
       [
-        [!f.stakeholder, "Nama Stakeholder"],
+        [!f.stakeholder_id && !f.stakeholder, "Nama Stakeholder"],
       ] as [boolean, string][]
     ).filter(([cond]) => cond).map(([, label]) => label);
 
@@ -143,11 +152,12 @@ function StakeholderForm({
     }
     onSave({
       ...f,
+      stakeholder_id: f.stakeholder_id || null,
       date: f.date || null,
       venue: f.venue || null,
       concern_issue: f.concern_issue || null,
       document_link: f.document_link || null
-    });
+    } as any);
     if (!initial) onDraftChange?.({ ...emptyStakeholderDraft });
     onClose();
   };
@@ -155,7 +165,16 @@ function StakeholderForm({
   return (
     <Modal title={initial ? "Edit Stakeholder" : "Tambah Stakeholder Engagement"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
-        <Field label="Nama Stakeholder" required><input type="text" value={f.stakeholder} onChange={e => set("stakeholder", e.target.value)} placeholder="Nama institusi / individu" className={inputCls} /></Field>
+        <Field label="Nama Stakeholder" required>
+          <StakeholderCombobox
+            value={f.stakeholder_id}
+            onChange={(stId, stName) => {
+              const next = { ...f, stakeholder_id: stId, stakeholder: stName };
+              setF(next);
+              if (!initial) onDraftChange?.(next);
+            }}
+          />
+        </Field>
         <div className="flex gap-4">
           <div className="flex-1">
             <Field label="Tanggal"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} className={inputCls} /></Field>
@@ -178,6 +197,7 @@ function StakeholderForm({
     </Modal>
   );
 }
+
 
 export default function StakeholdersModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<Stakeholder[]>([]);

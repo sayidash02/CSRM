@@ -3,6 +3,8 @@ import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
+import { StakeholderCombobox } from "../../components/ui/StakeholderCombobox";
+import { useStakeholderEngagements } from "../../hooks/useStakeholders";
 import { PicManagementModal } from './PicManagementModal';
 import { ImportExcelModal } from "./ImportExcelModal";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
@@ -17,7 +19,9 @@ export interface DailyActivity {
   id: number | string;
   activity_date: string;
   activity: string;
-  institution_group: string;
+  institution_group?: string | null;
+  stakeholder_id?: string | number | null;
+  stakeholder_engagement_id?: string | number | null;
   address: string;
   focus: string;
   location: string;
@@ -34,7 +38,10 @@ export interface DailyActivity {
   sub_category?: any;
   category_name?: string;
   sub_category_name?: string;
+  stakeholder?: any;
+  stakeholder_engagement?: any;
 }
+
 
 // Helpers
 const formatIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
@@ -116,19 +123,23 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 }
 
 const emptyDailyDraft = {
-  activity_date: "", activity: "", institution_group: "", address: "",
+  activity_date: "", activity: "", stakeholder_id: "", stakeholder_engagement_id: "", institution_group: "", address: "",
   focus: "", location: "", cost: "", pic_ids: [] as (string | number)[], category_id: "",
   sub_category_id: "", description_result: "", document_link: ""
 };
 
 function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast }: { initial?: DailyActivity; defaultValues?: typeof emptyDailyDraft; onDraftChange?: (v: typeof emptyDailyDraft) => void; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] }; onRefreshReferences: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
   const [showPicManager, setShowPicManager] = useState(false);
+  const { data: engagements = [] } = useStakeholderEngagements();
+
   const [f, setF] = useState(
     initial
       ? {
           activity_date: initial.activity_date ?? "",
           activity: initial.activity ?? "",
-          institution_group: initial.institution_group ?? "",
+          stakeholder_id: initial.stakeholder_id != null ? String(initial.stakeholder_id) : (initial as any)?.stakeholder?.id ? String((initial as any).stakeholder.id) : "",
+          stakeholder_engagement_id: initial.stakeholder_engagement_id != null ? String(initial.stakeholder_engagement_id) : "",
+          institution_group: initial.institution_group ?? (initial as any)?.stakeholder?.name ?? "",
           address: initial.address ?? "",
           focus: initial.focus ?? "",
           location: initial.location ?? "",
@@ -172,7 +183,13 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
       }
       return;
     }
-    onSave({ ...f, cost: Number(f.cost) || 0, document_link: f.document_link || null } as any);
+    onSave({
+      ...f,
+      stakeholder_id: f.stakeholder_id || null,
+      stakeholder_engagement_id: f.stakeholder_engagement_id || null,
+      cost: Number(f.cost) || 0,
+      document_link: f.document_link || null
+    } as any);
     if (!initial) onDraftChange?.({ ...emptyDailyDraft });
     onClose();
   };
@@ -182,11 +199,37 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
       <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="Tanggal Kegiatan" required><input type="date" value={String(f.activity_date).split('T')[0]} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
         <div className="col-span-2"><Field label="Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Deskripsi kegiatan" className={inputCls} /></Field></div>
-        <Field label="Institusi / Kelompok"><input type="text" value={f.institution_group} onChange={e => set("institution_group", e.target.value)} placeholder="Nama institusi" className={inputCls} /></Field>
+        <Field label="Stakeholder / Institusi">
+          <StakeholderCombobox
+            value={f.stakeholder_id}
+            onChange={(stId, stName) => {
+              const next = { ...f, stakeholder_id: stId, institution_group: stName };
+              setF(next);
+              if (!initial) onDraftChange?.(next as any);
+            }}
+          />
+        </Field>
+        <Field label="Stakeholder Engagement (Opsional)">
+          <select
+            value={f.stakeholder_engagement_id}
+            onChange={e => set("stakeholder_engagement_id", e.target.value)}
+            className={inputCls}
+          >
+            <option value="">Pilih Engagement (Opsional)</option>
+            {engagements.map((e: any) => (
+              <option key={e.id} value={e.id}>
+                {e.stakeholder ? `${e.stakeholder} - ` : ''}
+                {e.date ? formatDate(e.date) : ''}
+                {e.concern_issue ? ` (${e.concern_issue.substring(0, 25)})` : ''}
+              </option>
+            ))}
+          </select>
+        </Field>
         <Field label="Alamat"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Alamat institusi" className={inputCls} /></Field>
         <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi kegiatan" className={inputCls} /></Field>
         <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
+
         <Field label="Category" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
         <Field label="PIC" required>
@@ -420,7 +463,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     { header: "Fokus", accessor: "focus", sortable: true, render: (a) => <div className="text-xs text-muted-foreground whitespace-normal max-w-[150px]">{a.focus || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Institusi & Alamat", accessor: "institution_group", sortable: true, render: (a) => (
       <div className="max-w-[200px]">
-        <div className="text-sm font-medium text-foreground">{a.institution_group || <span className="text-muted-foreground/50">—</span>}</div>
+        <div className="text-sm font-medium text-foreground">{a.stakeholder?.name || a.institution_group || <span className="text-muted-foreground/50">—</span>}</div>
         {a.address && <div className="text-xs text-muted-foreground mt-0.5 whitespace-normal">{a.address}</div>}
       </div>
     )},

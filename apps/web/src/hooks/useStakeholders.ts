@@ -6,8 +6,17 @@ import {
   updateStakeholder,
   deleteStakeholder,
   restoreStakeholder,
+  getStakeholderEngagements,
   UpdateStakeholderData,
 } from '../api/stakeholders';
+
+export function useStakeholderEngagements() {
+  return useQuery({
+    queryKey: ['stakeholder-engagements'],
+    queryFn: getStakeholderEngagements,
+  });
+}
+
 
 export function useStakeholders() {
   return useQuery({
