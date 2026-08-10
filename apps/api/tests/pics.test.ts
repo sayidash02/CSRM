@@ -3,7 +3,7 @@ import app from '../src/app';
 import prisma from '../src/lib/prisma';
 
 beforeAll(async () => {
-  await prisma.daily_activity_pics.deleteMany();
+  await prisma.daily_activities.deleteMany();
   await prisma.pics.deleteMany();
 });
 

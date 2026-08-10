@@ -24,7 +24,7 @@ describe('POST /api/daily-activities', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_ids: [1],
+      pic_id: 1,
       category_id: 1,
       sub_category_id: 1
     };
@@ -43,7 +43,7 @@ describe('POST /api/daily-activities', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_ids: [999], // Doesn't exist
+      pic_id: 999, // Doesn't exist
       category_id: 1,
       sub_category_id: 1
     };
@@ -92,7 +92,7 @@ describe('PUT /api/daily-activities/:id', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_ids: [1],
+      pic_id: 1,
       category_id: 1,
       sub_category_id: 1
     };
@@ -102,7 +102,7 @@ describe('PUT /api/daily-activities/:id', () => {
     const updatePayload = {
       activity_date: '2026-07-26',
       activity: 'Kunjungan Lapangan Updated',
-      pic_ids: [1],
+      pic_id: 1,
       category_id: 1,
       sub_category_id: 1,
       cost: 500000

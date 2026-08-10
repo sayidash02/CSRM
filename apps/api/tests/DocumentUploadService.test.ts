@@ -28,7 +28,7 @@ describe('DocumentUploadService', () => {
     it('Should accept valid file', async () => {
       const buffer = Buffer.alloc(1024);
       const url = await uploadService.processAndUpload(buffer, 'test.pdf', 'application/pdf', buffer.length, new Date('2026-08-05'), 'Ziya');
-      expect(url).toContain('mocksharepoint');
+      expect(url).toMatch(/^file:\/\//);
     });
   });
 
