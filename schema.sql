@@ -53,6 +53,7 @@ CREATE TABLE sub_categories (
   FOREIGN KEY (category_id) REFERENCES categories(id),
   UNIQUE (category_id, name)
 );
+CREATE INDEX idx_sub_categories_category ON sub_categories(category_id);
 
 CREATE TABLE stakeholders (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -127,6 +128,9 @@ CREATE TABLE daily_activities (
 );
 CREATE INDEX idx_daily_activities_date ON daily_activities(activity_date);
 CREATE INDEX idx_daily_activities_deleted ON daily_activities(is_deleted);
+CREATE INDEX idx_daily_activities_pic ON daily_activities(pic_id);
+CREATE INDEX idx_daily_activities_category ON daily_activities(category_id);
+CREATE INDEX idx_daily_activities_sub_category ON daily_activities(sub_category_id);
 CREATE INDEX idx_daily_activities_stakeholder ON daily_activities(stakeholder_id);
 CREATE INDEX idx_daily_activities_stakeholder_engagement ON daily_activities(stakeholder_engagement_id);
 
