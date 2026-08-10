@@ -18,7 +18,7 @@ describe('POST /api/upload', () => {
       .attach('file', buffer, 'test.pdf');
     
     expect(res.status).toBe(200);
-    expect(res.body.data.url).toContain('mocksharepoint');
+    expect(res.body.data.url).toContain('sharepoint_mock');
   });
 
   it('Should accept valid upload and return mock URL', async () => {
@@ -30,6 +30,6 @@ describe('POST /api/upload', () => {
       .attach('file', buffer, 'test.pdf');
     
     expect(res.status).toBe(200);
-    expect(res.body.data.url).toContain('mocksharepoint');
+    expect(res.body.data.url).toContain('sharepoint_mock');
   });
 });

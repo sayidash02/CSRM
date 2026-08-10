@@ -98,7 +98,7 @@ export class SyncService {
         grievances,
         lrps
       ] = await Promise.all([
-        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true } }),
+        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { pic: true, category: true, sub_category: true } }),
         prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false, date: dateRange } }),
         prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
         prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false, date_received: dateRange } }),

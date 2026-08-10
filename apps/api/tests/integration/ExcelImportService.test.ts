@@ -29,10 +29,10 @@ describe('ExcelImportService', () => {
     
     expect(result.validRows.length).toBe(1);
     expect(result.errorRows.length).toBe(0);
-    expect(result.validRows[0].activity).toBe('Test Act');
-    expect(result.validRows[0].category_id).toBe('1');
-    expect(result.validRows[0].sub_category_id).toBe('1');
-    expect(result.validRows[0].pic_id).toBe('1');
+    expect(result.validRows[0]!.activity).toBe('Test Act');
+    expect(result.validRows[0]!.category_id).toBe('1');
+    expect(result.validRows[0]!.sub_category_id).toBe('1');
+    expect(result.validRows[0]!.pic_id).toBe('1');
   });
 
   it('should return errorRows length 1 when an unknown PIC is supplied', async () => {
@@ -46,7 +46,7 @@ describe('ExcelImportService', () => {
 
     expect(result.validRows.length).toBe(0);
     expect(result.errorRows.length).toBe(1);
-    expect(result.errorRows[0].errors).toContain("PIC 'Unknown PIC' tidak ditemukan");
+    expect(result.errorRows[0]!.errors).toContain("PIC 'Unknown PIC' tidak ditemukan");
   });
 
   it('should return errorRows when category or sub_category is missing or not found', async () => {
@@ -60,8 +60,8 @@ describe('ExcelImportService', () => {
 
     expect(result.validRows.length).toBe(0);
     expect(result.errorRows.length).toBe(1);
-    expect(result.errorRows[0].errors).toContain("Kategori wajib diisi");
-    expect(result.errorRows[0].errors).toContain("Sub Category 'Sub Unknown' tidak ditemukan");
+    expect(result.errorRows[0]!.errors).toContain("Kategori wajib diisi");
+    expect(result.errorRows[0]!.errors).toContain("Sub Category 'Sub Unknown' tidak ditemukan");
   });
 
   it('should return errorRows when cost is an invalid number', async () => {
@@ -75,6 +75,6 @@ describe('ExcelImportService', () => {
 
     expect(result.validRows.length).toBe(0);
     expect(result.errorRows.length).toBe(1);
-    expect(result.errorRows[0].errors).toContain("Biaya 'invalid-cost' bukan berupa angka");
+    expect(result.errorRows[0]!.errors).toContain("Biaya 'invalid-cost' bukan berupa angka");
   });
 });

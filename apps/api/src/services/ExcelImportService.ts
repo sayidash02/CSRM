@@ -15,7 +15,7 @@ export interface ParsedDailyActivityRow {
   cost: number;
   description_result: string;
   document_link: string;
-  pic_ids: string[];
+  pic_id: string | null;
   category_name: string;
   sub_category_name: string;
   pic_names: string[];
@@ -834,6 +834,7 @@ export class ExcelImportService {
             const subKey = `${catId}:${item.sub_category_name.trim().toLowerCase()}`;
             const subCatId = subCategoryMap.get(subKey)!;
             const pIds = item.pic_names.map(p => picMap.get(p.trim().toLowerCase())!);
+            const pId = pIds.length > 0 ? pIds[0] : null;
 
             await tx.daily_activities.create({
               data: {
@@ -846,11 +847,9 @@ export class ExcelImportService {
                 description_result: item.description_result,
                 category_id: catId,
                 sub_category_id: subCatId,
+                pic_id: pId!,
                 cost: item.cost,
-                document_link: item.document_link,
-                daily_activity_pics: {
-                  create: pIds.map(id => ({ pic_id: id }))
-                }
+                document_link: item.document_link
               }
             });
           }
@@ -1001,7 +1000,7 @@ export async function parseDailyActivitiesExcel(buffer: Buffer): Promise<ExcelIm
       cost,
       description_result,
       document_link,
-      pic_ids: picMatches.filter(Boolean).map(p => String(p!.id)),
+      pic_id: picMatches[0] ? String(picMatches[0].id) : null,
       category_name: rawCat,
       sub_category_name: rawSubCat,
       pic_names: rawPicNames
