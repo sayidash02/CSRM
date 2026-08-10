@@ -41,49 +41,37 @@ function handleControllerError(res: Response, error: any) {
 
 export const createDailyActivity = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, category_id, sub_category_id } = req.body;
+    const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
 
-    if (!activity_date || !activity || !pic_ids || !Array.isArray(pic_ids) || pic_ids.length === 0 || !category_id || !sub_category_id) {
+    if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
       res.status(400).json({ error: 'Missing required fields' });
       return;
     }
 
-    const pics = await prisma.pics.findMany({
-      where: { id: { in: pic_ids.map((id: any) => BigInt(id)) } }
+    const pic = await prisma.pics.findUnique({
+      where: { id: BigInt(pic_id) }
     });
     
-    if (pics.length !== pic_ids.length) {
-      res.status(400).json({ error: 'One or more invalid pic_ids' });
+    if (!pic) {
+      res.status(400).json({ error: 'Invalid pic_id' });
       return;
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const activityRecord = await tx.daily_activities.create({
-        data: {
-          activity_date: new Date(activity_date),
-          activity,
-          institution_group,
-          address,
-          focus,
-          location,
-          cost: cost !== undefined && cost !== null ? Number(cost) : null,
-          description_result,
-          document_link,
-          category_id: BigInt(category_id),
-          sub_category_id: BigInt(sub_category_id)
-        }
-      });
-
-      const picLinks = pic_ids.map((picId: any) => ({
-        daily_activity_id: activityRecord.id,
-        pic_id: BigInt(picId)
-      }));
-
-      await tx.daily_activity_pics.createMany({
-        data: picLinks
-      });
-
-      return activityRecord;
+    const result = await prisma.daily_activities.create({
+      data: {
+        activity_date: new Date(activity_date),
+        activity,
+        institution_group,
+        address,
+        focus,
+        location,
+        cost: cost !== undefined && cost !== null ? Number(cost) : null,
+        description_result,
+        document_link,
+        pic_id: BigInt(pic_id),
+        category_id: BigInt(category_id),
+        sub_category_id: BigInt(sub_category_id)
+      }
     });
 
     res.status(201).json({ data: result });
@@ -126,17 +114,11 @@ export const getDailyActivities = async (req: Request, res: Response): Promise<v
       ];
     }
 
-    const include = { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true };
+    const include = { pic: true, category: true, sub_category: true };
 
     if (no_paginate === 'true') {
       const activities = await prisma.daily_activities.findMany({ where, include, orderBy: { activity_date: 'desc' } });
-      const mappedActivities = activities.map((act: any) => ({
-        ...act,
-        pics: act.daily_activity_pics.map((p: any) => p.pic),
-        pic_ids: act.daily_activity_pics.map((p: any) => p.pic.id),
-        daily_activity_pics: undefined
-      }));
-      res.status(200).json({ data: mappedActivities });
+      res.status(200).json({ data: activities });
       return;
     }
 
@@ -155,15 +137,8 @@ export const getDailyActivities = async (req: Request, res: Response): Promise<v
       prisma.daily_activities.count({ where })
     ]);
     
-    const mappedActivities = activities.map((act: any) => ({
-      ...act,
-      pics: act.daily_activity_pics.map((p: any) => p.pic),
-      pic_ids: act.daily_activity_pics.map((p: any) => p.pic.id),
-      daily_activity_pics: undefined
-    }));
-    
     res.status(200).json({ 
-      data: mappedActivities,
+      data: activities,
       meta: {
         page: pageNum,
         limit: limitNum,
@@ -205,54 +180,38 @@ export const restoreDailyActivity = async (req: Request, res: Response): Promise
 export const updateDailyActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, category_id, sub_category_id } = req.body;
+    const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
 
-    if (!activity_date || !activity || !pic_ids || !Array.isArray(pic_ids) || pic_ids.length === 0 || !category_id || !sub_category_id) {
+    if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
       res.status(400).json({ error: 'Missing required fields' });
       return;
     }
 
-    const pics = await prisma.pics.findMany({
-      where: { id: { in: pic_ids.map((id: any) => BigInt(id)) } }
+    const pic = await prisma.pics.findUnique({
+      where: { id: BigInt(pic_id) }
     });
     
-    if (pics.length !== pic_ids.length) {
-      res.status(400).json({ error: 'One or more invalid pic_ids' });
+    if (!pic) {
+      res.status(400).json({ error: 'Invalid pic_id' });
       return;
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const activityRecord = await tx.daily_activities.update({
-        where: { id: BigInt(id as string) },
-        data: {
-          activity_date: new Date(activity_date),
-          activity,
-          institution_group,
-          address,
-          focus,
-          location,
-          cost: cost !== undefined && cost !== null ? Number(cost) : null,
-          description_result,
-          document_link,
-          category_id: BigInt(category_id),
-          sub_category_id: BigInt(sub_category_id)
-        }
-      });
-
-      await tx.daily_activity_pics.deleteMany({
-        where: { daily_activity_id: BigInt(id as string) }
-      });
-
-      const picLinks = pic_ids.map((picId: any) => ({
-        daily_activity_id: activityRecord.id,
-        pic_id: BigInt(picId)
-      }));
-
-      await tx.daily_activity_pics.createMany({
-        data: picLinks
-      });
-
-      return activityRecord;
+    const result = await prisma.daily_activities.update({
+      where: { id: BigInt(id as string) },
+      data: {
+        activity_date: new Date(activity_date),
+        activity,
+        institution_group,
+        address,
+        focus,
+        location,
+        cost: cost !== undefined && cost !== null ? Number(cost) : null,
+        description_result,
+        document_link,
+        pic_id: BigInt(pic_id),
+        category_id: BigInt(category_id),
+        sub_category_id: BigInt(sub_category_id)
+      }
     });
 
     res.status(200).json({ data: result });
@@ -285,8 +244,9 @@ export const importCommitExcel = async (req: Request, res: Response) => {
     const result = await prisma.$transaction(async (tx) => {
       let count = 0;
       for (const r of rows) {
-        if (!r.category_id || !r.sub_category_id || !r.pic_ids || !Array.isArray(r.pic_ids) || r.pic_ids.length === 0) {
-          throw new Error('Field referensi (category_id, sub_category_id, pic_ids) wajib diisi untuk setiap baris');
+        const picId = r.pic_id || (Array.isArray(r.pic_ids) ? r.pic_ids[0] : null);
+        if (!r.category_id || !r.sub_category_id || !picId) {
+          throw new Error('Field referensi (category_id, sub_category_id, pic_id) wajib diisi untuk setiap baris');
         }
         
         await tx.daily_activities.create({
@@ -297,6 +257,7 @@ export const importCommitExcel = async (req: Request, res: Response) => {
             address: String(r.address || ''),
             category_id: BigInt(r.category_id),
             sub_category_id: BigInt(r.sub_category_id),
+            pic_id: BigInt(picId),
             focus: String(r.focus || ''),
             location: String(r.location || ''),
             cost: Number(r.cost) || 0,
@@ -304,12 +265,7 @@ export const importCommitExcel = async (req: Request, res: Response) => {
             document_link: String(r.document_link || ''),
             is_deleted: false,
             created_at: new Date(),
-            updated_at: new Date(),
-            daily_activity_pics: {
-              create: r.pic_ids.map((picId: string | number) => ({
-                pic_id: BigInt(picId)
-              }))
-            }
+            updated_at: new Date()
           }
         });
         count++;
