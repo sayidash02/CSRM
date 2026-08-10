@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PaginationProps {
@@ -11,6 +11,13 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, limit, totalItems, totalPages, onPageChange, onLimitChange }: PaginationProps) {
+  const [jumpPage, setJumpPage] = useState<string>(page.toString());
+
+  // Sync local input state if the external page prop changes
+  useEffect(() => {
+    setJumpPage(page.toString());
+  }, [page]);
+
   if (totalItems === 0) return null;
 
   const startItem = (page - 1) * limit + 1;
@@ -30,6 +37,30 @@ export function Pagination({ page, limit, totalItems, totalPages, onPageChange, 
   // Deduplicate '...'
   const displayPages = pages.filter((p, idx, arr) => p !== '...' || arr[idx - 1] !== '...');
 
+  const handleJump = () => {
+    const parsed = parseInt(jumpPage, 10);
+    if (isNaN(parsed)) {
+      setJumpPage(page.toString());
+      return;
+    }
+    
+    let targetPage = parsed;
+    if (targetPage < 1) targetPage = 1;
+    if (targetPage > totalPages) targetPage = totalPages;
+    
+    if (targetPage !== page) {
+      onPageChange(targetPage);
+    } else {
+      setJumpPage(page.toString());
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleJump();
+    }
+  };
+
   return (
     <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-white sm:px-6">
       <div className="flex flex-1 justify-between sm:hidden">
@@ -46,6 +77,19 @@ export function Pagination({ page, limit, totalItems, totalPages, onPageChange, 
             <option value={50}>50 per halaman</option>
             <option value={100}>100 per halaman</option>
           </select>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-700">Ke hal:</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={jumpPage}
+              onChange={(e) => setJumpPage(e.target.value)}
+              onBlur={handleJump}
+              onKeyDown={handleKeyDown}
+              className="w-16 text-sm border-gray-300 rounded-md focus:ring-primary focus:border-primary"
+            />
+          </div>
         </div>
         <div>
           <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
