@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, Eye, UserCheck, Users } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { StakeholderCombobox } from '../../components/ui/StakeholderCombobox';
+import { useStakeholders } from '../../hooks/useStakeholders';
+import { StakeholderMaster } from '../../api/stakeholders';
+import { Stakeholder360 } from './Stakeholder360';
 
 export interface Stakeholder {
   id: string;
@@ -56,7 +59,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
+    <div className="flex items-center justify-between px-6 py-4 bg-card border-b border-border shrink-0 gap-3 flex-wrap shadow-xs">
       <div className="shrink-0">
         <h1 className="text-base font-semibold text-foreground">{title}</h1>
         {subtitle && <p className="text-xs text-muted-foreground mt-0.5 font-mono">{subtitle}</p>}
@@ -198,12 +201,29 @@ function StakeholderForm({
   );
 }
 
+export interface StakeholdersModuleProps {
+  activeYear: string;
+  onExport: (l: string, data: any[]) => void;
+  showToast: (msg: string, type?: "success"|"error"|"info") => void;
+  initialStakeholderId?: string | null;
+  onSelectStakeholder360?: (id: string | null) => void;
+}
 
-export default function StakeholdersModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
+export default function StakeholdersModule({
+  activeYear,
+  onExport,
+  showToast,
+  initialStakeholderId,
+  onSelectStakeholder360,
+}: StakeholdersModuleProps) {
   const [items, setItems] = useState<Stakeholder[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDraft, setAddDraft] = useState({ ...emptyStakeholderDraft });
   const [showDeleted, setShowDeleted] = useState(false);
+  const [activeTab, setActiveTab] = useState<"engagement" | "master">("engagement");
+  const [view360Id, setView360Id] = useState<string | null>(initialStakeholderId || null);
+
+  const { data: masterStakeholders = [], isLoading: loadingMaster } = useStakeholders();
   
   const fetchData = useCallback(async () => {
     try {
@@ -225,11 +245,37 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    if (initialStakeholderId !== undefined) {
+      setView360Id(initialStakeholderId);
+    }
+  }, [initialStakeholderId]);
+
   const { q, setQ, filtered } = useGlobalSearch(items);
+  const { q: masterQ, setQ: setMasterQ, filtered: filteredMaster } = useGlobalSearch(masterStakeholders);
+
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Stakeholder | null>(null);
   const [toDelete, setToDelete] = useState<Stakeholder | null>(null);
   const [toRestore, setToRestore] = useState<Stakeholder | null>(null);
+
+  const handleOpen360 = (id: string) => {
+    setView360Id(id);
+    onSelectStakeholder360?.(id);
+  };
+
+  const handleClose360 = () => {
+    setView360Id(null);
+    onSelectStakeholder360?.(null);
+  };
+
+  const resolveMasterId = (item: Stakeholder): string | null => {
+    if (item.stakeholder_id) return String(item.stakeholder_id);
+    const found = masterStakeholders.find(
+      (m) => m.name.toLowerCase().trim() === item.stakeholder.toLowerCase().trim()
+    );
+    return found ? String(found.id) : null;
+  };
 
   const handleAdd = async (d: Omit<Stakeholder, "id">) => {
     try {
@@ -280,18 +326,48 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
   }, [showToast, fetchData]);
 
   const handleExportClick = () => {
-    const exportData = filtered.map(s => ({
-      "Stakeholder": s.stakeholder,
-      "Date/Venue": (s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || ""),
-      "Concern/Issue": s.concern_issue || "",
-      "Document Link": s.document_link || ""
-    }));
-    onExport("Stakeholders", exportData);
+    if (activeTab === "master") {
+      const exportMaster = filteredMaster.map((m) => ({
+        "ID": m.id,
+        "Nama Stakeholder": m.name,
+        "Status": m.is_active ? "Aktif" : "Nonaktif",
+      }));
+      onExport("Master_Stakeholders", exportMaster);
+    } else {
+      const exportData = filtered.map(s => ({
+        "Stakeholder": s.stakeholder,
+        "Date/Venue": (s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || ""),
+        "Concern/Issue": s.concern_issue || "",
+        "Document Link": s.document_link || ""
+      }));
+      onExport("Stakeholders_Engagement", exportData);
+    }
   };
 
   const columns: ColumnDef<Stakeholder>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
-    { header: "Stakeholder", accessor: "stakeholder", sortable: true, render: (s) => <span className="text-sm font-medium text-foreground">{s.stakeholder}</span> },
+    { 
+      header: "Stakeholder", 
+      accessor: "stakeholder", 
+      sortable: true, 
+      render: (s) => {
+        const mId = resolveMasterId(s);
+        return (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-foreground">{s.stakeholder}</span>
+            {mId && (
+              <button
+                onClick={() => handleOpen360(mId)}
+                className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors inline-flex items-center"
+                title="Lihat Profil Stakeholder 360°"
+              >
+                <Eye size={13} />
+              </button>
+            )}
+          </div>
+        );
+      } 
+    },
     { header: "Date & Venue", accessor: "date", sortable: true, render: (s) => <span className="text-xs text-muted-foreground font-mono">{(s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || "")}</span> },
     { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
     { 
@@ -319,57 +395,168 @@ export default function StakeholdersModule({ activeYear, onExport, showToast }: 
         );
       }
     },
-    { header: "", render: (s) => showDeleted ? (
-      <div className="flex items-center justify-end">
-        <button 
-          onClick={() => setToRestore(s)} 
-          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
-        >
-          <RotateCcw size={12} />
-          Restore
-        </button>
-      </div>
-    ) : (
-      <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => setEditing(s)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
-        <button onClick={() => setToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
-      </div>
-    )}
-  ], [showDeleted, handleRestore]);
+    { header: "", render: (s) => {
+      const mId = resolveMasterId(s);
+      return showDeleted ? (
+        <div className="flex items-center justify-end">
+          <button 
+            onClick={() => setToRestore(s)} 
+            className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+          >
+            <RotateCcw size={12} />
+            Restore
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 justify-end">
+          {mId && (
+            <button
+              onClick={() => handleOpen360(mId)}
+              className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"
+              title="Profil 360°"
+            >
+              <UserCheck size={13} />
+            </button>
+          )}
+          <button onClick={() => setEditing(s)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
+          <button onClick={() => setToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
+        </div>
+      );
+    }}
+  ], [showDeleted, handleRestore, masterStakeholders]);
+
+  const masterColumns: ColumnDef<StakeholderMaster>[] = useMemo(() => [
+    { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
+    {
+      header: "Nama Stakeholder",
+      accessor: "name",
+      sortable: true,
+      render: (m) => (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">{m.name}</span>
+        </div>
+      ),
+    },
+    {
+      header: "Status",
+      accessor: "is_active",
+      render: (m) => (
+        m.is_active ? (
+          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            Aktif
+          </span>
+        ) : (
+          <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20">
+            Nonaktif
+          </span>
+        )
+      ),
+    },
+    {
+      header: "Aksi",
+      className: "text-right",
+      render: (m) => (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={() => handleOpen360(String(m.id))}
+            className="px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 rounded-md transition-colors flex items-center gap-1.5"
+            title="Lihat Profil 360° Stakeholder Ini"
+          >
+            <Eye size={13} />
+            <span>Profil 360°</span>
+          </button>
+        </div>
+      ),
+    },
+  ], []);
+
+  // If viewing 360 profile
+  if (view360Id) {
+    return <Stakeholder360 id={view360Id} onBack={handleClose360} />;
+  }
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar 
-        title="Stakeholder Engagement" 
-        subtitle="Rekaman pertemuan & komunikasi dengan pemangku kepentingan" 
+        title="Stakeholder Engagement & Master Data" 
+        subtitle="Rekaman pertemuan & profil 360° pemangku kepentingan" 
         showSearch 
-        searchValue={q} 
-        onSearch={setQ} 
-        addLabel="Tambah" 
-        onAdd={() => setShowForm(true)} 
+        searchValue={activeTab === "engagement" ? q : masterQ} 
+        onSearch={activeTab === "engagement" ? setQ : setMasterQ} 
+        addLabel="Tambah Engagement" 
+        onAdd={activeTab === "engagement" ? () => setShowForm(true) : undefined} 
         onExport={handleExportClick} 
         showDeleted={showDeleted}
       >
-        <div className="flex items-center gap-2 mr-2">
-          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
-          <input 
-            type="checkbox" 
-            checked={showDeleted} 
-            onChange={(e) => setShowDeleted(e.target.checked)} 
-            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
-          />
+        {/* Module Tab Switcher */}
+        <div className="flex items-center bg-muted rounded-lg p-0.5 border border-border mr-2">
+          <button
+            onClick={() => setActiveTab("engagement")}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+              activeTab === "engagement"
+                ? "bg-card text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Users size={13} />
+            <span>Engagement</span>
+          </button>
+          <button
+            onClick={() => setActiveTab("master")}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 ${
+              activeTab === "master"
+                ? "bg-card text-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <UserCheck size={13} />
+            <span>Master Stakeholders ({masterStakeholders.length})</span>
+          </button>
         </div>
-      </TopBar>
-      <div className="flex-1 overflow-auto p-6 flex flex-col">
-        {loading ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
-        ) : (
-          <div className="flex-1 min-h-0">
-            <DataTable columns={columns} data={filtered} />
+
+        {activeTab === "engagement" && (
+          <div className="flex items-center gap-2 mr-2">
+            <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+            <input 
+              type="checkbox" 
+              checked={showDeleted} 
+              onChange={(e) => setShowDeleted(e.target.checked)} 
+              className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+            />
           </div>
         )}
-        {!loading && <div className="mt-2 text-xs text-muted-foreground font-mono">Menampilkan {filtered.length} dari {items.length} data</div>}
+      </TopBar>
+
+      <div className="flex-1 overflow-auto p-6 flex flex-col">
+        {activeTab === "engagement" ? (
+          loading ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
+          ) : (
+            <div className="flex-1 min-h-0">
+              <DataTable columns={columns} data={filtered} />
+            </div>
+          )
+        ) : (
+          loadingMaster ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">Memuat data master stakeholders...</div>
+          ) : (
+            <div className="flex-1 min-h-0">
+              <DataTable columns={masterColumns} data={filteredMaster} />
+            </div>
+          )
+        )}
+        {activeTab === "engagement" && !loading && (
+          <div className="mt-2 text-xs text-muted-foreground font-mono">
+            Menampilkan {filtered.length} dari {items.length} data engagement
+          </div>
+        )}
+        {activeTab === "master" && !loadingMaster && (
+          <div className="mt-2 text-xs text-muted-foreground font-mono">
+            Menampilkan {filteredMaster.length} dari {masterStakeholders.length} master stakeholder
+          </div>
+        )}
       </div>
+
       {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} defaultValues={addDraft} onDraftChange={setAddDraft} />}
       {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.stakeholder} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete); setToDelete(null); }} />}

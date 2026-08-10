@@ -37,7 +37,12 @@ export const getById = async (req: Request, res: Response): Promise<void> => {
       },
       include: {
         daily_activities: {
-          where: { is_deleted: false }
+          where: { is_deleted: false },
+          include: {
+            category: true,
+            sub_category: true,
+            pic: true
+          }
         },
         stakeholder_engagement: {
           where: { is_deleted: false }

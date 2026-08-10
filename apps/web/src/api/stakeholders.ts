@@ -1,5 +1,28 @@
 import { apiClient } from '../lib/apiClient';
 
+export interface StakeholderDailyActivity {
+  id: string | number;
+  activity_date: string;
+  activity: string;
+  address?: string | null;
+  focus?: string | null;
+  location?: string | null;
+  description_result?: string | null;
+  cost?: number | string | null;
+  document_link?: string | null;
+  category?: { id?: string | number; name: string } | null;
+  sub_category?: { id?: string | number; name: string } | null;
+  pic?: { id?: string | number; name: string } | null;
+}
+
+export interface StakeholderEngagementItem {
+  id: string | number;
+  date?: string | null;
+  venue?: string | null;
+  concern_issue?: string | null;
+  document_link?: string | null;
+}
+
 export interface StakeholderMaster {
   id: string;
   name: string;
@@ -7,6 +30,8 @@ export interface StakeholderMaster {
   is_deleted: boolean;
   created_at?: string;
   updated_at?: string;
+  daily_activities?: StakeholderDailyActivity[];
+  stakeholder_engagement?: StakeholderEngagementItem[];
 }
 
 export interface UpdateStakeholderData {
