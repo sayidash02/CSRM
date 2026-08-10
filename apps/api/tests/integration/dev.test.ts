@@ -44,7 +44,6 @@ describe('Dev Reset Controller (Non-Production)', () => {
       data: {
         activity_date: new Date(),
         activity: 'Test',
-        institution_group: 'Group',
         address: 'Addr',
         focus: 'Focus',
         location: 'Loc',

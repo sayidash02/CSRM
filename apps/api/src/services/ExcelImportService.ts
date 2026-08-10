@@ -840,7 +840,6 @@ export class ExcelImportService {
               data: {
                 activity_date: item.activity_date,
                 activity: item.activity,
-                institution_group: item.institution_group,
                 address: item.address,
                 focus: item.focus,
                 location: item.location,

@@ -41,7 +41,7 @@ function handleControllerError(res: Response, error: any) {
 
 export const createDailyActivity = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
+    const { activity_date, activity, stakeholder_id, stakeholder_engagement_id, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
 
     if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
       res.status(400).json({ error: 'Missing required fields' });
@@ -61,7 +61,8 @@ export const createDailyActivity = async (req: Request, res: Response): Promise<
       data: {
         activity_date: new Date(activity_date),
         activity,
-        institution_group,
+        stakeholder_id: stakeholder_id ? BigInt(stakeholder_id) : null,
+        stakeholder_engagement_id: stakeholder_engagement_id ? BigInt(stakeholder_engagement_id) : null,
         address,
         focus,
         location,
@@ -109,12 +110,11 @@ export const getDailyActivities = async (req: Request, res: Response): Promise<v
       const q = search as string;
       where.OR = [
         { activity: { contains: q } },
-        { institution_group: { contains: q } },
         { location: { contains: q } }
       ];
     }
 
-    const include = { pic: true, category: true, sub_category: true };
+    const include = { pic: true, category: true, sub_category: true, stakeholder: true, stakeholder_engagement: true };
 
     if (no_paginate === 'true') {
       const activities = await prisma.daily_activities.findMany({ where, include, orderBy: { activity_date: 'desc' } });
@@ -180,7 +180,7 @@ export const restoreDailyActivity = async (req: Request, res: Response): Promise
 export const updateDailyActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
+    const { activity_date, activity, stakeholder_id, stakeholder_engagement_id, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
 
     if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
       res.status(400).json({ error: 'Missing required fields' });
@@ -201,7 +201,8 @@ export const updateDailyActivity = async (req: Request, res: Response): Promise<
       data: {
         activity_date: new Date(activity_date),
         activity,
-        institution_group,
+        stakeholder_id: stakeholder_id ? BigInt(stakeholder_id) : null,
+        stakeholder_engagement_id: stakeholder_engagement_id ? BigInt(stakeholder_engagement_id) : null,
         address,
         focus,
         location,
@@ -253,7 +254,8 @@ export const importCommitExcel = async (req: Request, res: Response) => {
           data: {
             activity_date: new Date(r.activity_date),
             activity: String(r.activity || ''),
-            institution_group: String(r.institution_group || ''),
+            stakeholder_id: r.stakeholder_id ? BigInt(r.stakeholder_id) : null,
+            stakeholder_engagement_id: r.stakeholder_engagement_id ? BigInt(r.stakeholder_engagement_id) : null,
             address: String(r.address || ''),
             category_id: BigInt(r.category_id),
             sub_category_id: BigInt(r.sub_category_id),

@@ -54,6 +54,13 @@ CREATE TABLE sub_categories (
   UNIQUE (category_id, name)
 );
 
+CREATE TABLE stakeholders (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Seed data awal untuk category/sub_category sesuai spec
 INSERT INTO categories (name) VALUES ('Stakeholder Engagement'), ('Paper Work');
 
@@ -70,13 +77,32 @@ SELECT id, 'Data Processing (Olah Data)' FROM categories WHERE name = 'Paper Wor
 
 
 -- ============================================================
--- 1. DAILY ACTIVITIES
+-- 1. STAKEHOLDER ENGAGEMENT
+-- ============================================================
+CREATE TABLE stakeholder_engagement (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  stakeholder_id BIGINT,
+  date DATE,
+  venue VARCHAR(255),
+  concern_issue TEXT,
+  document_link TEXT,             -- kolom "Docs"
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (stakeholder_id) REFERENCES stakeholders(id)
+);
+CREATE INDEX idx_stakeholder_deleted ON stakeholder_engagement(is_deleted);
+
+
+-- ============================================================
+-- 2. DAILY ACTIVITIES
 -- ============================================================
 CREATE TABLE daily_activities (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   activity_date DATE NOT NULL,
   activity VARCHAR(255) NOT NULL,
-  institution_group VARCHAR(255),
+  stakeholder_id BIGINT,
+  stakeholder_engagement_id BIGINT,
   address VARCHAR(255),
   focus VARCHAR(255),                     -- kolom "Fokus": teks bebas, tidak ada dropdown di Excel asli
   location VARCHAR(255),
@@ -91,31 +117,12 @@ CREATE TABLE daily_activities (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (pic_id) REFERENCES pics(id),
   FOREIGN KEY (category_id) REFERENCES categories(id),
-  FOREIGN KEY (sub_category_id) REFERENCES sub_categories(id)
+  FOREIGN KEY (sub_category_id) REFERENCES sub_categories(id),
+  FOREIGN KEY (stakeholder_id) REFERENCES stakeholders(id),
+  FOREIGN KEY (stakeholder_engagement_id) REFERENCES stakeholder_engagement(id)
 );
 CREATE INDEX idx_daily_activities_date ON daily_activities(activity_date);
 CREATE INDEX idx_daily_activities_deleted ON daily_activities(is_deleted);
-
-
--- ============================================================
--- 2. STAKEHOLDER ENGAGEMENT
--- ============================================================
--- Excel aslinya cuma 5 kolom: No, Stakeholder, Date And Venue,
--- Concern/Issue, Docs — jauh lebih sederhana dari v1. Tidak ada
--- PIC, tidak ada meeting_result/follow_up terpisah di proses
--- yang berjalan sekarang.
-CREATE TABLE stakeholder_engagement (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  stakeholder VARCHAR(255) NOT NULL,
-  date DATE,
-  venue VARCHAR(255),
-  concern_issue TEXT,
-  document_link TEXT,             -- kolom "Docs"
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_stakeholder_deleted ON stakeholder_engagement(is_deleted);
 
 
 -- ============================================================
@@ -165,40 +172,7 @@ CREATE INDEX idx_proposals_deleted ON proposals(is_deleted);
 
 
 -- ============================================================
--- 5. CSR PROJECTS
--- ============================================================
--- Kolom sudah cocok dengan Excel sejak v1 (tidak ada PIC di
--- sheet CSR Project 2026, jadi memang sengaja tidak ada pic_id).
--- Catatan: kolom "REALISASI" di Excel masih kosong semua di
--- contoh yang tersedia — belum bisa dipastikan angka (cocok utk
--- DECIMAL) atau teks naratif. `budget` di bawah ini asumsi
--- sementara, perlu dikonfirmasi ke pegawai sebelum go-live.
-CREATE TABLE csr_projects (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  project_year YEAR NOT NULL,
-  program VARCHAR(255) NOT NULL,
-  activity VARCHAR(255),
-  type_of_activity VARCHAR(100),
-  location VARCHAR(255),
-  target_beneficiaries VARCHAR(255),
-  objective TEXT,
-  status VARCHAR(20) NOT NULL DEFAULT 'Planning'
-    CHECK (status IN ('Planning','On Going','Completed','Cancelled')),
-  budget DECIMAL(15,2),                    -- pemetaan dari kolom "REALISASI" — perlu konfirmasi tipe data asli
-  implementation_period VARCHAR(100),      -- teks bebas, misal "Jan - Mar 2026"
-  documentation_image TEXT,
-  document TEXT,
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_csr_year ON csr_projects(project_year);
-CREATE INDEX idx_csr_status ON csr_projects(status);
-CREATE INDEX idx_csr_deleted ON csr_projects(is_deleted);
-
-
--- ============================================================
--- 6. GRIEVANCE
+-- 5. GRIEVANCE
 -- ============================================================
 -- Kolom sudah cocok dengan Excel sejak v1 (tidak ada PIC di
 -- sheet Grievance 2026, jadi memang sengaja tidak ada pic_id).
@@ -233,6 +207,41 @@ CREATE TABLE grievance (
 CREATE INDEX idx_grievance_status ON grievance(status);
 CREATE INDEX idx_grievance_significance ON grievance(significance);
 CREATE INDEX idx_grievance_deleted ON grievance(is_deleted);
+
+
+-- ============================================================
+-- 6. CSR PROJECTS
+-- ============================================================
+-- Kolom sudah cocok dengan Excel sejak v1 (tidak ada PIC di
+-- sheet CSR Project 2026, jadi memang sengaja tidak ada pic_id).
+-- Catatan: kolom "REALISASI" di Excel masih kosong semua di
+-- contoh yang tersedia — belum bisa dipastikan angka (cocok utk
+-- DECIMAL) atau teks naratif. `budget` di bawah ini asumsi
+-- sementara, perlu dikonfirmasi ke pegawai sebelum go-live.
+CREATE TABLE csr_projects (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  project_year YEAR NOT NULL,
+  program VARCHAR(255) NOT NULL,
+  activity VARCHAR(255),
+  type_of_activity VARCHAR(100),
+  location VARCHAR(255),
+  target_beneficiaries VARCHAR(255),
+  objective TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'Planning'
+    CHECK (status IN ('Planning','On Going','Completed','Cancelled')),
+  budget DECIMAL(15,2),                    -- pemetaan dari kolom "REALISASI" — perlu konfirmasi tipe data asli
+  implementation_period VARCHAR(100),      -- teks bebas, misal "Jan - Mar 2026"
+  documentation_image TEXT,
+  document TEXT,
+  grievance_id BIGINT,
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (grievance_id) REFERENCES grievance(id)
+);
+CREATE INDEX idx_csr_year ON csr_projects(project_year);
+CREATE INDEX idx_csr_status ON csr_projects(status);
+CREATE INDEX idx_csr_deleted ON csr_projects(is_deleted);
 
 
 -- ============================================================

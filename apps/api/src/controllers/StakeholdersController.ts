@@ -3,21 +3,13 @@ import prisma from '../lib/prisma';
 
 export const createStakeholder = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { stakeholder, date, venue, concern_issue, document_link } = req.body;
+    const { stakeholder, stakeholder_id, date, venue, concern_issue, document_link } = req.body;
 
-    if (!stakeholder) {
-      res.status(400).json({ error: 'Missing required fields: stakeholder' });
-      return;
-    }
-
-    if (typeof stakeholder !== 'string' || stakeholder.trim() === '') {
-      res.status(400).json({ error: 'Invalid field: stakeholder must be a non-empty string' });
-      return;
-    }
+    const sId = stakeholder_id ? BigInt(stakeholder_id) : null;
 
     const result = await prisma.stakeholder_engagement.create({
       data: {
-        stakeholder,
+        stakeholder_id: sId,
         date: date ? new Date(date) : null,
         venue,
         concern_issue,
@@ -44,7 +36,8 @@ export const getStakeholders = async (req: Request, res: Response): Promise<void
       };
     }
     const stakeholders = await prisma.stakeholder_engagement.findMany({
-      where
+      where,
+      include: { stakeholder: true }
     });
     
     res.status(200).json({ data: stakeholders });
@@ -73,17 +66,14 @@ export const deleteStakeholder = async (req: Request, res: Response): Promise<vo
 export const updateStakeholder = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { stakeholder, date, venue, concern_issue, document_link } = req.body;
+    const { stakeholder, stakeholder_id, date, venue, concern_issue, document_link } = req.body;
 
-    if (!stakeholder) {
-      res.status(400).json({ error: 'Missing required fields: stakeholder' });
-      return;
-    }
+    const sId = stakeholder_id ? BigInt(stakeholder_id) : null;
 
     const result = await prisma.stakeholder_engagement.update({
       where: { id: BigInt(id as string) },
       data: {
-        stakeholder,
+        stakeholder_id: sId,
         date: date ? new Date(date) : null,
         venue,
         concern_issue,

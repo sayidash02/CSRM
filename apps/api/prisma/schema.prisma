@@ -32,27 +32,39 @@ model sub_categories {
   @@unique([category_id, name])
 }
 
+model stakeholders {
+  id                     BigInt                   @id @default(autoincrement())
+  name                   String                   @unique @db.VarChar(100)
+  is_active              Boolean                  @default(true)
+  created_at             DateTime                 @default(now())
+  daily_activities       daily_activities[]
+  stakeholder_engagement stakeholder_engagement[]
+}
+
 model daily_activities {
-  id                 BigInt         @id @default(autoincrement())
-  activity_date      DateTime       @db.Date
-  activity           String         @db.VarChar(255)
-  institution_group  String?        @db.VarChar(255)
-  address            String?        @db.VarChar(255)
-  focus              String?        @db.VarChar(255)
-  location           String?        @db.VarChar(255)
-  description_result String?        @db.Text
-  pic_id             BigInt
-  category_id        BigInt
-  sub_category_id    BigInt
-  is_deleted         Boolean        @default(false)
-  is_archived        Boolean        @default(false)
-  created_at         DateTime       @default(now())
-  updated_at         DateTime       @updatedAt
-  cost               Decimal?       @db.Decimal(15, 2)
-  document_link      String?        @db.Text
-  category           categories     @relation(fields: [category_id], references: [id])
-  pic                pics           @relation(fields: [pic_id], references: [id])
-  sub_category       sub_categories @relation(fields: [sub_category_id], references: [id])
+  id                        BigInt                  @id @default(autoincrement())
+  activity_date             DateTime                @db.Date
+  activity                  String                  @db.VarChar(255)
+  stakeholder_id            BigInt?
+  stakeholder_engagement_id BigInt?
+  address                   String?                 @db.VarChar(255)
+  focus                     String?                 @db.VarChar(255)
+  location                  String?                 @db.VarChar(255)
+  description_result        String?                 @db.Text
+  pic_id                    BigInt
+  category_id               BigInt
+  sub_category_id           BigInt
+  is_deleted                Boolean                 @default(false)
+  is_archived               Boolean                 @default(false)
+  created_at                DateTime                @default(now())
+  updated_at                DateTime                @updatedAt
+  cost                      Decimal?                @db.Decimal(15, 2)
+  document_link             String?                 @db.Text
+  category                  categories              @relation(fields: [category_id], references: [id])
+  pic                       pics                    @relation(fields: [pic_id], references: [id])
+  sub_category              sub_categories          @relation(fields: [sub_category_id], references: [id])
+  stakeholder               stakeholders?           @relation(fields: [stakeholder_id], references: [id])
+  stakeholder_engagement    stakeholder_engagement? @relation(fields: [stakeholder_engagement_id], references: [id])
 
   @@index([activity_date])
   @@index([is_deleted])
@@ -60,22 +72,27 @@ model daily_activities {
   @@index([category_id], map: "daily_activities_category_id_fkey")
   @@index([pic_id], map: "daily_activities_pic_id_fkey")
   @@index([sub_category_id], map: "daily_activities_sub_category_id_fkey")
+  @@index([stakeholder_id], map: "daily_activities_stakeholder_id_fkey")
+  @@index([stakeholder_engagement_id], map: "daily_activities_stakeholder_engagement_id_fkey")
 }
 
 model stakeholder_engagement {
-  id            BigInt   @id @default(autoincrement())
-  stakeholder   String   @db.VarChar(255)
-  date          DateTime? @db.Date
-  venue         String?   @db.VarChar(255)
-  concern_issue String?  @db.Text
-  document_link String?  @db.Text
-  is_deleted    Boolean  @default(false)
-  is_archived   Boolean  @default(false)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  id               BigInt             @id @default(autoincrement())
+  stakeholder_id   BigInt?
+  date             DateTime?          @db.Date
+  venue            String?            @db.VarChar(255)
+  concern_issue    String?            @db.Text
+  document_link    String?            @db.Text
+  is_deleted       Boolean            @default(false)
+  is_archived      Boolean            @default(false)
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  stakeholder      stakeholders?      @relation(fields: [stakeholder_id], references: [id])
+  daily_activities daily_activities[]
 
   @@index([is_deleted])
   @@index([is_archived])
+  @@index([stakeholder_id], map: "stakeholder_engagement_stakeholder_id_fkey")
 }
 
 model top_issues {
@@ -119,52 +136,56 @@ model proposals {
 }
 
 model csr_projects {
-  id                    BigInt   @id @default(autoincrement())
-  project_year          Int      @db.Year
-  program               String   @db.VarChar(255)
-  activity              String?  @db.VarChar(255)
-  type_of_activity      String?  @db.VarChar(100)
-  location              String?  @db.VarChar(255)
-  target_beneficiaries  String?  @db.VarChar(255)
-  objective             String?  @db.Text
-  status                String   @default("Planning") @db.VarChar(20)
-  budget                Decimal? @db.Decimal(15, 2)
-  implementation_period String?  @db.VarChar(100)
-  documentation_image   String?  @db.Text
-  document              String?  @db.Text
-  is_deleted            Boolean  @default(false)
-  is_archived           Boolean  @default(false)
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
+  id                    BigInt     @id @default(autoincrement())
+  project_year          Int        @db.Year
+  program               String     @db.VarChar(255)
+  activity              String?    @db.VarChar(255)
+  type_of_activity      String?    @db.VarChar(100)
+  location              String?    @db.VarChar(255)
+  target_beneficiaries  String?    @db.VarChar(255)
+  objective             String?    @db.Text
+  status                String     @default("Planning") @db.VarChar(20)
+  budget                Decimal?   @db.Decimal(15, 2)
+  implementation_period String?    @db.VarChar(100)
+  documentation_image   String?    @db.Text
+  document              String?    @db.Text
+  grievance_id          BigInt?
+  is_deleted            Boolean    @default(false)
+  is_archived           Boolean    @default(false)
+  created_at            DateTime   @default(now())
+  updated_at            DateTime   @updatedAt
+  grievance             grievance? @relation(fields: [grievance_id], references: [id])
 
   @@index([project_year])
   @@index([status])
   @@index([is_deleted])
   @@index([is_archived])
+  @@index([grievance_id], map: "csr_projects_grievance_id_fkey")
 }
 
 model grievance {
-  id               BigInt    @id @default(autoincrement())
-  register_no      String    @unique @db.VarChar(50)
-  log_date         DateTime  @db.Date
-  complainant_name String    @db.VarChar(255)
-  address          String?   @db.VarChar(255)
-  phone            String?   @db.VarChar(30)
-  category         String?   @db.VarChar(100)
-  significance     String    @db.VarChar(20)
-  description      String?   @db.Text
-  location         String?   @db.VarChar(255)
-  investigation    String?   @db.Text
-  resolution       String?   @db.Text
-  feedback         String?   @db.Text
-  status           String    @default("Open") @db.VarChar(20)
-  completion_date  DateTime? @db.Date
-  remarks          String?   @db.Text
-  supporting_files String?   @db.Text
-  is_deleted       Boolean   @default(false)
-  is_archived      Boolean   @default(false)
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
+  id               BigInt         @id @default(autoincrement())
+  register_no      String         @unique @db.VarChar(50)
+  log_date         DateTime       @db.Date
+  complainant_name String         @db.VarChar(255)
+  address          String?        @db.VarChar(255)
+  phone            String?        @db.VarChar(30)
+  category         String?        @db.VarChar(100)
+  significance     String         @db.VarChar(20)
+  description      String?        @db.Text
+  location         String?        @db.VarChar(255)
+  investigation    String?        @db.Text
+  resolution       String?        @db.Text
+  feedback         String?        @db.Text
+  status           String         @default("Open") @db.VarChar(20)
+  completion_date  DateTime?      @db.Date
+  remarks          String?        @db.Text
+  supporting_files String?        @db.Text
+  is_deleted       Boolean        @default(false)
+  is_archived      Boolean        @default(false)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime       @updatedAt
+  csr_projects     csr_projects[]
 
   @@index([status])
   @@index([significance])
