@@ -5,7 +5,30 @@ export const createStakeholder = async (req: Request, res: Response): Promise<vo
   try {
     const { stakeholder, stakeholder_id, date, venue, concern_issue, document_link } = req.body;
 
-    const sId = stakeholder_id ? BigInt(stakeholder_id) : null;
+    let sId: bigint | null = stakeholder_id ? BigInt(stakeholder_id) : null;
+    let sName: string | null = null;
+
+    if (!sId && typeof stakeholder === 'string') {
+      const trimmed = stakeholder.trim();
+      if (!trimmed) {
+        res.status(400).json({ error: 'Missing required field: stakeholder' });
+        return;
+      }
+      let st = await prisma.stakeholders.findFirst({ where: { name: trimmed, is_deleted: false } });
+      if (!st) {
+        st = await prisma.stakeholders.create({ data: { name: trimmed } });
+      }
+      sId = st.id;
+      sName = st.name;
+    } else if (!sId) {
+      res.status(400).json({ error: 'Missing required field: stakeholder' });
+      return;
+    }
+
+    if (!sName && sId) {
+      const st = await prisma.stakeholders.findUnique({ where: { id: sId } });
+      sName = st ? st.name : null;
+    }
 
     const result = await prisma.stakeholder_engagement.create({
       data: {
@@ -17,7 +40,12 @@ export const createStakeholder = async (req: Request, res: Response): Promise<vo
       }
     });
 
-    res.status(201).json({ data: result });
+    res.status(201).json({
+      data: {
+        ...result,
+        stakeholder: sName
+      }
+    });
   } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -39,8 +67,13 @@ export const getStakeholders = async (req: Request, res: Response): Promise<void
       where,
       include: { stakeholder: true }
     });
+
+    const formatted = stakeholders.map((item) => ({
+      ...item,
+      stakeholder: item.stakeholder?.name || null
+    }));
     
-    res.status(200).json({ data: stakeholders });
+    res.status(200).json({ data: formatted });
   } catch (error: any) {
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -68,7 +101,25 @@ export const updateStakeholder = async (req: Request, res: Response): Promise<vo
     const { id } = req.params;
     const { stakeholder, stakeholder_id, date, venue, concern_issue, document_link } = req.body;
 
-    const sId = stakeholder_id ? BigInt(stakeholder_id) : null;
+    let sId: bigint | null = stakeholder_id ? BigInt(stakeholder_id) : null;
+    let sName: string | null = null;
+
+    if (!sId && typeof stakeholder === 'string') {
+      const trimmed = stakeholder.trim();
+      if (trimmed) {
+        let st = await prisma.stakeholders.findFirst({ where: { name: trimmed, is_deleted: false } });
+        if (!st) {
+          st = await prisma.stakeholders.create({ data: { name: trimmed } });
+        }
+        sId = st.id;
+        sName = st.name;
+      }
+    }
+
+    if (!sName && sId) {
+      const st = await prisma.stakeholders.findUnique({ where: { id: sId } });
+      sName = st ? st.name : null;
+    }
 
     const result = await prisma.stakeholder_engagement.update({
       where: { id: BigInt(id as string) },
@@ -81,7 +132,12 @@ export const updateStakeholder = async (req: Request, res: Response): Promise<vo
       }
     });
 
-    res.status(200).json({ data: result });
+    res.status(200).json({
+      data: {
+        ...result,
+        stakeholder: sName
+      }
+    });
   } catch (error: any) {
     if (error.code === 'P2025') {
       res.status(404).json({ error: 'Stakeholder record not found' });
@@ -107,3 +163,4 @@ export const restoreStakeholder = async (req: Request, res: Response): Promise<v
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+

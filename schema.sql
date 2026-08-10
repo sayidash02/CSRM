@@ -58,8 +58,11 @@ CREATE TABLE stakeholders (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL UNIQUE,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+CREATE INDEX idx_stakeholders_deleted ON stakeholders(is_deleted);
 
 -- Seed data awal untuk category/sub_category sesuai spec
 INSERT INTO categories (name) VALUES ('Stakeholder Engagement'), ('Paper Work');
@@ -92,6 +95,7 @@ CREATE TABLE stakeholder_engagement (
   FOREIGN KEY (stakeholder_id) REFERENCES stakeholders(id)
 );
 CREATE INDEX idx_stakeholder_deleted ON stakeholder_engagement(is_deleted);
+CREATE INDEX idx_stakeholder_engagement_stakeholder ON stakeholder_engagement(stakeholder_id);
 
 
 -- ============================================================
@@ -123,6 +127,8 @@ CREATE TABLE daily_activities (
 );
 CREATE INDEX idx_daily_activities_date ON daily_activities(activity_date);
 CREATE INDEX idx_daily_activities_deleted ON daily_activities(is_deleted);
+CREATE INDEX idx_daily_activities_stakeholder ON daily_activities(stakeholder_id);
+CREATE INDEX idx_daily_activities_stakeholder_engagement ON daily_activities(stakeholder_engagement_id);
 
 
 -- ============================================================
@@ -242,6 +248,7 @@ CREATE TABLE csr_projects (
 CREATE INDEX idx_csr_year ON csr_projects(project_year);
 CREATE INDEX idx_csr_status ON csr_projects(status);
 CREATE INDEX idx_csr_deleted ON csr_projects(is_deleted);
+CREATE INDEX idx_csr_projects_grievance ON csr_projects(grievance_id);
 
 
 -- ============================================================

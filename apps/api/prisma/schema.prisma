@@ -36,9 +36,13 @@ model stakeholders {
   id                     BigInt                   @id @default(autoincrement())
   name                   String                   @unique @db.VarChar(100)
   is_active              Boolean                  @default(true)
+  is_deleted             Boolean                  @default(false)
   created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @updatedAt
   daily_activities       daily_activities[]
   stakeholder_engagement stakeholder_engagement[]
+
+  @@index([is_deleted])
 }
 
 model daily_activities {

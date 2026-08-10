@@ -6,16 +6,31 @@ const prisma = new PrismaClient();
 
 
 
+let catId: bigint;
+let subCatId: bigint;
+let picId: bigint;
+
 beforeAll(async () => {
   await prisma.sync_log.deleteMany();
   await prisma.daily_activities.deleteMany();
-  await prisma.sub_categories.deleteMany();
-  await prisma.categories.deleteMany();
-  await prisma.pics.deleteMany();
 
-  await prisma.categories.create({ data: { id: 1, name: 'Stakeholder Engagement' }});
-  await prisma.sub_categories.create({ data: { id: 1, category_id: 1, name: 'Issue' }});
-  await prisma.pics.create({ data: { id: 1, name: 'Ziya Ramadhani' }});
+  let cat = await prisma.categories.findUnique({ where: { name: 'Stakeholder Engagement' } });
+  if (!cat) {
+    cat = await prisma.categories.create({ data: { name: 'Stakeholder Engagement' } });
+  }
+  catId = cat.id;
+
+  let subCat = await prisma.sub_categories.findFirst({ where: { category_id: catId, name: 'Issue' } });
+  if (!subCat) {
+    subCat = await prisma.sub_categories.create({ data: { category_id: catId, name: 'Issue' } });
+  }
+  subCatId = subCat.id;
+
+  let pic = await prisma.pics.findUnique({ where: { name: 'Ziya Ramadhani' } });
+  if (!pic) {
+    pic = await prisma.pics.create({ data: { name: 'Ziya Ramadhani' } });
+  }
+  picId = pic.id;
 });
 
 afterAll(async () => {
@@ -29,9 +44,9 @@ describe('Sync Flow', () => {
       data: {
         activity_date: new Date('2026-08-01'),
         activity: 'Sync Test 1',
-        pic_id: 1,
-        category_id: 1,
-        sub_category_id: 1
+        pic_id: picId,
+        category_id: catId,
+        sub_category_id: subCatId
       }
     });
 
@@ -57,9 +72,9 @@ describe('Sync Flow', () => {
       data: {
         activity_date: new Date('2026-08-02'),
         activity: 'Sync Test 2',
-        pic_id: 1,
-        category_id: 1,
-        sub_category_id: 1
+        pic_id: picId,
+        category_id: catId,
+        sub_category_id: subCatId
       }
     });
 

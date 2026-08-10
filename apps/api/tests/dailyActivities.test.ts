@@ -4,15 +4,31 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+let catId: bigint;
+let subCatId: bigint;
+let picId: bigint;
+
 beforeAll(async () => {
   await prisma.daily_activities.deleteMany();
-  await prisma.sub_categories.deleteMany();
-  await prisma.categories.deleteMany();
-  await prisma.pics.deleteMany();
 
-  await prisma.categories.create({ data: { id: 1, name: 'Stakeholder Engagement' }});
-  await prisma.sub_categories.create({ data: { id: 1, category_id: 1, name: 'Issue' }});
-  await prisma.pics.create({ data: { id: 1, name: 'Ziya Ramadhani' }});
+  let subCat = await prisma.sub_categories.findFirst({ where: { name: 'Issue' } });
+  if (!subCat) {
+    let cat = await prisma.categories.findUnique({ where: { name: 'Stakeholder Engagement' } });
+    if (!cat) {
+      cat = await prisma.categories.create({ data: { name: 'Stakeholder Engagement' } });
+    }
+    catId = cat.id;
+    subCat = await prisma.sub_categories.create({ data: { category_id: catId, name: 'Issue' } });
+  } else {
+    catId = subCat.category_id;
+  }
+  subCatId = subCat.id;
+
+  let pic = await prisma.pics.findFirst({ where: { name: 'Ziya Ramadhani' } });
+  if (!pic) {
+    pic = await prisma.pics.create({ data: { name: 'Ziya Ramadhani' } });
+  }
+  picId = pic.id;
 });
 
 afterAll(async () => {
@@ -24,9 +40,9 @@ describe('POST /api/daily-activities', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_id: 1,
-      category_id: 1,
-      sub_category_id: 1
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString()
     };
     const res = await request(app).post('/api/daily-activities').send(payload);
     expect(res.status).toBe(201);
@@ -38,6 +54,7 @@ describe('POST /api/daily-activities', () => {
     const res = await request(app).post('/api/daily-activities').send(payload);
     expect(res.status).toBe(400);
   });
+
 
   it('Negative: Should fail if foreign key does not exist', async () => {
     const payload = {
@@ -92,9 +109,9 @@ describe('PUT /api/daily-activities/:id', () => {
     const payload = {
       activity_date: '2026-07-25',
       activity: 'Kunjungan Lapangan',
-      pic_id: 1,
-      category_id: 1,
-      sub_category_id: 1
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString()
     };
     const createRes = await request(app).post('/api/daily-activities').send(payload);
     const id = createRes.body.data.id;
@@ -102,9 +119,9 @@ describe('PUT /api/daily-activities/:id', () => {
     const updatePayload = {
       activity_date: '2026-07-26',
       activity: 'Kunjungan Lapangan Updated',
-      pic_id: 1,
-      category_id: 1,
-      sub_category_id: 1,
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString(),
       cost: 500000
     };
     
