@@ -67,10 +67,10 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
         where: { is_deleted: false },
         orderBy: { activity_date: 'desc' },
         take: 5,
-        include: { daily_activity_pics: { include: { pic: true } }, sub_category: true }
+        include: { pic: true, sub_category: true }
       }),
       prisma.grievance.findMany({
-        where: { is_deleted: false, status: { in: ['Open', 'On Progress'] }, significance: { in: ['High', 'Critical'] } },
+        where: { is_deleted: false },
         take: 2
       }),
       prisma.csr_projects.findMany({
@@ -116,9 +116,9 @@ export const getDashboardStats = async (_req: Request, res: Response): Promise<v
 
     const recentActivitiesSerialized = recentActivities.map((act: any) => ({
       ...act, id: act.id.toString(),
-      pic_ids: act.daily_activity_pics?.map((p: any) => p.pic_id.toString()) || [],
+      pic_id: act.pic_id?.toString() || null,
       category_id: act.category_id.toString(), sub_category_id: act.sub_category_id.toString(),
-      pics: act.daily_activity_pics?.map((p: any) => ({ ...p.pic, id: p.pic.id.toString() })) || [],
+      pic: act.pic ? { ...act.pic, id: act.pic.id.toString() } : null,
       sub_category: act.sub_category ? { ...act.sub_category, id: act.sub_category.id.toString(), category_id: act.sub_category.category_id.toString() } : null
     }));
 
