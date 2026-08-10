@@ -10,7 +10,7 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "dotenv -e .env.test -- jest",
+    "test": "dotenv -e .env.test -- jest --runInBand",
     "dev": "nodemon src/server.ts",
     "seed": "ts-node src/seed.ts"
   },
