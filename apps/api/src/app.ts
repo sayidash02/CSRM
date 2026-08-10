@@ -22,6 +22,8 @@ import archiveRoutes from './routes/archive';
 import yearsRouter from './routes/years';
 import devRoutes from './routes/dev';
 
+import stakeholderMasterRouter from './routes/stakeholder.routes';
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -29,6 +31,7 @@ app.use(express.json());
 app.use('/api/daily-activities', dailyActivitiesRouter);
 app.use('/api/references', referencesRouter);
 app.use('/api/stakeholders', stakeholdersRouter);
+app.use('/api/master-stakeholders', stakeholderMasterRouter);
 app.use('/api/top-issues', topIssuesRouter);
 app.use('/api/proposals', proposalsRouter);
 app.use('/api/csr-projects', csrProjectsRouter);
