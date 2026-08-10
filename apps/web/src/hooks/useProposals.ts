@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../lib/apiClient';
 import { Proposal } from '../features/proposals/ProposalsModule';
 
-export const fetchProposals = async (year: string, showDeleted: boolean) => {
+export const fetchProposals = async (year: string, showDeleted: boolean): Promise<Proposal[]> => {
   const yearParam = year ? `year=${year}` : '';
   const isDeletedParam = `is_deleted=${showDeleted}`;
   const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
@@ -11,7 +11,7 @@ export const fetchProposals = async (year: string, showDeleted: boolean) => {
 };
 
 export function useProposals(activeYear: string, showDeleted: boolean) {
-  return useQuery({
+  return useQuery<Proposal[]>({
     queryKey: ['proposals', 'list', activeYear, showDeleted],
     queryFn: () => fetchProposals(activeYear, showDeleted),
   });

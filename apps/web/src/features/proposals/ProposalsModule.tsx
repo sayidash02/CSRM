@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
-import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
+import { useProposals, useCreateProposal, useEditProposal, useDeleteProposal, useRestoreProposal } from '../../hooks/useProposals';
 
 export interface Proposal {
   id: string | number;
@@ -182,31 +182,19 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
 }
 
 export default function ProposalsModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
-  const [items, setItems] = useState<Proposal[]>([]);
   const [addDraft, setAddDraft] = useState({ ...emptyProposalDraft });
   const [showDeleted, setShowDeleted] = useState(false);
   
-  useEffect(() => {
-    fetchData();
-  }, [activeYear, showDeleted]);
+  const { data: items = [], isLoading, isError } = useProposals(activeYear, showDeleted);
 
-  const fetchData = async () => {
-    try {
-      const yearParam = activeYear ? `year=${activeYear}` : '';
-      const isDeletedParam = `is_deleted=${showDeleted}`;
-      const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
-      const res = await apiClient.get(`/proposals${queryParams ? `?${queryParams}` : ''}`);
-      setItems(res.data.data);
-    } catch (e: any) {
-      console.error(e);
-      showToast?.(e.response?.data?.error || "Gagal memuat data proposal", "error");
-    }
-  };
+  const createMutation = useCreateProposal();
+  const editMutation = useEditProposal();
+  const deleteMutation = useDeleteProposal();
+  const restoreMutation = useRestoreProposal();
 
   const handleAdd = async (d: Omit<Proposal, "id">) => {
     try {
-      await apiClient.post('/proposals', d);
-      fetchData();
+      await createMutation.mutateAsync(d);
       showToast?.(`Proposal dari '${d.institution}' berhasil ditambahkan`, "success");
     } catch (e: any) {
       console.error(e);
@@ -216,8 +204,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
 
   const handleEdit = async (id: string | number, d: Omit<Proposal, "id">) => {
     try {
-      await apiClient.put(`/proposals/${id}`, d);
-      fetchData();
+      await editMutation.mutateAsync({ id, data: d });
       showToast?.(`Proposal dari '${d.institution}' berhasil diperbarui`, "success");
     } catch (e: any) {
       console.error(e);
@@ -227,9 +214,8 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
 
   const handleDelete = async (id: string | number) => {
     try {
-      await apiClient.delete(`/proposals/${id}`);
-      fetchData();
-      showToast?.(`Proposal dari '${toDelete?.institution || ''}' berhasil dihapus`, "success");
+      await deleteMutation.mutateAsync(id);
+      showToast?.(`Proposal berhasil dihapus`, "success");
     } catch (e: any) {
       console.error(e);
       showToast?.(e.response?.data?.error || "Gagal menghapus data", "error");
@@ -238,9 +224,8 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
 
   const handleRestore = async (id: string | number) => {
     try {
-      await apiClient.patch(`/proposals/${id}/restore`);
+      await restoreMutation.mutateAsync(id);
       if (showToast) showToast("Data berhasil dipulihkan", "success");
-      fetchData();
     } catch (e: any) {
       if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
     }
