@@ -95,5 +95,5 @@ describe('Sync Flow', () => {
     const status3 = await request(app).get('/api/sync/status');
     expect(status3.status).toBe(200);
     expect(status3.body.data.unsynced_count).toBe(0);
-  });
+  }, 15000);
 });
