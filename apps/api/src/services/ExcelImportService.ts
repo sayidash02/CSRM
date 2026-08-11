@@ -827,7 +827,39 @@ export class ExcelImportService {
           subCategoryMap.set(subKey, created.id);
         }
 
-        // 4. Insert Daily Activities
+        // 4. Resolve / Create Stakeholders
+        const existingStakeholders = await tx.stakeholders.findMany();
+        const stakeholderMap = new Map<string, bigint>();
+        for (const s of existingStakeholders) {
+          stakeholderMap.set(s.name.trim().toLowerCase(), s.id);
+        }
+
+        const uniqueStakeholdersToCreate = new Map<string, string>();
+
+        for (const item of rawDailyActivities) {
+          if (item.institution_group) {
+            const trimmed = item.institution_group.trim();
+            const norm = trimmed.toLowerCase();
+            if (norm && !stakeholderMap.has(norm) && !uniqueStakeholdersToCreate.has(norm)) {
+              uniqueStakeholdersToCreate.set(norm, trimmed);
+            }
+          }
+        }
+
+        for (const item of rawStakeholders) {
+          const trimmed = item.stakeholder.trim();
+          const norm = trimmed.toLowerCase();
+          if (norm && !stakeholderMap.has(norm) && !uniqueStakeholdersToCreate.has(norm)) {
+            uniqueStakeholdersToCreate.set(norm, trimmed);
+          }
+        }
+
+        for (const [norm, name] of uniqueStakeholdersToCreate.entries()) {
+          const created = await tx.stakeholders.create({ data: { name: truncStr(name, 255) } });
+          stakeholderMap.set(norm, created.id);
+        }
+
+        // 5. Insert Daily Activities
         if (rawDailyActivities.length > 0) {
           for (const item of rawDailyActivities) {
             const catId = categoryMap.get(item.category_name.trim().toLowerCase())!;
@@ -835,6 +867,11 @@ export class ExcelImportService {
             const subCatId = subCategoryMap.get(subKey)!;
             const pIds = item.pic_names.map(p => picMap.get(p.trim().toLowerCase())!);
             const pId = pIds.length > 0 ? pIds[0] : null;
+
+            let sId: bigint | null = null;
+            if (item.institution_group) {
+              sId = stakeholderMap.get(item.institution_group.trim().toLowerCase()) || null;
+            }
 
             await tx.daily_activities.create({
               data: {
@@ -848,16 +885,28 @@ export class ExcelImportService {
                 sub_category_id: subCatId,
                 pic_id: pId!,
                 cost: item.cost,
-                document_link: item.document_link
+                document_link: item.document_link,
+                stakeholder_id: sId
               }
             });
           }
         }
 
-        // 5. Insert Stakeholders
+        // 6. Insert Stakeholders Engagement
         if (rawStakeholders.length > 0) {
+          const stakeholderEngagementsData = rawStakeholders.map(s => {
+            const sId = stakeholderMap.get(s.stakeholder.trim().toLowerCase())!;
+            return {
+              stakeholder_id: sId,
+              date: s.date,
+              venue: s.venue,
+              concern_issue: s.concern_issue,
+              document_link: s.document_link
+            };
+          });
+
           await tx.stakeholder_engagement.createMany({
-            data: rawStakeholders
+            data: stakeholderEngagementsData
           });
         }
 
