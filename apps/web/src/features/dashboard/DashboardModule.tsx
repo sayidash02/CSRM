@@ -20,8 +20,7 @@ export interface DashboardStats {
     weeklyThisWeek: number; weeklyLastWeek: number; weeklyTrend: number;
   };
   actionable: {
-    proposalsUnderReview: number; csrOnGoing: number; grievanceHighOpen: number;
-    staleProposals: number; untouchedGrievances: number;
+    csrOnGoing: number; grievanceHighOpen: number; untouchedGrievances: number;
   };
   charts: {
     dailyByCategory: Array<{ name: string; value: number }>;
@@ -82,7 +81,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
     { label: "Stakeholder Meetings", value: stats.totals.stakeholder, sub: "pertemuan stakeholder", icon: <Users size={16} />, color: "text-violet-600", bg: "bg-violet-50", module: "stakeholder" },
     { label: "Active Issues", value: stats.totals.issues, sub: "isu dipantau", icon: <AlertTriangle size={16} />, color: "text-amber-600", bg: "bg-amber-50", module: "topissues" },
     {
-      label: "Proposal", value: stats.totals.proposals, sub: `${stats.actionable.proposalsUnderReview} menunggu review`,
+      label: "Proposal", value: stats.totals.proposals, sub: "proposal masuk",
       icon: <FileText size={16} />, color: "text-teal-600", bg: "bg-teal-50", module: "proposals",
     },
     { label: "CSR Project", value: stats.totals.csr, sub: `${stats.actionable.csrOnGoing} sedang berjalan`, icon: <Leaf size={16} />, color: "text-emerald-600", bg: "bg-emerald-50", module: "csr" },

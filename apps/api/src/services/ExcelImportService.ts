@@ -622,7 +622,7 @@ export class ExcelImportService {
           const institution = instCol !== -1 ? truncStr(extractCellString(row.getCell(instCol).value), 255, 'Umum') : 'Umum';
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
           const proposal_description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
-          const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Under Review') : 'Under Review';
+          const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Accept') : 'Accept';
 
           rawProposals.push({
             registration_no,

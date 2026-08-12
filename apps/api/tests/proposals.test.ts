@@ -15,7 +15,7 @@ describe('POST /api/proposals', () => {
       registration_no: 'PROP-001',
       date_received: '2026-07-30',
       institution: 'Inst A',
-      status: 'Under Review'
+      status: 'Accept'
     };
     const res = await request(app).post('/api/proposals').send(payload);
     expect(res.status).toBe(201);
@@ -33,7 +33,8 @@ describe('POST /api/proposals', () => {
     const payload = { 
       registration_no: 'PROP-001',
       date_received: '2026-07-30',
-      institution: 'Inst B'
+      institution: 'Inst B',
+      status: 'Accept'
     };
     const res = await request(app).post('/api/proposals').send(payload);
     expect(res.status).toBe(409);
@@ -101,7 +102,8 @@ describe('PUT /api/proposals/:id', () => {
     const payload = {
       registration_no: 'PROP-003',
       date_received: '2026-07-31',
-      institution: 'Inst C'
+      institution: 'Inst C',
+      status: 'Accept'
     };
     const createRes = await request(app).post('/api/proposals').send(payload);
     const id = createRes.body.data.id;
@@ -110,13 +112,13 @@ describe('PUT /api/proposals/:id', () => {
       registration_no: 'PROP-003-UPD',
       date_received: '2026-08-01',
       institution: 'Inst C Updated',
-      status: 'Approved'
+      status: 'Decline'
     };
     
     const res = await request(app).put(`/api/proposals/${id}`).send(updatePayload);
     expect(res.status).toBe(200);
     expect(res.body.data.registration_no).toBe('PROP-003-UPD');
     expect(res.body.data.institution).toBe('Inst C Updated');
-    expect(res.body.data.status).toBe('Approved');
+    expect(res.body.data.status).toBe('Decline');
   });
 });

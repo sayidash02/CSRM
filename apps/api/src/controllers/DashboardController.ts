@@ -110,14 +110,6 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
   });
   const proposalsStatusList = Object.entries(proposalStatusCounts).map(([name, value]) => ({ name, value }));
 
-  const recentActivitiesSerialized = recentActivities.map((act: any) => ({
-    ...act, id: act.id.toString(),
-    pic_id: act.pic_id?.toString() || null,
-    category_id: act.category_id.toString(), sub_category_id: act.sub_category_id.toString(),
-    pic: act.pic ? { ...act.pic, id: act.pic.id.toString() } : null,
-    sub_category: act.sub_category ? { ...act.sub_category, id: act.sub_category.id.toString(), category_id: act.sub_category.category_id.toString() } : null
-  }));
-
   res.status(200).json({
     data: {
       totals: {
@@ -135,9 +127,9 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
         dailyByCategory: dailyByCategoryList, proposalsStatus: proposalsStatusList
       },
       recent: {
-        activities: recentActivitiesSerialized,
-        highPriorityGrievances: highPriorityGrievances.map((g) => ({ ...g, id: g.id.toString() })),
-        onGoingCsr: onGoingCsr.map((c) => ({ ...c, id: c.id.toString() }))
+        activities: recentActivities,
+        highPriorityGrievances,
+        onGoingCsr
       },
       sync: {
         unsyncedCount,

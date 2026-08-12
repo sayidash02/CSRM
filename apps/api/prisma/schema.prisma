@@ -128,7 +128,7 @@ model proposals {
   proposal_description String?  @db.Text
   proposal_file        String?  @db.Text
   assessment_file      String?  @db.Text
-  status               String   @default("Under Review") @db.VarChar(20)
+  status               String   @db.VarChar(20)
   is_deleted           Boolean  @default(false)
   is_archived          Boolean  @default(false)
   created_at           DateTime @default(now())
