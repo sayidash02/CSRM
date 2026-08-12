@@ -5,7 +5,20 @@ const router = express.Router();
 
 router.post('/excel', async (req: Request, res: Response) => {
   try {
-    const { sheetName = 'Export', columns = [], data = [] } = req.body;
+    let sheetName = (req.query.label as string) || 'Export';
+    let columns: any[] = [];
+    let data: any[] = [];
+
+    if (Array.isArray(req.body)) {
+      data = req.body;
+      if (data.length > 0) {
+        columns = Object.keys(data[0]).map(key => ({ header: key, key, width: Math.max(key.length + 5, 15) }));
+      }
+    } else if (req.body && typeof req.body === 'object') {
+      sheetName = req.body.sheetName || sheetName;
+      columns = req.body.columns || [];
+      data = req.body.data || [];
+    }
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(sheetName);
