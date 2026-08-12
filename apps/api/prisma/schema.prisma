@@ -221,3 +221,16 @@ model sync_log {
   file_url      String?  @db.VarChar(500)
   triggered_by  String?  @db.VarChar(100)
 }
+
+model audit_logs {
+  id          BigInt   @id @default(autoincrement())
+  entity_type String   @db.VarChar(50)
+  entity_id   BigInt
+  action      String   @db.VarChar(20)
+  changes     Json?
+  created_at  DateTime @default(now())
+
+  @@index([entity_type, entity_id])
+  @@index([created_at])
+}
+
