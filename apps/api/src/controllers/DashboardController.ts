@@ -66,7 +66,12 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
       include: { pic: true, sub_category: true }
     }),
     prisma.grievance.findMany({
-      where: { is_deleted: false },
+      where: {
+        is_deleted: false,
+        status: { in: ['Open', 'On Progress'] },
+        significance: { in: ['High', 'Critical'] }
+      },
+      orderBy: { created_at: 'desc' },
       take: 2
     }),
     prisma.csr_projects.findMany({
@@ -128,7 +133,13 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
       },
       recent: {
         activities: recentActivities,
-        highPriorityGrievances,
+        highPriorityGrievances: highPriorityGrievances.map((g: any) => ({
+          id: g.id,
+          regNo: g.register_no,
+          name: g.complainant_name,
+          description: g.description,
+          significance: g.significance
+        })),
         onGoingCsr
       },
       sync: {
