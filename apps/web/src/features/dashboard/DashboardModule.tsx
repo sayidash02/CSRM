@@ -9,6 +9,13 @@ import {
   PieChart, Pie, Legend
 } from "recharts";
 import { ImportWizardModal } from "../import/ImportWizardModal";
+import {
+  TooltipProvider,
+  Tooltip as UITooltip,
+  TooltipTrigger,
+  TooltipContent
+} from "../../app/components/ui/tooltip";
+
 
 export interface DashboardStats {
   totals: {
@@ -138,10 +145,19 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
               </div>
               <div className="flex items-center gap-1">
                 {s.trend !== undefined && (
-                  <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium font-mono ${s.trend >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                    {s.trend >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                    {s.trend >= 0 ? `+${s.trend}%` : `${s.trend}%`}
-                  </span>
+                  <TooltipProvider>
+                    <UITooltip>
+                      <TooltipTrigger asChild>
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium font-mono cursor-help ${s.trend >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
+                          {s.trend >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                          {s.trend >= 0 ? `+${s.trend}%` : `${s.trend}%`}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Dibandingkan dengan minggu lalu</p>
+                      </TooltipContent>
+                    </UITooltip>
+                  </TooltipProvider>
                 )}
                 <ArrowUpRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
