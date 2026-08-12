@@ -64,7 +64,7 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
   const isDeletedFilter = is_deleted === 'true';
   const where: any = { is_deleted: isDeletedFilter, is_archived: false };
   
-  if (year) {
+  if (year && year !== 'Semua' && year !== 'All' && !isNaN(parseInt(year as string))) {
     const y = year as string;
     where.activity_date = {
       gte: new Date(`${y}-01-01T00:00:00.000Z`),
