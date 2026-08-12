@@ -171,8 +171,8 @@ CREATE TABLE proposals (
   proposal_description TEXT,
   proposal_file TEXT,
   assessment_file TEXT,
-  status VARCHAR(20) NOT NULL DEFAULT 'Under Review'
-    CHECK (status IN ('Approved','Under Review','Declined')),
+  status VARCHAR(20) NOT NULL
+    CHECK (status IN ('Accept','Decline')),
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
