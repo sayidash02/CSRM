@@ -2,6 +2,7 @@ import request from 'supertest';
 import express from 'express';
 import topIssuesRouter from '../src/routes/topIssues';
 import prisma from '../src/lib/prisma';
+import { errorHandler } from '../src/lib/errorHandler';
 
 const testApp = express();
 testApp.use(express.json());
@@ -9,6 +10,7 @@ testApp.use(express.json());
   return this.toString();
 };
 testApp.use('/api/top-issues', topIssuesRouter);
+testApp.use(errorHandler);
 
 beforeAll(async () => {
   await prisma.top_issues.deleteMany();
