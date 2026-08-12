@@ -59,7 +59,7 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
 });
 
 export const getDailyActivities = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { year, is_deleted, page, limit, search, cat, sub_cat, start, end, no_paginate } = req.query;
+  const { year, is_deleted, page, limit, search, cat, sub_cat, start, end, no_paginate, sort_by, sort_dir } = req.query;
   const isDeletedFilter = is_deleted === 'true';
   const where: any = { is_deleted: isDeletedFilter, is_archived: false };
   
@@ -90,10 +90,36 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     ];
   }
 
+  let orderByConfig: any = { activity_date: 'desc' };
+
+  if (sort_by) {
+    const dir = sort_dir === 'asc' ? 'asc' : 'desc';
+    
+    switch(sort_by as string) {
+      case 'activity_date':
+      case 'activity':
+      case 'focus':
+      case 'institution_group':
+      case 'location':
+      case 'cost':
+      case 'description_result':
+        orderByConfig = { [sort_by as string]: dir };
+        break;
+      case 'category.name':
+        orderByConfig = { category: { name: dir } };
+        break;
+      case 'sub_category_name':
+        orderByConfig = { sub_category: { name: dir } };
+        break;
+      default:
+        orderByConfig = { activity_date: 'desc' };
+    }
+  }
+
   const include = { pic: true, category: true, sub_category: true, stakeholder: true, stakeholder_engagement: true };
 
   if (no_paginate === 'true') {
-    const activities = await prisma.daily_activities.findMany({ where, include, orderBy: { activity_date: 'desc' } });
+    const activities = await prisma.daily_activities.findMany({ where, include, orderBy: orderByConfig });
     res.status(200).json({ data: activities });
     return;
   }
@@ -108,7 +134,7 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       include,
       skip,
       take: limitNum,
-      orderBy: { activity_date: 'desc' }
+      orderBy: orderByConfig
     }),
     prisma.daily_activities.count({ where })
   ]);
