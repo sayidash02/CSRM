@@ -18,10 +18,12 @@ describe('LrpController', () => {
   let res: Partial<Response>;
   let jsonMock: jest.Mock;
   let statusMock: jest.Mock;
+  let nextMock: jest.Mock;
 
   beforeEach(() => {
     jsonMock = jest.fn();
     statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    nextMock = jest.fn();
     req = {
       body: {},
       params: {},
@@ -40,7 +42,7 @@ describe('LrpController', () => {
       const mockResult = { id: 1n, program: 'Program 1', sharepoint_link: 'http://link.com', year: 2026 };
       (prisma.lrp.create as jest.Mock).mockResolvedValue(mockResult);
 
-      await createLrp(req as Request, res as Response);
+      await createLrp(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(jsonMock).toHaveBeenCalledWith({ data: mockResult });
@@ -49,7 +51,7 @@ describe('LrpController', () => {
     it('should return 400 if missing required fields (Neg)', async () => {
       req.body = { program: 'Program 1' }; // missing sharepoint_link
       
-      await createLrp(req as Request, res as Response);
+      await createLrp(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(400);
       expect(jsonMock).toHaveBeenCalledWith({ error: 'Missing required fields' });
@@ -57,12 +59,12 @@ describe('LrpController', () => {
 
     it('should handle internal server error (Neg)', async () => {
       req.body = { program: 'Program 1', sharepoint_link: 'http://link.com', year: 2026 };
-      (prisma.lrp.create as jest.Mock).mockRejectedValue(new Error('DB Error'));
+      const dbErr = new Error('DB Error');
+      (prisma.lrp.create as jest.Mock).mockRejectedValue(dbErr);
 
-      await createLrp(req as Request, res as Response);
+      await createLrp(req as Request, res as Response, nextMock);
 
-      expect(statusMock).toHaveBeenCalledWith(500);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'Internal server error' });
+      expect(nextMock).toHaveBeenCalledWith(dbErr);
     });
   });
 
@@ -71,7 +73,7 @@ describe('LrpController', () => {
       const mockResult = [{ id: 1n, program: 'Program 1', sharepoint_link: 'http://link.com', is_deleted: false }];
       (prisma.lrp.findMany as jest.Mock).mockResolvedValue(mockResult);
 
-      await getLrps(req as Request, res as Response);
+      await getLrps(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({ data: mockResult });
@@ -82,7 +84,7 @@ describe('LrpController', () => {
       const mockResult = [{ id: 1n, program: 'Program 1', sharepoint_link: 'http://link.com', is_deleted: true }];
       (prisma.lrp.findMany as jest.Mock).mockResolvedValue(mockResult);
 
-      await getLrps(req as Request, res as Response);
+      await getLrps(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(prisma.lrp.findMany).toHaveBeenCalledWith({
@@ -99,7 +101,7 @@ describe('LrpController', () => {
       const mockResult = { id: 1n, program: 'Program Updated', sharepoint_link: 'http://link-updated.com' };
       (prisma.lrp.update as jest.Mock).mockResolvedValue(mockResult);
 
-      await updateLrp(req as Request, res as Response);
+      await updateLrp(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({ data: mockResult });
@@ -112,7 +114,7 @@ describe('LrpController', () => {
       const mockResult = { id: 1n, is_deleted: true };
       (prisma.lrp.update as jest.Mock).mockResolvedValue(mockResult);
 
-      await deleteLrp(req as Request, res as Response);
+      await deleteLrp(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({ data: mockResult });
@@ -125,7 +127,7 @@ describe('LrpController', () => {
       const mockResult = { id: 1n, is_deleted: false };
       (prisma.lrp.update as jest.Mock).mockResolvedValue(mockResult);
 
-      await restoreLrp(req as Request, res as Response);
+      await restoreLrp(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({ data: mockResult });
@@ -133,12 +135,12 @@ describe('LrpController', () => {
 
     it('PATCH /api/lrp/999999/restore (status 404)', async () => {
       req.params = { id: '999999' };
-      (prisma.lrp.update as jest.Mock).mockRejectedValue({ code: 'P2025' });
+      const p2025Err = { code: 'P2025' };
+      (prisma.lrp.update as jest.Mock).mockRejectedValue(p2025Err);
 
-      await restoreLrp(req as Request, res as Response);
+      await restoreLrp(req as Request, res as Response, nextMock);
 
-      expect(statusMock).toHaveBeenCalledWith(404);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'LRP record not found' });
+      expect(nextMock).toHaveBeenCalledWith(p2025Err);
     });
   });
 });
