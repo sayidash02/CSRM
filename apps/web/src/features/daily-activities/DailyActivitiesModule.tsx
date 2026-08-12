@@ -416,7 +416,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     try {
       showToast("Sedang menyiapkan data export...", "info");
       const params = new URLSearchParams();
-      if (activeYear) params.append('year', activeYear);
+      if (activeYear && activeYear !== 'Semua' && activeYear !== 'All') params.append('year', activeYear);
       params.append('is_deleted', String(showDeleted));
       params.append('no_paginate', 'true');
       if (q) params.append('search', q);
@@ -428,10 +428,12 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       params.append('sort_dir', sortDir);
 
       const res = await apiClient.get(`/daily-activities?${params.toString()}`);
-      const exportItems = res.data.data.map((a: any) => ({
+      const rawData = Array.isArray(res.data.data) ? res.data.data : [];
+
+      const exportItems = rawData.map((a: any) => ({
         ...a,
-        category_name: references.categories?.find((c: any) => String(c.id) === String(a.category_id))?.name || "-",
-        sub_category_name: references.sub_categories?.find((s: any) => String(s.id) === String(a.sub_category_id))?.name || "-"
+        category_name: a.category?.name || references.categories?.find((c: any) => String(c.id) === String(a.category_id))?.name || "-",
+        sub_category_name: a.sub_category?.name || references.sub_categories?.find((s: any) => String(s.id) === String(a.sub_category_id))?.name || "-"
       }));
 
       const exportColumns = [
@@ -452,7 +454,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         ...a,
         activity_date: formatDate(a.activity_date),
         cost: formatIDR(a.cost),
-        pic_names: a.pics?.map((p: any) => p.name).join(", ") || "-"
+        pic_names: a.pic?.name || a.pics?.map((p: any) => p.name).join(", ") || "-"
       }));
 
       onExport("Daily Activities", { sheetName: `Daily Activities ${activeYear || 'Semua'}`, columns: exportColumns, data: exportData });
