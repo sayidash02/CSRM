@@ -75,7 +75,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
   const statCards: Array<{ label: string; value: number; sub: string; trend?: number; icon: React.ReactNode; color: string; bg: string; module: string; badge?: string }> = [
     {
       label: "Daily Activities", value: stats.totals.daily,
-      sub: `M: ${stats.trends.weeklyThisWeek ?? 0} vs ${stats.trends.weeklyLastWeek ?? 0} | B: ${stats.trends.dailyThisMonth ?? 0} vs ${stats.trends.dailyLastMonth ?? 0}`,
+      sub: "aktivitas tercatat",
       trend: stats.trends.weeklyTrend, icon: <Calendar size={16} />, color: "text-blue-600", bg: "bg-blue-50", module: "daily",
     },
     { label: "Stakeholder Meetings", value: stats.totals.stakeholder, sub: "pertemuan stakeholder", icon: <Users size={16} />, color: "text-violet-600", bg: "bg-violet-50", module: "stakeholder" },
