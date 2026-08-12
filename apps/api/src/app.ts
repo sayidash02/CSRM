@@ -9,21 +9,20 @@ import csrProjectsRouter from './routes/csrProjects';
 import grievanceRouter from './routes/grievance';
 import lrpRouter from './routes/lrp';
 import picsRouter from './routes/pics';
-
-(BigInt.prototype as any).toJSON = function () {
-  return this.toString();
-};
-
 import uploadRouter from './routes/upload';
+import syncRouter from './routes/sync';
 import exportRouter from './routes/export';
 import dashboardRouter from './routes/dashboard';
 import importRoutes from './routes/import';
 import archiveRoutes from './routes/archive';
 import yearsRouter from './routes/years';
 import devRoutes from './routes/dev';
-
 import stakeholderMasterRouter from './routes/stakeholder.routes';
 import { errorHandler } from './lib/errorHandler';
+
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 
 const app = express();
 app.use(cors());
@@ -39,7 +38,6 @@ app.use('/api/csr-projects', csrProjectsRouter);
 app.use('/api/grievance', grievanceRouter);
 app.use('/api/lrp', lrpRouter);
 app.use('/api/upload', uploadRouter);
-import syncRouter from './routes/sync';
 app.use('/api/sync', syncRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/pics', picsRouter);
