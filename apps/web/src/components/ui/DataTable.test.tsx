@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { DataTable, ColumnDef } from './DataTable';
 import { describe, it, expect } from 'vitest';
 
@@ -11,10 +11,11 @@ describe('DataTable', () => {
       { header: 'Name', accessor: 'name' }
     ];
 
-    render(<DataTable data={data} columns={columns} />);
+    const html = renderToString(<DataTable data={data} columns={columns} />);
     
-    expect(screen.getByText('Task 1')).toBeInTheDocument();
-    expect(screen.getByText('ID')).toBeInTheDocument();
-    expect(screen.getByText('Name')).toBeInTheDocument();
+    expect(html).toContain('Task 1');
+    expect(html).toContain('ID');
+    expect(html).toContain('Name');
   });
 });
+

@@ -1,8 +1,9 @@
 import { MonthlyReportService } from '../../src/services/MonthlyReportService';
-import { prisma } from '../../src/lib/prisma';
+import prisma from '../../src/lib/prisma';
 
 jest.mock('../../src/lib/prisma', () => ({
-  prisma: {
+  __esModule: true,
+  default: {
     grievance: { findMany: jest.fn() },
     daily_activities: { findMany: jest.fn() },
     top_issues: { findMany: jest.fn() },

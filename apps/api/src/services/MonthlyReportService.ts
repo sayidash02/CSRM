@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { prisma } from '../lib/prisma';
+import prisma from '../lib/prisma';
 
 export class MonthlyReportService {
   async generateReport(month: number, year: number): Promise<ExcelJS.Workbook> {

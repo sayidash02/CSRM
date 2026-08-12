@@ -75,6 +75,41 @@ describe('GET /api/daily-activities', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
   });
+
+  it('Should sort activities by cost ascending when sort_by=cost&sort_dir=asc', async () => {
+    const payload1 = {
+      activity_date: '2026-07-25',
+      activity: 'Activity Expensive',
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString(),
+      cost: 1000000
+    };
+    const payload2 = {
+      activity_date: '2026-07-25',
+      activity: 'Activity Cheap',
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString(),
+      cost: 50000
+    };
+
+    const create1 = await request(app).post('/api/daily-activities').send(payload1);
+    const create2 = await request(app).post('/api/daily-activities').send(payload2);
+
+    const res = await request(app).get('/api/daily-activities?sort_by=cost&sort_dir=asc');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeGreaterThanOrEqual(2);
+
+    const costs = res.body.data.map((item: any) => Number(item.cost)).filter((c: number) => !isNaN(c));
+    for (let i = 0; i < costs.length - 1; i++) {
+      expect(costs[i]).toBeLessThanOrEqual(costs[i + 1]);
+    }
+
+    if (create1.body?.data?.id) await prisma.daily_activities.delete({ where: { id: BigInt(create1.body.data.id) } });
+    if (create2.body?.data?.id) await prisma.daily_activities.delete({ where: { id: BigInt(create2.body.data.id) } });
+  });
 });
 
 describe('DELETE and RESTORE /api/daily-activities/:id', () => {
