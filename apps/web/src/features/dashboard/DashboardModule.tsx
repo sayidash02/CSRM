@@ -186,7 +186,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                   <XAxis dataKey="name" tick={{ fontSize: 9, fontFamily: "DM Mono, monospace" }} interval={0} />
                   <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                   <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="value" name="Jumlah" radius={[4, 4, 0, 0]}>
                     {catData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
                   </Bar>
                 </BarChart>
