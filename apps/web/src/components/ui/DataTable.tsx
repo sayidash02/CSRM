@@ -13,9 +13,11 @@ export type ColumnDef<T> = {
 interface DataTableProps<T> {
   data: T[];
   columns: ColumnDef<T>[];
+  onSortChange?: (key: string, direction: 'asc' | 'desc') => void;
+  serverSortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
 }
 
-export function DataTable<T>({ data, columns }: DataTableProps<T>) {
+export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: DataTableProps<T>) {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [openFilter, setOpenFilter] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
       });
     }
 
-    if (sortConfig !== null) {
+    if (sortConfig !== null && !onSortChange) {
       sortableItems.sort((a, b) => {
         const aValue = getNestedValue(a, sortConfig.key);
         const bValue = getNestedValue(b, sortConfig.key);
@@ -86,10 +88,19 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
       });
     }
     return sortableItems;
-  }, [data, sortConfig, activeFilters]);
+  }, [data, sortConfig, activeFilters, onSortChange]);
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
+
+    if (onSortChange) {
+      if (serverSortConfig && serverSortConfig.key === key && serverSortConfig.direction === 'asc') {
+        direction = 'desc';
+      }
+      onSortChange(key, direction);
+      return;
+    }
+
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
@@ -111,8 +122,8 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
                   <div className="flex items-center gap-1 justify-between">
                     <div className="flex items-center gap-1">
                       {col.header}
-                      {col.sortable && col.accessor && sortConfig?.key === col.accessor && (
-                        sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                      {col.sortable && col.accessor && (sortConfig?.key === col.accessor || serverSortConfig?.key === col.accessor) && (
+                        (serverSortConfig?.key === col.accessor ? serverSortConfig.direction : sortConfig?.direction) === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
                       )}
                     </div>
                     {col.filterOptions && col.accessor && (
@@ -172,4 +183,3 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
     </div>
   );
 }
-
