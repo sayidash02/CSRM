@@ -304,6 +304,8 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [isLoading, setIsLoading] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('activity_date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -317,7 +319,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       fetchData();
     }, 300);
     return () => clearTimeout(timer);
-  }, [activeYear, showDeleted, page, limit, catFilter, subCatFilter, dateRange.start, dateRange.end, q]);
+  }, [activeYear, showDeleted, page, limit, catFilter, subCatFilter, dateRange.start, dateRange.end, q, sortBy, sortDir]);
 
   useEffect(() => {
     fetchReferences();
@@ -346,6 +348,8 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       if (subCatFilter !== 'All') params.append('sub_cat', subCatFilter);
       if (dateRange.start) params.append('start', dateRange.start);
       if (dateRange.end) params.append('end', dateRange.end);
+      params.append('sort_by', sortBy);
+      params.append('sort_dir', sortDir);
 
       const res = await apiClient.get(`/daily-activities?${params.toString()}`);
       setItems(res.data.data);
@@ -420,6 +424,8 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       if (subCatFilter !== 'All') params.append('sub_cat', subCatFilter);
       if (dateRange.start) params.append('start', dateRange.start);
       if (dateRange.end) params.append('end', dateRange.end);
+      params.append('sort_by', sortBy);
+      params.append('sort_dir', sortDir);
 
       const res = await apiClient.get(`/daily-activities?${params.toString()}`);
       const exportItems = res.data.data.map((a: any) => ({
@@ -529,7 +535,14 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
         <div className="flex-1 min-h-0">
           {isLoading && <div className="p-4 text-center text-sm text-muted-foreground">Memuat data...</div>}
-          {!isLoading && <DataTable data={displayed} columns={columns} />}
+          {!isLoading && (
+            <DataTable 
+              data={displayed} 
+              columns={columns} 
+              onSortChange={(key, dir) => { setSortBy(key); setSortDir(dir); setPage(1); }}
+              serverSortConfig={{ key: sortBy, direction: sortDir }}
+            />
+          )}
         </div>
         <Pagination 
           page={meta.page} 
