@@ -14,7 +14,7 @@ export const createProposal = catchAsync(async (req: Request, res: Response): Pr
     status
   } = req.body;
 
-  if (!registration_no || !date_received || !institution) {
+  if (!registration_no || !date_received || !institution || !status) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
@@ -28,7 +28,7 @@ export const createProposal = catchAsync(async (req: Request, res: Response): Pr
       proposal_description,
       proposal_file,
       assessment_file,
-      status: status || 'Under Review'
+      status
     }
   });
 
@@ -66,7 +66,7 @@ export const updateProposal = catchAsync(async (req: Request, res: Response): Pr
     status
   } = req.body;
 
-  if (!registration_no || !date_received || !institution) {
+  if (!registration_no || !date_received || !institution || !status) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
