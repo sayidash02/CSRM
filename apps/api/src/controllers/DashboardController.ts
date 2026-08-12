@@ -27,8 +27,6 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
     totalStakeholders,
     totalIssues,
     totalProposals,
-    proposalsUnderReview,
-    staleProposals,
     totalCsr,
     csrOnGoing,
     totalGrievances,
@@ -51,8 +49,6 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
     prisma.top_issues.count({ where: { is_deleted: false } }),
     
     prisma.proposals.count({ where: { is_deleted: false } }),
-    prisma.proposals.count({ where: { status: 'Under Review', is_deleted: false } }),
-    prisma.proposals.count({ where: { status: 'Under Review', is_deleted: false, date_received: { lt: fourteenDaysAgo } } }),
     
     prisma.csr_projects.count({ where: { is_deleted: false } }),
     prisma.csr_projects.count({ where: { status: 'On Going', is_deleted: false } }),
@@ -108,7 +104,7 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
   });
   const dailyByCategoryList = Object.entries(categoryCounts).map(([name, value]) => ({ name, value }));
 
-  const proposalStatusCounts: Record<string, number> = { 'Under Review': 0, 'Approved': 0, 'Declined': 0 };
+  const proposalStatusCounts: Record<string, number> = { 'Accept': 0, 'Decline': 0 };
   allProposals.forEach((p) => {
     if (p.status) { proposalStatusCounts[p.status] = (proposalStatusCounts[p.status] || 0) + 1; }
   });
@@ -133,8 +129,7 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
         weeklyThisWeek: thisWeekDaily, weeklyLastWeek: lastWeekDaily, weeklyTrend: weeklyTrend
       },
       actionable: {
-        proposalsUnderReview, csrOnGoing, grievanceHighOpen,
-        staleProposals, untouchedGrievances
+        csrOnGoing, grievanceHighOpen, untouchedGrievances
       },
       charts: {
         dailyByCategory: dailyByCategoryList, proposalsStatus: proposalsStatusList

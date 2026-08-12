@@ -28,7 +28,7 @@ describe('GET /api/dashboard/stats', () => {
         registration_no: 'PRP-TEST-001',
         date_received: oldDate,
         institution: 'Test Inst',
-        status: 'Under Review',
+        status: 'Accept',
         is_deleted: false
       }
     });
@@ -54,7 +54,6 @@ describe('GET /api/dashboard/stats', () => {
     const { actionable, trends, sync } = res.body.data;
     
     // Check Actionable
-    expect(actionable.staleProposals).toBe(1);
     expect(actionable.untouchedGrievances).toBe(1);
     
     // Check Trends (should have weekly properties)
