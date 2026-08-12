@@ -51,7 +51,7 @@ export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: 
     if (Object.keys(activeFilters).length > 0) {
       sortableItems = sortableItems.filter(item => {
         for (const [key, filterValue] of Object.entries(activeFilters)) {
-          if (filterValue === 'All') continue;
+          if (filterValue === 'All' || filterValue === 'all') continue;
           const itemValue = getNestedValue(item, key);
           if (String(itemValue) !== String(filterValue)) {
             return false;

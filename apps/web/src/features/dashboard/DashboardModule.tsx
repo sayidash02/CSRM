@@ -73,7 +73,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
     );
   }
 
-  const statCards = [
+  const statCards: Array<{ label: string; value: number; sub: string; trend?: number; icon: React.ReactNode; color: string; bg: string; module: string; badge?: string }> = [
     {
       label: "Daily Activities", value: stats.totals.daily,
       sub: `M: ${stats.trends.weeklyThisWeek ?? 0} vs ${stats.trends.weeklyLastWeek ?? 0} | B: ${stats.trends.dailyThisMonth ?? 0} vs ${stats.trends.dailyLastMonth ?? 0}`,
@@ -84,7 +84,6 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
     {
       label: "Proposal", value: stats.totals.proposals, sub: `${stats.actionable.proposalsUnderReview} menunggu review`,
       icon: <FileText size={16} />, color: "text-teal-600", bg: "bg-teal-50", module: "proposals",
-      badge: stats.actionable.staleProposals > 0 ? `🔥 ${stats.actionable.staleProposals} > 2 mgg` : undefined
     },
     { label: "CSR Project", value: stats.totals.csr, sub: `${stats.actionable.csrOnGoing} sedang berjalan`, icon: <Leaf size={16} />, color: "text-emerald-600", bg: "bg-emerald-50", module: "csr" },
     { label: "Grievance", value: stats.totals.grievance, sub: `${stats.actionable.grievanceHighOpen} prioritas tinggi`, icon: <MessageSquareWarning size={16} />, color: "text-red-600", bg: "bg-red-50", module: "grievance" },
@@ -116,20 +115,12 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       </div>
 
       {/* Alert Banner */}
-      {(stats.actionable.staleProposals > 0 || stats.actionable.untouchedGrievances > 0) && (
+      {stats.actionable.untouchedGrievances > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex flex-col gap-2">
-          {stats.actionable.staleProposals > 0 && (
-            <div className="flex items-center gap-2 text-sm text-red-700 font-medium">
-              <AlertCircle size={16} className="text-red-500 shrink-0" />
-              <span>Terdapat <strong>{stats.actionable.staleProposals}</strong> proposal Under Review lebih dari 2 minggu yang butuh perhatian.</span>
-            </div>
-          )}
-          {stats.actionable.untouchedGrievances > 0 && (
-            <div className="flex items-center gap-2 text-sm text-red-700 font-medium">
-              <AlertCircle size={16} className="text-red-500 shrink-0" />
-              <span>Terdapat <strong>{stats.actionable.untouchedGrievances}</strong> grievance prioritas tinggi yang belum ditindaklanjuti sama sekali.</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 text-sm text-red-700 font-medium">
+            <AlertCircle size={16} className="text-red-500 shrink-0" />
+            <span>Terdapat <strong>{stats.actionable.untouchedGrievances}</strong> grievance prioritas tinggi yang belum ditindaklanjuti sama sekali.</span>
+          </div>
         </div>
       )}
 

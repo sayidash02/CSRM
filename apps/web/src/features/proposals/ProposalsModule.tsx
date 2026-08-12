@@ -6,6 +6,7 @@ import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { useProposals, useCreateProposal, useEditProposal, useDeleteProposal, useRestoreProposal } from '../../hooks/useProposals';
+import { toast } from "sonner";
 
 export interface Proposal {
   id: string | number;
@@ -80,17 +81,15 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
+const statusColors: Record<string, string> = { Accept: "bg-emerald-100 text-emerald-700", Decline: "bg-red-100 text-red-600" };
+
 function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    Approved:"bg-emerald-100 text-emerald-700", "Under Review":"bg-amber-100 text-amber-700",
-    Declined:"bg-red-100 text-red-600"
-  };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${statusColors[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
 }
 
 const emptyProposalDraft = {
   registration_no: "", date_received: "", institution: "", address: "",
-  proposal_description: "", proposal_file: "", assessment_file: "", status: "Under Review"
+  proposal_description: "", proposal_file: "", assessment_file: "", status: ""
 };
 
 function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultValues, onDraftChange }: {
@@ -104,7 +103,7 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
 }) {
   const [f, setF] = useState(
     initial
-      ? { registration_no: initial.registration_no ?? nextRegNo, date_received: initial.date_received ? String(initial.date_received).split('T')[0] : "", institution: initial.institution ?? "", address: initial.address ?? "", proposal_description: initial.proposal_description ?? "", proposal_file: initial.proposal_file ?? "", assessment_file: initial.assessment_file ?? "", status: initial.status ?? "Under Review" }
+      ? { registration_no: initial.registration_no ?? nextRegNo, date_received: initial.date_received ? String(initial.date_received).split('T')[0] : "", institution: initial.institution ?? "", address: initial.address ?? "", proposal_description: initial.proposal_description ?? "", proposal_file: initial.proposal_file ?? "", assessment_file: initial.assessment_file ?? "", status: initial.status ?? "" }
       : { ...emptyProposalDraft, registration_no: defaultValues?.registration_no || nextRegNo, ...defaultValues }
   );
   
@@ -121,18 +120,8 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
   };
   
   const handleSave = () => {
-    const missing: string[] = (
-      [
-        [!f.institution, "Nama Institusi"],
-        [!f.date_received, "Tanggal Diterima"],
-        [!f.registration_no, "No. Registrasi"],
-      ] as [boolean, string][]
-    ).filter(([cond]) => cond).map(([, label]) => label);
-
-    if (missing.length > 0) {
-      if (showToast) {
-        showToast(`Field berikut belum diisi: ${missing.join(", ")}`, "error");
-      }
+    if (!f.registration_no || !f.date_received || !f.institution || !f.status) {
+      toast.error("Registration No, Date, Institution, dan Status wajib diisi.");
       return;
     }
     onSave({
@@ -174,7 +163,13 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
             />
           </Field>
         </div>
-        <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Under Review</option><option>Approved</option><option>Declined</option></select></Field>
+        <Field label="Status">
+          <select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}>
+            <option value="" disabled>Pilih Status...</option>
+            <option value="Accept">Accept</option>
+            <option value="Decline">Decline</option>
+          </select>
+        </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Proposal"} isEdit={!!initial} />
     </Modal>
@@ -250,10 +245,9 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       accessor: "status", 
       sortable: true, 
       filterOptions: [
-        { label: "Semua Status", value: "All" },
-        { label: "Under Review", value: "Under Review" },
-        { label: "Approved", value: "Approved" },
-        { label: "Declined", value: "Declined" }
+        { label: "All Status", value: "all" },
+        { label: "Accept", value: "Accept" },
+        { label: "Decline", value: "Decline" }
       ],
       render: (p) => <StatusBadge status={p.status} /> 
     },
