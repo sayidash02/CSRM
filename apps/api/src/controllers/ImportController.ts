@@ -1,43 +1,34 @@
 import { Request, Response } from 'express';
 import { ExcelImportService } from '../services/ExcelImportService';
+import { catchAsync } from '../lib/catchAsync';
 
-export const previewImport = async (req: Request, res: Response): Promise<void> => {
-  try {
-    if (!req.file) {
-      res.status(400).json({ error: 'No file uploaded' });
-      return;
-    }
-
-    const result = await ExcelImportService.preview(req.file.path);
-
-    res.status(200).json({
-      success: true,
-      data: result
-    });
-  } catch (error: any) {
-    console.error('Error in previewImport:', error);
-    res.status(500).json({ error: 'Internal server error during import preview' });
+export const previewImport = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({ error: 'No file uploaded' });
+    return;
   }
-};
 
-export const confirmImport = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { fileId } = req.body || {};
+  const result = await ExcelImportService.preview(req.file.path);
 
-    if (!fileId) {
-      res.status(400).json({ error: 'Missing fileId' });
-      return;
-    }
+  res.status(200).json({
+    success: true,
+    data: result
+  });
+});
 
-    const result = await ExcelImportService.confirm(fileId);
+export const confirmImport = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { fileId } = req.body || {};
 
-    res.status(200).json({
-      success: true,
-      message: 'Import completed successfully',
-      count: result.count
-    });
-  } catch (error: any) {
-    console.error('Error in confirmImport:', error);
-    res.status(500).json({ error: error.message || 'Internal server error during import confirmation' });
+  if (!fileId) {
+    res.status(400).json({ error: 'Missing fileId' });
+    return;
   }
-};
+
+  const result = await ExcelImportService.confirm(fileId);
+
+  res.status(200).json({
+    success: true,
+    message: 'Import completed successfully',
+    count: result.count
+  });
+});
