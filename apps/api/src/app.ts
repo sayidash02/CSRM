@@ -23,6 +23,7 @@ import yearsRouter from './routes/years';
 import devRoutes from './routes/dev';
 
 import stakeholderMasterRouter from './routes/stakeholder.routes';
+import { errorHandler } from './lib/errorHandler';
 
 const app = express();
 app.use(cors());
@@ -47,5 +48,7 @@ app.use('/api/import', importRoutes);
 app.use('/api/archive', archiveRoutes);
 app.use('/api/years', yearsRouter);
 app.use('/api/dev', devRoutes);
+
+app.use(errorHandler);
 
 export default app;
