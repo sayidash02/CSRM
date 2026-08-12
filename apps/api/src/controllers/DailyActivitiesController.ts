@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { parseDailyActivitiesExcel } from '../services/ExcelImportService';
 import { catchAsync } from '../lib/catchAsync';
@@ -90,26 +91,41 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     ];
   }
 
-  let orderByConfig: any = { activity_date: 'desc' };
+  let orderByConfig: Prisma.daily_activitiesOrderByWithRelationInput = { activity_date: 'desc' };
 
   if (sort_by) {
-    const dir = sort_dir === 'asc' ? 'asc' : 'desc';
+    const dir: Prisma.SortOrder = sort_dir === 'asc' ? 'asc' : 'desc';
     
     switch(sort_by as string) {
       case 'activity_date':
       case 'activity':
       case 'focus':
-      case 'institution_group':
       case 'location':
       case 'cost':
       case 'description_result':
         orderByConfig = { [sort_by as string]: dir };
         break;
+      case 'institution_group':
+      case 'stakeholder':
+      case 'stakeholder_name':
+      case 'stakeholder.name':
+        orderByConfig = { stakeholder: { name: dir } };
+        break;
+      case 'category':
+      case 'category_name':
       case 'category.name':
         orderByConfig = { category: { name: dir } };
         break;
+      case 'sub_category':
       case 'sub_category_name':
+      case 'sub_category.name':
         orderByConfig = { sub_category: { name: dir } };
+        break;
+      case 'pics':
+      case 'pic':
+      case 'pic_name':
+      case 'pic.name':
+        orderByConfig = { pic: { name: dir } };
         break;
       default:
         orderByConfig = { activity_date: 'desc' };
