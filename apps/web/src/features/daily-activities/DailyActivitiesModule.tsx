@@ -181,6 +181,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
     }
     onSave({
       ...f,
+      pic_ids: f.pic_ids,
       stakeholder_id: f.stakeholder_id || null,
       cost: Number(f.cost) || 0,
       document_link: f.document_link || null
@@ -457,7 +458,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     )},
     { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
-    { header: "PIC", accessor: "pics", sortable: false, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.map((p:any)=>p.name).join(', ') || '-'}</span> },
+    { header: "PIC", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.length > 0 ? a.pics.map((p: any) => p.name).join(', ') : '-'}</span> },
     { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
