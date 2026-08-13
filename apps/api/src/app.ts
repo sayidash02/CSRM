@@ -17,6 +17,7 @@ import importRoutes from './routes/import';
 import archiveRoutes from './routes/archive';
 import yearsRouter from './routes/years';
 import devRoutes from './routes/dev';
+import auditLogRoutes from './routes/auditLog.routes';
 import { errorHandler } from './lib/errorHandler';
 
 (BigInt.prototype as any).toJSON = function () {
@@ -45,6 +46,7 @@ app.use('/api/import', importRoutes);
 app.use('/api/archive', archiveRoutes);
 app.use('/api/years', yearsRouter);
 app.use('/api/dev', devRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 app.use(errorHandler);
 
