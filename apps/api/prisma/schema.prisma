@@ -8,11 +8,11 @@ datasource db {
 }
 
 model pics {
-  id               BigInt             @id @default(autoincrement())
-  name             String             @unique @db.VarChar(100)
-  is_active        Boolean            @default(true)
-  created_at       DateTime           @default(now())
-  daily_activities daily_activities[]
+  id                  BigInt                @id @default(autoincrement())
+  name                String                @unique @db.VarChar(100)
+  is_active           Boolean               @default(true)
+  created_at          DateTime              @default(now())
+  daily_activity_pics daily_activity_pics[]
 }
 
 model categories {
@@ -33,33 +33,41 @@ model sub_categories {
 }
 
 model daily_activities {
-  id                 BigInt         @id @default(autoincrement())
-  activity_date      DateTime       @db.Date
-  activity           String         @db.VarChar(255)
-  institution_group  String?        @db.VarChar(255)
-  address            String?        @db.VarChar(255)
-  focus              String?        @db.VarChar(255)
-  location           String?        @db.VarChar(255)
-  description_result String?        @db.Text
-  pic_id             BigInt
-  category_id        BigInt
-  sub_category_id    BigInt
-  is_deleted         Boolean        @default(false)
-  is_archived        Boolean        @default(false)
-  created_at         DateTime       @default(now())
-  updated_at         DateTime       @updatedAt
-  cost               Decimal?       @db.Decimal(15, 2)
-  document_link      String?        @db.Text
-  category           categories     @relation(fields: [category_id], references: [id])
-  pic                pics           @relation(fields: [pic_id], references: [id])
-  sub_category       sub_categories @relation(fields: [sub_category_id], references: [id])
+  id                  BigInt                @id @default(autoincrement())
+  activity_date       DateTime              @db.Date
+  activity            String                @db.VarChar(255)
+  institution_group   String?               @db.VarChar(255)
+  address             String?               @db.VarChar(255)
+  focus               String?               @db.VarChar(255)
+  location            String?               @db.VarChar(255)
+  description_result  String?               @db.Text
+  category_id         BigInt
+  sub_category_id     BigInt
+  is_deleted          Boolean               @default(false)
+  is_archived         Boolean               @default(false)
+  created_at          DateTime              @default(now())
+  updated_at          DateTime              @updatedAt
+  cost                Decimal?              @db.Decimal(15, 2)
+  document_link       String?               @db.Text
+  category            categories            @relation(fields: [category_id], references: [id])
+  sub_category        sub_categories        @relation(fields: [sub_category_id], references: [id])
+  daily_activity_pics daily_activity_pics[]
 
   @@index([activity_date])
   @@index([is_deleted])
   @@index([is_archived])
   @@index([category_id], map: "daily_activities_category_id_fkey")
-  @@index([pic_id], map: "daily_activities_pic_id_fkey")
   @@index([sub_category_id], map: "daily_activities_sub_category_id_fkey")
+}
+
+model daily_activity_pics {
+  activity_id    BigInt
+  pic_id         BigInt
+  daily_activity daily_activities @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+  pic            pics             @relation(fields: [pic_id], references: [id])
+
+  @@id([activity_id, pic_id])
+  @@index([pic_id])
 }
 
 model stakeholder_engagement {
