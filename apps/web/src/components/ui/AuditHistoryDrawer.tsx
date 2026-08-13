@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { translateField } from '../../utils/fieldDictionary';
+import { translateField, translateValue } from '../../utils/fieldDictionary';
 import { apiClient } from '../../lib/apiClient';
 
 interface DrawerProps {
@@ -7,9 +7,10 @@ interface DrawerProps {
   onClose: () => void;
   entityType: string;
   entityId: string | number | null;
+  references?: any;
 }
 
-export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, entityType, entityId }) => {
+export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, entityType, entityId, references }) => {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -50,8 +51,8 @@ export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, ent
                 {log.changes && Object.entries(log.changes).map(([field, vals]: any) => (
                   <div key={field} className="mt-1 bg-gray-50 p-2 rounded text-xs">
                     <span className="font-medium text-gray-700">{translateField(field)}</span>: 
-                    <span className="text-red-500 line-through mx-1">{String(vals.old ?? '-')}</span> ➔ 
-                    <span className="text-green-600 font-semibold mx-1">{String(vals.new ?? '-')}</span>
+                    <span className="text-red-500 line-through mx-1">{translateValue(field, vals.old, references)}</span> ➔ 
+                    <span className="text-green-600 font-semibold mx-1">{translateValue(field, vals.new, references)}</span>
                   </div>
                 ))}
               </div>
@@ -62,3 +63,4 @@ export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, ent
     </div>
   );
 };
+
