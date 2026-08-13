@@ -3,7 +3,6 @@ import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
-import { useStakeholderEngagements } from "../../hooks/useStakeholders";
 import { PicManagementModal } from './PicManagementModal';
 import { ImportExcelModal } from "./ImportExcelModal";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
@@ -20,7 +19,6 @@ export interface DailyActivity {
   activity: string;
   institution_group?: string | null;
   stakeholder_id?: string | number | null;
-  stakeholder_engagement_id?: string | number | null;
   address: string;
   focus: string;
   location: string;
@@ -38,7 +36,6 @@ export interface DailyActivity {
   category_name?: string;
   sub_category_name?: string;
   stakeholder?: any;
-  stakeholder_engagement?: any;
 }
 
 
@@ -122,14 +119,13 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 }
 
 const emptyDailyDraft = {
-  activity_date: "", activity: "", stakeholder_id: "", stakeholder_engagement_id: "", institution_group: "", address: "",
+  activity_date: "", activity: "", stakeholder_id: "", institution_group: "", address: "",
   focus: "", location: "", cost: "", pic_ids: [] as (string | number)[], category_id: "",
   sub_category_id: "", description_result: "", document_link: ""
 };
 
 function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast }: { initial?: DailyActivity; defaultValues?: typeof emptyDailyDraft; onDraftChange?: (v: typeof emptyDailyDraft) => void; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] }; onRefreshReferences: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
   const [showPicManager, setShowPicManager] = useState(false);
-  const { data: engagements = [] } = useStakeholderEngagements();
 
   const [f, setF] = useState(
     initial
@@ -137,7 +133,6 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           activity_date: initial.activity_date ?? "",
           activity: initial.activity ?? "",
           stakeholder_id: initial.stakeholder_id != null ? String(initial.stakeholder_id) : (initial as any)?.stakeholder?.id ? String((initial as any).stakeholder.id) : "",
-          stakeholder_engagement_id: initial.stakeholder_engagement_id != null ? String(initial.stakeholder_engagement_id) : "",
           institution_group: initial.institution_group ?? (initial as any)?.stakeholder?.name ?? "",
           address: initial.address ?? "",
           focus: initial.focus ?? "",
@@ -185,7 +180,6 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
     onSave({
       ...f,
       stakeholder_id: f.stakeholder_id || null,
-      stakeholder_engagement_id: f.stakeholder_engagement_id || null,
       cost: Number(f.cost) || 0,
       document_link: f.document_link || null
     } as any);
@@ -206,22 +200,6 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
             placeholder="Nama institusi / stakeholder"
             className={inputCls}
           />
-        </Field>
-        <Field label="Stakeholder Engagement (Opsional)">
-          <select
-            value={f.stakeholder_engagement_id}
-            onChange={e => set("stakeholder_engagement_id", e.target.value)}
-            className={inputCls}
-          >
-            <option value="">Pilih Engagement (Opsional)</option>
-            {engagements.map((e: any) => (
-              <option key={e.id} value={e.id}>
-                {e.stakeholder ? `${e.stakeholder} - ` : ''}
-                {e.date ? formatDate(e.date) : ''}
-                {e.concern_issue ? ` (${e.concern_issue.substring(0, 25)})` : ''}
-              </option>
-            ))}
-          </select>
         </Field>
         <Field label="Alamat"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Alamat institusi" className={inputCls} /></Field>
         <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi kegiatan" className={inputCls} /></Field>
