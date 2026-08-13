@@ -140,7 +140,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           focus: initial.focus ?? "",
           location: initial.location ?? "",
           cost: initial.cost != null ? String(initial.cost) : "",
-          pic_ids: initial.pic_ids ? initial.pic_ids.map(id => String(id)) : [],
+          pic_ids: initial.pics ? initial.pics.map((p: any) => String(p.id)) : (initial.pic_ids ? initial.pic_ids.map(id => String(id)) : []),
           category_id: initial.category_id != null ? String(initial.category_id) : "",
           sub_category_id: initial.sub_category_id != null ? String(initial.sub_category_id) : "",
           description_result: initial.description_result ?? "",
@@ -181,7 +181,6 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
     }
     onSave({
       ...f,
-      pic_id: f.pic_ids && f.pic_ids.length > 0 ? f.pic_ids[0] : null,
       stakeholder_id: f.stakeholder_id || null,
       cost: Number(f.cost) || 0,
       document_link: f.document_link || null
@@ -435,7 +434,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         ...a,
         activity_date: formatDate(a.activity_date),
         cost: formatIDR(a.cost),
-        pic_names: a.pic?.name || a.pics?.map((p: any) => p.name).join(", ") || "-"
+        pic_names: a.pics?.map((p: any) => p.name).join(", ") || "-"
       }));
 
       onExport("Daily Activities", { sheetName: `Daily Activities ${activeYear || 'Semua'}`, columns: exportColumns, data: exportData });
@@ -458,7 +457,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     )},
     { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
-    { header: "PIC", accessor: "pic_id", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pic?.name || '-'}</span> },
+    { header: "PIC", accessor: "pics", sortable: false, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.map((p:any)=>p.name).join(', ') || '-'}</span> },
     { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },

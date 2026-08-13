@@ -63,7 +63,7 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
       where: { is_deleted: false },
       orderBy: { activity_date: 'desc' },
       take: 5,
-      include: { pic: true, sub_category: true }
+      include: { daily_activity_pics: { include: { pic: true } }, sub_category: true }
     }),
     prisma.grievance.findMany({
       where: {

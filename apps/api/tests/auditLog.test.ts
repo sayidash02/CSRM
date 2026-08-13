@@ -47,7 +47,7 @@ describe('Audit Logs API & Interceptor', () => {
       data: {
         category_id: cat.id,
         sub_category_id: subCat.id,
-        pic_id: pic.id,
+        daily_activity_pics: { create: [{ pic_id: pic.id }] },
         activity_date: new Date('2026-08-10'),
         institution_group: 'Initial Inst',
         activity: 'Initial Activity',

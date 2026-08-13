@@ -98,7 +98,7 @@ export class SyncService {
         grievance,
         lrps
       ] = await Promise.all([
-        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { pic: true, category: true, sub_category: true } }),
+        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true } }),
         prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false, date: dateRange } }),
         prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
         prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false, date_received: dateRange } }),
@@ -188,7 +188,7 @@ export class SyncService {
         cost: row.cost?.toString() || '0',
         description_result: row.description_result,
         document_link: this.hyperlink(row.document_link),
-        pic: row.pic?.name || '',
+        pic: row.daily_activity_pics?.map((p: any) => p.pic?.name).filter(Boolean).join(', ') || '',
         category: row.category?.name || '',
         sub_category: row.sub_category?.name || ''
       });

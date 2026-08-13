@@ -165,4 +165,41 @@ describe('PUT /api/daily-activities/:id', () => {
     expect(res.body.data.activity).toBe('Kunjungan Lapangan Updated');
     expect(res.body.data.cost).toBe('500000');
   });
+
+  it('Should record audit log when PICs change during update', async () => {
+    let newPic = await prisma.pics.findFirst({ where: { name: 'Adji K' } });
+    if (!newPic) {
+      newPic = await prisma.pics.create({ data: { name: 'Adji K' } });
+    }
+
+    const payload = {
+      activity_date: '2026-07-25',
+      activity: 'Kunjungan Audit PIC',
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString()
+    };
+    const createRes = await request(app).post('/api/daily-activities').send(payload);
+    const id = createRes.body.data.id;
+
+    const updatePayload = {
+      activity_date: '2026-07-25',
+      activity: 'Kunjungan Audit PIC',
+      pic_ids: [newPic.id.toString()],
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString()
+    };
+
+    const res = await request(app).put(`/api/daily-activities/${id}`).send(updatePayload);
+    expect(res.status).toBe(200);
+
+    const logRes = await request(app).get(`/api/audit-logs/daily_activities/${id}`);
+    expect(logRes.status).toBe(200);
+    const picLog = logRes.body.data.find((l: any) => l.changes?.pic_id);
+    expect(picLog).toBeDefined();
+    expect(typeof picLog.changes).toBe('object');
+    expect(picLog.changes.pic_id.old).toBe('Ziya Ramadhani');
+    expect(picLog.changes.pic_id.new).toBe('Adji K');
+  });
 });
+

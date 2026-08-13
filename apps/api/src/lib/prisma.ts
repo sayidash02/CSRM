@@ -29,7 +29,7 @@ const prisma = basePrisma.$extends({
             (basePrisma as any).audit_logs.create({
               data: {
                 entity_type: model,
-                entity_id: result.id,
+                entity_id: (result as any).id || BigInt(0),
                 action,
                 changes: diff ? (diff as any) : null,
               }

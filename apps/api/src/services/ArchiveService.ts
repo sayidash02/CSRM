@@ -25,7 +25,7 @@ export class ArchiveService {
       const [da, se, ti, pr, cp, gr, lrp] = await Promise.all([
         tx.daily_activities.findMany({
           where: { is_deleted: false, is_archived: false, activity_date: { gte: startDate, lte: endDate } },
-          include: { pic: true, category: true, sub_category: true }
+          include: { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true }
         }),
         tx.stakeholder_engagement.findMany({
           where: { is_deleted: false, is_archived: false, date: { gte: startDate, lte: endDate } }

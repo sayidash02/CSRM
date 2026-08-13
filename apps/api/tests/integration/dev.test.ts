@@ -49,7 +49,7 @@ describe('Dev Reset Controller (Non-Production)', () => {
         location: 'Loc',
         cost: 100,
         description_result: 'Desc',
-        pic_id: pic.id,
+        daily_activity_pics: { create: [{ pic_id: pic.id }] },
         category_id: category.id,
         sub_category_id: subCategory.id
       }

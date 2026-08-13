@@ -44,7 +44,7 @@ describe('Sync Flow', () => {
       data: {
         activity_date: new Date('2026-08-01'),
         activity: 'Sync Test 1',
-        pic_id: picId,
+        daily_activity_pics: { create: [{ pic_id: picId }] },
         category_id: catId,
         sub_category_id: subCatId
       }
@@ -72,7 +72,7 @@ describe('Sync Flow', () => {
       data: {
         activity_date: new Date('2026-08-02'),
         activity: 'Sync Test 2',
-        pic_id: picId,
+        daily_activity_pics: { create: [{ pic_id: picId }] },
         category_id: catId,
         sub_category_id: subCatId
       }

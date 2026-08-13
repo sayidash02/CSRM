@@ -1,13 +1,16 @@
 -- ============================================================
--- CRMS Database Schema — v2
+-- CRMS Database Schema — v3
 -- Catatan: ditulis dengan sintaks MySQL, gampang diadaptasi ke
 -- PostgreSQL/lainnya (ganti AUTO_INCREMENT -> SERIAL, dst)
 --
--- Perubahan dari v1: kolom tiap tabel modul disesuaikan supaya
--- PERSIS mengikuti kolom yang benar-benar ada di Excel yang
--- dipakai pegawai (CRS_Dept_Daily_Activities_2026.xlsx), bukan
--- lagi asumsi awal. Detail alasan tiap perubahan ada di
--- Arsitektur-Teknis-CRMS.md Bab 3.1 (#11 dst) dan Bab 8.
+-- Perubahan dari v2: PIC pada Daily Activities diubah dari
+-- single-value (kolom pic_id) menjadi MULTI-SELECT lewat tabel
+-- pivot many-to-many (daily_activity_pics). Alasan perubahan:
+-- laporan per-individu yang presisi jadi butuh setiap PIC
+-- tercatat sebagai baris terpisah, bukan digabung jadi satu
+-- entry string seperti "Ziya & Adji" di v2 — pendekatan lama
+-- itu tidak bisa dipecah otomatis untuk dihitung per orang.
+-- Tabel `pics` sendiri TIDAK berubah strukturnya dari v2.
 -- ============================================================
 
 -- ============================================================
@@ -22,11 +25,10 @@
 -- tetap konsisten antar baris — data historis menunjukkan nama
 -- yang sama sering ditulis beda-beda kalau dibiarkan teks bebas
 -- (mis. "Ziya" vs "Ziyadu", "Fadhil" vs "Pak. Fadhil" vs "Pak.FADHIL").
--- Kalau 1 aktivitas melibatkan beberapa orang sekaligus, pegawai
--- bisa membuat 1 entry PIC gabungan sendiri (mis. "Ziya & Adji")
--- sebagai satu opsi custom — sesuai kebiasaan yang sudah berjalan.
--- Bukan direlasikan many-to-many supaya tetap sederhana; gampang
--- diubah nanti kalau pegawai butuh laporan per-individu yang presisi.
+-- Sejak v3: kalau 1 aktivitas melibatkan beberapa orang sekaligus,
+-- pegawai memilih beberapa PIC langsung dari daftar (multi-select),
+-- disimpan lewat tabel pivot daily_activity_pics di bawah — bukan
+-- lagi lewat entry gabungan custom seperti "Ziya & Adji".
 CREATE TABLE pics (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL UNIQUE,
@@ -90,6 +92,11 @@ CREATE INDEX idx_stakeholder_deleted ON stakeholder_engagement(is_deleted);
 -- ============================================================
 -- 2. DAILY ACTIVITIES
 -- ============================================================
+-- Sejak v3: PIC dipindah dari kolom pic_id (single value) ke
+-- relasi many-to-many lewat tabel daily_activity_pics di bawah,
+-- supaya satu aktivitas bisa punya lebih dari satu PIC sekaligus
+-- (multi-select), masing-masing sebagai baris terpisah yang bisa
+-- dihitung/dilaporkan per individu.
 CREATE TABLE daily_activities (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   activity_date DATE NOT NULL,
@@ -98,24 +105,36 @@ CREATE TABLE daily_activities (
   address VARCHAR(255),
   focus VARCHAR(255),                     -- kolom "Fokus": teks bebas, tidak ada dropdown di Excel asli
   location VARCHAR(255),
-  cost DECIMAL(15,2),                     -- kolom "Biaya" — baru ditambahkan, ada di template Excel 2026 tapi kelewat di v1
+  cost DECIMAL(15,2),                     -- kolom "Biaya"
   description_result TEXT,                -- gabungan "Keterangan" + "Hasil" — dikonfirmasi ke pegawai, memang boleh disatukan
   document_link TEXT,             -- kolom "link" — cuma 1 kolom link di Excel, bukan 2
-  pic_id BIGINT NOT NULL,
   category_id BIGINT NOT NULL,
   sub_category_id BIGINT NOT NULL,
   is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (pic_id) REFERENCES pics(id),
   FOREIGN KEY (category_id) REFERENCES categories(id),
   FOREIGN KEY (sub_category_id) REFERENCES sub_categories(id)
 );
 CREATE INDEX idx_daily_activities_date ON daily_activities(activity_date);
 CREATE INDEX idx_daily_activities_deleted ON daily_activities(is_deleted);
-CREATE INDEX idx_daily_activities_pic ON daily_activities(pic_id);
 CREATE INDEX idx_daily_activities_category ON daily_activities(category_id);
 CREATE INDEX idx_daily_activities_sub_category ON daily_activities(sub_category_id);
+
+-- Tabel pivot: satu daily_activity bisa punya banyak PIC, dan
+-- satu PIC bisa terlibat di banyak daily_activity (many-to-many).
+-- composite primary key (activity_id, pic_id) otomatis mencegah
+-- PIC yang sama tercatat dobel pada aktivitas yang sama.
+CREATE TABLE daily_activity_pics (
+  activity_id BIGINT NOT NULL,
+  pic_id BIGINT NOT NULL,
+  PRIMARY KEY (activity_id, pic_id),
+  FOREIGN KEY (activity_id) REFERENCES daily_activities(id) ON DELETE CASCADE,
+  FOREIGN KEY (pic_id) REFERENCES pics(id)
+);
+CREATE INDEX idx_daily_activity_pics_pic ON daily_activity_pics(pic_id);
+-- Index untuk activity_id sudah otomatis ter-cover oleh composite
+-- primary key di atas (activity_id sebagai kolom pertama).
 
 
 -- ============================================================
@@ -243,8 +262,7 @@ CREATE INDEX idx_csr_deleted ON csr_projects(is_deleted);
 -- community development / pemulihan mata pencaharian masyarakat
 -- sekitar perusahaan, kolomnya hanya hyperlink SharePoint yang
 -- mengarah ke file2 docx/pdf/gambar dsb." Sengaja dibuat SANGAT
--- minim, jauh lebih sederhana dari desain v1 (yang meniru CSR
--- Projects). `program` ditambahkan sebagai satu-satunya field di
+-- minim. `program` ditambahkan sebagai satu-satunya field di
 -- luar permintaan literal pegawai — supaya tiap baris di daftar
 -- masih bisa dibedakan/dicari (baris isinya cuma link mentah
 -- tanpa label akan sulit ditelusuri). Kalau ternyata pegawai
@@ -274,3 +292,43 @@ CREATE TABLE sync_log (
 -- Query "ada berapa data belum di-sync" dari aplikasi:
 --   SELECT last successful synced_at, lalu COUNT(*) WHERE created_at > synced_at
 --   di ketujuh tabel modul (gabungkan dgn UNION ALL atau loop per tabel)
+
+
+-- ============================================================
+-- CONTOH QUERY — Daily Activities dengan multi-PIC
+-- ============================================================
+
+-- Ambil daftar aktivitas beserta semua nama PIC-nya digabung
+-- jadi satu string (mirip tampilan lama), pakai GROUP_CONCAT
+-- (MySQL) / STRING_AGG (PostgreSQL):
+--
+-- SELECT
+--   da.id,
+--   da.activity_date,
+--   da.activity,
+--   GROUP_CONCAT(p.name ORDER BY p.name SEPARATOR ', ') AS pic_names
+-- FROM daily_activities da
+-- LEFT JOIN daily_activity_pics dap ON dap.activity_id = da.id
+-- LEFT JOIN pics p ON p.id = dap.pic_id
+-- WHERE da.is_deleted = FALSE
+-- GROUP BY da.id;
+
+-- Laporan jumlah aktivitas per PIC (per individu, akurat karena
+-- setiap PIC punya baris sendiri di tabel pivot):
+--
+-- SELECT p.name, COUNT(*) AS total_aktivitas
+-- FROM daily_activity_pics dap
+-- JOIN pics p ON p.id = dap.pic_id
+-- JOIN daily_activities da ON da.id = dap.activity_id
+-- WHERE da.is_deleted = FALSE
+-- GROUP BY p.name
+-- ORDER BY total_aktivitas DESC;
+
+-- Insert 1 aktivitas dengan 2 PIC sekaligus:
+--
+-- INSERT INTO daily_activities (activity_date, activity, category_id, sub_category_id)
+-- VALUES ('2026-04-13', 'Contoh aktivitas', 1, 1);
+-- SET @new_id = LAST_INSERT_ID();
+-- INSERT INTO daily_activity_pics (activity_id, pic_id) VALUES
+--   (@new_id, 3),  -- id PIC 'Ziya'
+--   (@new_id, 7);  -- id PIC 'Adji'

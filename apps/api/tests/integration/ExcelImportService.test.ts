@@ -32,7 +32,7 @@ describe('ExcelImportService', () => {
     expect(result.validRows[0]!.activity).toBe('Test Act');
     expect(result.validRows[0]!.category_id).toBe('1');
     expect(result.validRows[0]!.sub_category_id).toBe('1');
-    expect(result.validRows[0]!.pic_id).toBe('1');
+    expect(result.validRows[0]!.pic_ids[0]).toBe('1');
   });
 
   it('should return errorRows length 1 when an unknown PIC is supplied', async () => {
