@@ -29,6 +29,7 @@ export interface DailyActivity {
   sub_category_id: string | number;
   description_result: string;
   document_link: string | null;
+  updated_at?: string;
   // Included relations from backend
   pics?: any[];
   pic?: any;
@@ -461,6 +462,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
     { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Terakhir Diubah", accessor: "updated_at", sortable: true, render: (a) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{a.updated_at ? formatDate(a.updated_at) : '—'}</span> },
     { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span> },
     { header: "", render: (a) => showDeleted ? (
       <div className="flex items-center justify-end">
