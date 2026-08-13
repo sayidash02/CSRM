@@ -3,7 +3,6 @@ import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
-import { StakeholderCombobox } from "../../components/ui/StakeholderCombobox";
 import { useStakeholderEngagements } from "../../hooks/useStakeholders";
 import { PicManagementModal } from './PicManagementModal';
 import { ImportExcelModal } from "./ImportExcelModal";
@@ -200,13 +199,12 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
         <Field label="Tanggal Kegiatan" required><input type="date" value={String(f.activity_date).split('T')[0]} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
         <div className="col-span-2"><Field label="Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Deskripsi kegiatan" className={inputCls} /></Field></div>
         <Field label="Stakeholder / Institusi">
-          <StakeholderCombobox
-            value={f.stakeholder_id}
-            onChange={(stId, stName) => {
-              const next = { ...f, stakeholder_id: stId, institution_group: stName };
-              setF(next);
-              if (!initial) onDraftChange?.(next as any);
-            }}
+          <input
+            type="text"
+            value={f.institution_group}
+            onChange={e => set("institution_group", e.target.value)}
+            placeholder="Nama institusi / stakeholder"
+            className={inputCls}
           />
         </Field>
         <Field label="Stakeholder Engagement (Opsional)">

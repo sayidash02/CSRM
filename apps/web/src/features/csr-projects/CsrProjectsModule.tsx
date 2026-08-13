@@ -129,13 +129,6 @@ function CsrForm({
   onSave: (d: Omit<CsrProject, "id">) => void;
   showToast?: (msg: string, type?: "success" | "error" | "info") => void;
 }) {
-  const [grievances, setGrievances] = useState<any[]>([]);
-
-  useEffect(() => {
-    apiClient.get('/grievance')
-      .then(res => setGrievances(res.data.data || []))
-      .catch(err => console.error("Gagal memuat daftar grievance:", err));
-  }, []);
 
   const [f, setF] = useState(
     initial
@@ -185,7 +178,6 @@ function CsrForm({
     onSave({
       ...f,
       project_year: Number(f.project_year),
-      grievance_id: f.grievance_id ? f.grievance_id : null,
       budget: f.budget ? Number(f.budget) : null,
       activity: f.activity || null,
       type_of_activity: f.type_of_activity || null,
@@ -215,16 +207,6 @@ function CsrForm({
           <Field label="Periode Pelaksanaan"><input type="text" value={f.implementation_period} onChange={e => set("implementation_period", e.target.value)} placeholder="Jan – Des 2026" className={inputCls} /></Field>
         </div>
         <Field label="Tujuan"><textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} /></Field>
-        <Field label="Terkait Grievance yang mana?">
-          <select value={f.grievance_id} onChange={e => set("grievance_id", e.target.value)} className={inputCls}>
-            <option value="">— Tidak terkait grievance —</option>
-            {grievances.map((g: any) => (
-              <option key={g.id} value={g.id}>
-                [{g.register_no}] {g.complainant_name} - {g.description ? g.description.substring(0, 35) : ''}
-              </option>
-            ))}
-          </select>
-        </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Planning</option><option>On Going</option><option>Completed</option><option>Cancelled</option></select></Field>
           <Field label="Realisasi"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>

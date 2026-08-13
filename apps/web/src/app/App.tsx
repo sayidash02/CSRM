@@ -200,36 +200,7 @@ function SyncModal({ onClose, totalUnsynced, onSuccess, activeYear }: { onClose:
 
 export default function App() {
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
-  const [selectedStakeholderId, setSelectedStakeholderId] = useState<string | null>(() => {
-    if (window.location.hash.startsWith('#/stakeholders/')) {
-      return window.location.hash.replace('#/stakeholders/', '');
-    }
-    return null;
-  });
 
-  useEffect(() => {
-    const checkHash = () => {
-      if (window.location.hash.startsWith('#/stakeholders/')) {
-        const id = window.location.hash.replace('#/stakeholders/', '');
-        setActiveModule("stakeholder");
-        setSelectedStakeholderId(id);
-      }
-    };
-    checkHash();
-    window.addEventListener('hashchange', checkHash);
-    return () => window.removeEventListener('hashchange', checkHash);
-  }, []);
-
-  const handleSelectStakeholder360 = useCallback((id: string | null) => {
-    setSelectedStakeholderId(id);
-    if (id) {
-      window.location.hash = `#/stakeholders/${id}`;
-    } else {
-      if (window.location.hash.startsWith('#/stakeholders/')) {
-        window.location.hash = '';
-      }
-    }
-  }, []);
   const [activeYear, setActiveYear] = useState<string>(
     () => localStorage.getItem('crms_active_year') ?? String(new Date().getFullYear())
   );
@@ -357,15 +328,7 @@ export default function App() {
 
         {activeModule === "dashboard" && <DashboardModule stats={dashboardStats} onNav={setActiveModule} />}
         {activeModule === "daily" && <DailyActivitiesModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
-        {activeModule === "stakeholder" && (
-          <StakeholdersModule
-            activeYear={activeYear}
-            onExport={handleExport}
-            showToast={showToast}
-            initialStakeholderId={selectedStakeholderId}
-            onSelectStakeholder360={handleSelectStakeholder360}
-          />
-        )}
+        {activeModule === "stakeholder" && <StakeholdersModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
         {activeModule === "topissues" && <TopIssuesModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
         {activeModule === "proposals" && <ProposalsModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
         {activeModule === "csr" && <CsrProjectsModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
