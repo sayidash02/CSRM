@@ -236,12 +236,12 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
           entity_type: 'daily_activities',
           entity_id: BigInt(id as string),
           action: 'UPDATE',
-          changes: JSON.stringify({
+          changes: {
             pic_id: {
               old: oldPicNames,
               new: newPicNames
             }
-          })
+          }
         }
       });
     }
@@ -295,8 +295,8 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
   const result = await prisma.$transaction(async (tx) => {
     let count = 0;
     for (const r of rows) {
-      const picIds = Array.isArray(r.pic_ids) && r.pic_ids.length > 0 ? r.pic_ids : (r.pic_id ? [r.pic_id] : []);
-      if (!r.category_id || !r.sub_category_id || picIds.length === 0) {
+      const pIds = Array.isArray(r.pic_ids) ? r.pic_ids : (r.pic_id ? [r.pic_id] : []);
+      if (!r.category_id || !r.sub_category_id || pIds.length === 0) {
         const err: any = new Error('Field referensi (category_id, sub_category_id, pic_ids) wajib diisi untuk setiap baris');
         err.status = 400;
         throw err;
@@ -311,9 +311,7 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
           category_id: BigInt(r.category_id),
           sub_category_id: BigInt(r.sub_category_id),
           daily_activity_pics: {
-            create: picIds.map((id: any) => ({
-              pic_id: BigInt(id)
-            }))
+            create: pIds.map((id: any) => ({ pic_id: BigInt(id) }))
           },
           focus: String(r.focus || ''),
           location: String(r.location || ''),
