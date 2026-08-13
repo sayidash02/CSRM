@@ -22,19 +22,10 @@ const upload = multer({
 });
 
 export const createDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, category_id, sub_category_id } = req.body;
 
-  if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
+  if (!activity_date || !activity || !pic_ids || !Array.isArray(pic_ids) || pic_ids.length === 0 || !category_id || !sub_category_id) {
     res.status(400).json({ error: 'Missing required fields' });
-    return;
-  }
-
-  const pic = await prisma.pics.findUnique({
-    where: { id: BigInt(pic_id) }
-  });
-  
-  if (!pic) {
-    res.status(400).json({ error: 'Invalid pic_id' });
     return;
   }
 
@@ -49,9 +40,11 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
       cost: cost !== undefined && cost !== null ? Number(cost) : null,
       description_result,
       document_link,
-      pic_id: BigInt(pic_id),
       category_id: BigInt(category_id),
-      sub_category_id: BigInt(sub_category_id)
+      sub_category_id: BigInt(sub_category_id),
+      daily_activity_pics: {
+        create: pic_ids.map((id: any) => ({ pic_id: BigInt(id) }))
+      }
     }
   });
 
@@ -124,18 +117,22 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       case 'pic':
       case 'pic_name':
       case 'pic.name':
-        orderByConfig = { pic: { name: dir } };
+        orderByConfig = { activity_date: 'desc' };
         break;
       default:
         orderByConfig = { activity_date: 'desc' };
     }
   }
 
-  const include = { pic: true, category: true, sub_category: true };
+  const include = { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true };
 
   if (no_paginate === 'true') {
     const activities = await prisma.daily_activities.findMany({ where, include, orderBy: orderByConfig });
-    res.status(200).json({ data: activities });
+    const formattedActivities = activities.map((a: any) => ({
+      ...a,
+      pics: a.daily_activity_pics?.map((dap: any) => dap.pic) || []
+    }));
+    res.status(200).json({ data: formattedActivities });
     return;
   }
 
@@ -154,8 +151,13 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     prisma.daily_activities.count({ where })
   ]);
   
+  const formattedActivities = activities.map((a: any) => ({
+    ...a,
+    pics: a.daily_activity_pics?.map((dap: any) => dap.pic) || []
+  }));
+
   res.status(200).json({ 
-    data: activities,
+    data: formattedActivities,
     meta: {
       page: pageNum,
       limit: limitNum,
