@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw, History } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
@@ -11,6 +11,7 @@ import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter";
+import { AuditHistoryDrawer } from "../../components/ui/AuditHistoryDrawer";
 
 // Types
 export interface DailyActivity {
@@ -289,6 +290,8 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
   const [toRestore, setToRestore] = useState<DailyActivity | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
 
   // Debounce search & filters trigger fetchData
   useEffect(() => {
@@ -471,6 +474,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => { setSelectedHistoryId(a.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={12} /></button>
         <button onClick={() => setEditing(a)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(a)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
       </div>
@@ -546,6 +550,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         />
       )}
       {toRestore && <RestoreConfirmModal label={toRestore.activity || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="daily_activities" entityId={selectedHistoryId} />
     </div>
   );
 }
