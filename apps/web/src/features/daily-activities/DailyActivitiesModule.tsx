@@ -179,6 +179,7 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
     }
     onSave({
       ...f,
+      pic_id: f.pic_ids && f.pic_ids.length > 0 ? f.pic_ids[0] : null,
       stakeholder_id: f.stakeholder_id || null,
       cost: Number(f.cost) || 0,
       document_link: f.document_link || null
