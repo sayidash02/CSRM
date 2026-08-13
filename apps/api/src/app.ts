@@ -17,7 +17,6 @@ import importRoutes from './routes/import';
 import archiveRoutes from './routes/archive';
 import yearsRouter from './routes/years';
 import devRoutes from './routes/dev';
-import stakeholderMasterRouter from './routes/stakeholder.routes';
 import { errorHandler } from './lib/errorHandler';
 
 (BigInt.prototype as any).toJSON = function () {
@@ -32,7 +31,6 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api/daily-activities', dailyActivitiesRouter);
 app.use('/api/references', referencesRouter);
 app.use('/api/stakeholders', stakeholdersRouter);
-app.use('/api/master-stakeholders', stakeholderMasterRouter);
 app.use('/api/top-issues', topIssuesRouter);
 app.use('/api/proposals', proposalsRouter);
 app.use('/api/csr-projects', csrProjectsRouter);

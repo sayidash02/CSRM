@@ -15,8 +15,7 @@ export const createCsrProject = catchAsync(async (req: Request, res: Response): 
     budget, 
     implementation_period, 
     documentation_image, 
-    document,
-    grievance_id
+    document
   } = req.body;
 
   if (!project_year || isNaN(Number(project_year)) || !program) {
@@ -37,8 +36,7 @@ export const createCsrProject = catchAsync(async (req: Request, res: Response): 
       budget,
       implementation_period,
       documentation_image,
-      document,
-      grievance_id: grievance_id ? BigInt(grievance_id) : null
+      document
     }
   });
 
@@ -54,8 +52,7 @@ export const getCsrProjects = catchAsync(async (req: Request, res: Response): Pr
     where.project_year = Number(y);
   }
   const projects = await prisma.csr_projects.findMany({
-    where,
-    include: { grievance: true }
+    where
   });
   
   res.status(200).json({ data: projects });
@@ -75,8 +72,7 @@ export const updateCsrProject = catchAsync(async (req: Request, res: Response): 
     budget, 
     implementation_period, 
     documentation_image, 
-    document,
-    grievance_id
+    document
   } = req.body;
 
   if (!project_year || !program) {
@@ -98,8 +94,7 @@ export const updateCsrProject = catchAsync(async (req: Request, res: Response): 
       budget,
       implementation_period,
       documentation_image,
-      document,
-      grievance_id: grievance_id ? BigInt(grievance_id) : null
+      document
     }
   });
 

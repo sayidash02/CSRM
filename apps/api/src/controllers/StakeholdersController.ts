@@ -3,36 +3,18 @@ import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 
 export const createStakeholder = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { stakeholder, stakeholder_id, date, venue, concern_issue, document_link } = req.body;
+  const { stakeholder, date, venue, concern_issue, document_link } = req.body;
 
-  let sId: bigint | null = stakeholder_id ? BigInt(stakeholder_id) : null;
-  let sName: string | null = null;
-
-  if (!sId && typeof stakeholder === 'string') {
-    const trimmed = stakeholder.trim();
-    if (!trimmed) {
-      res.status(400).json({ error: 'Missing required field: stakeholder' });
-      return;
-    }
-    let st = await prisma.stakeholders.findFirst({ where: { name: trimmed, is_deleted: false } });
-    if (!st) {
-      st = await prisma.stakeholders.create({ data: { name: trimmed } });
-    }
-    sId = st.id;
-    sName = st.name;
-  } else if (!sId) {
+  if (!stakeholder || (typeof stakeholder === 'string' && !stakeholder.trim())) {
     res.status(400).json({ error: 'Missing required field: stakeholder' });
     return;
   }
 
-  if (!sName && sId) {
-    const st = await prisma.stakeholders.findUnique({ where: { id: sId } });
-    sName = st ? st.name : null;
-  }
+  const sName = typeof stakeholder === 'string' ? stakeholder.trim() : stakeholder;
 
   const result = await prisma.stakeholder_engagement.create({
     data: {
-      stakeholder_id: sId,
+      stakeholder: sName,
       date: date ? new Date(date) : null,
       venue,
       concern_issue,
@@ -41,10 +23,7 @@ export const createStakeholder = catchAsync(async (req: Request, res: Response):
   });
 
   res.status(201).json({
-    data: {
-      ...result,
-      stakeholder: sName
-    }
+    data: result
   });
 });
 
@@ -60,16 +39,10 @@ export const getStakeholders = catchAsync(async (req: Request, res: Response): P
     };
   }
   const stakeholders = await prisma.stakeholder_engagement.findMany({
-    where,
-    include: { stakeholder: true }
+    where
   });
-
-  const formatted = stakeholders.map((item) => ({
-    ...item,
-    stakeholder: item.stakeholder?.name || null
-  }));
   
-  res.status(200).json({ data: formatted });
+  res.status(200).json({ data: stakeholders });
 });
 
 export const deleteStakeholder = catchAsync(async (req: Request, res: Response): Promise<void> => {
@@ -83,44 +56,26 @@ export const deleteStakeholder = catchAsync(async (req: Request, res: Response):
 
 export const updateStakeholder = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { stakeholder, stakeholder_id, date, venue, concern_issue, document_link } = req.body;
+  const { stakeholder, date, venue, concern_issue, document_link } = req.body;
 
-  let sId: bigint | null = stakeholder_id ? BigInt(stakeholder_id) : null;
-  let sName: string | null = null;
+  const dataToUpdate: any = {
+    date: date ? new Date(date) : null,
+    venue,
+    concern_issue,
+    document_link
+  };
 
-  if (!sId && typeof stakeholder === 'string') {
-    const trimmed = stakeholder.trim();
-    if (trimmed) {
-      let st = await prisma.stakeholders.findFirst({ where: { name: trimmed, is_deleted: false } });
-      if (!st) {
-        st = await prisma.stakeholders.create({ data: { name: trimmed } });
-      }
-      sId = st.id;
-      sName = st.name;
-    }
-  }
-
-  if (!sName && sId) {
-    const st = await prisma.stakeholders.findUnique({ where: { id: sId } });
-    sName = st ? st.name : null;
+  if (stakeholder !== undefined) {
+    dataToUpdate.stakeholder = typeof stakeholder === 'string' ? stakeholder.trim() : stakeholder;
   }
 
   const result = await prisma.stakeholder_engagement.update({
     where: { id: BigInt(id as string) },
-    data: {
-      stakeholder_id: sId,
-      date: date ? new Date(date) : null,
-      venue,
-      concern_issue,
-      document_link
-    }
+    data: dataToUpdate
   });
 
   res.status(200).json({
-    data: {
-      ...result,
-      stakeholder: sName
-    }
+    data: result
   });
 });
 

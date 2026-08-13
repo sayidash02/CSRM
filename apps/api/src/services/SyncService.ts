@@ -98,8 +98,8 @@ export class SyncService {
         grievance,
         lrps
       ] = await Promise.all([
-        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { pic: true, category: true, sub_category: true, stakeholder: true } }),
-        prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false, date: dateRange }, include: { stakeholder: true } }),
+        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { pic: true, category: true, sub_category: true } }),
+        prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false, date: dateRange } }),
         prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
         prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false, date_received: dateRange } }),
         prisma.csr_projects.findMany({ where: { is_deleted: false, is_archived: false, project_year: syncYear } }),
@@ -181,7 +181,7 @@ export class SyncService {
         no: idx + 1,
         activity_date: this.formatDate(row.activity_date),
         activity: row.activity,
-        institution_group: row.stakeholder?.name || row.institution_group || '',
+        institution_group: row.institution_group || '',
         address: row.address,
         focus: row.focus,
         location: row.location,
@@ -208,7 +208,7 @@ export class SyncService {
     data.forEach((row, idx) => {
       sheet.addRow({
         no: idx + 1,
-        stakeholder: row.stakeholder?.name || (typeof row.stakeholder === 'string' ? row.stakeholder : ''),
+        stakeholder: row.stakeholder || '',
         date_venue: row.date ? `${this.formatDate(row.date)}\n${row.venue || ''}`.trim() : (row.venue || ''),
         concern_issue: row.concern_issue,
         document_link: this.hyperlink(row.document_link)

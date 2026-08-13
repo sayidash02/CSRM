@@ -22,7 +22,7 @@ const upload = multer({
 });
 
 export const createDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { activity_date, activity, stakeholder_id, stakeholder_engagement_id, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
 
   if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
     res.status(400).json({ error: 'Missing required fields' });
@@ -42,8 +42,7 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
     data: {
       activity_date: new Date(activity_date),
       activity,
-      stakeholder_id: stakeholder_id ? BigInt(stakeholder_id) : null,
-      stakeholder_engagement_id: stakeholder_engagement_id ? BigInt(stakeholder_engagement_id) : null,
+      institution_group: institution_group ?? req.body.stakeholder ?? null,
       address,
       focus,
       location,
@@ -109,7 +108,7 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       case 'stakeholder':
       case 'stakeholder_name':
       case 'stakeholder.name':
-        orderByConfig = { stakeholder: { name: dir } };
+        orderByConfig = { institution_group: dir };
         break;
       case 'category':
       case 'category_name':
@@ -132,7 +131,7 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     }
   }
 
-  const include = { pic: true, category: true, sub_category: true, stakeholder: true, stakeholder_engagement: true };
+  const include = { pic: true, category: true, sub_category: true };
 
   if (no_paginate === 'true') {
     const activities = await prisma.daily_activities.findMany({ where, include, orderBy: orderByConfig });
@@ -186,7 +185,7 @@ export const restoreDailyActivity = catchAsync(async (req: Request, res: Respons
 
 export const updateDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { activity_date, activity, stakeholder_id, stakeholder_engagement_id, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
 
   if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
     res.status(400).json({ error: 'Missing required fields' });
@@ -207,8 +206,7 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
     data: {
       activity_date: new Date(activity_date),
       activity,
-      stakeholder_id: stakeholder_id ? BigInt(stakeholder_id) : null,
-      stakeholder_engagement_id: stakeholder_engagement_id ? BigInt(stakeholder_engagement_id) : null,
+      institution_group: institution_group ?? req.body.stakeholder ?? null,
       address,
       focus,
       location,
@@ -259,8 +257,7 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
         data: {
           activity_date: new Date(r.activity_date),
           activity: String(r.activity || ''),
-          stakeholder_id: r.stakeholder_id ? BigInt(r.stakeholder_id) : null,
-          stakeholder_engagement_id: r.stakeholder_engagement_id ? BigInt(r.stakeholder_engagement_id) : null,
+          institution_group: r.institution_group ? String(r.institution_group) : null,
           address: String(r.address || ''),
           category_id: BigInt(r.category_id),
           sub_category_id: BigInt(r.sub_category_id),
