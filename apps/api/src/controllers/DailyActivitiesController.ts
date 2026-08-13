@@ -22,10 +22,22 @@ const upload = multer({
 });
 
 export const createDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
 
-  if (!activity_date || !activity || !pic_ids || !Array.isArray(pic_ids) || pic_ids.length === 0 || !category_id || !sub_category_id) {
+  const rawPicIds = pic_ids || (pic_id ? [pic_id] : []);
+  const resolvedPicIds = Array.isArray(rawPicIds) ? rawPicIds : [rawPicIds];
+
+  if (!activity_date || !activity || resolvedPicIds.length === 0 || !category_id || !sub_category_id) {
     res.status(400).json({ error: 'Missing required fields' });
+    return;
+  }
+
+  const validPics = await prisma.pics.findMany({
+    where: { id: { in: resolvedPicIds.map((id: any) => BigInt(id)) } }
+  });
+  
+  if (validPics.length !== resolvedPicIds.length) {
+    res.status(400).json({ error: 'Invalid pic_ids' });
     return;
   }
 
@@ -43,7 +55,9 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
       category_id: BigInt(category_id),
       sub_category_id: BigInt(sub_category_id),
       daily_activity_pics: {
-        create: pic_ids.map((id: any) => ({ pic_id: BigInt(id) }))
+        create: resolvedPicIds.map((id: any) => ({
+          pic_id: BigInt(id)
+        }))
       }
     }
   });
@@ -117,6 +131,7 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       case 'pic':
       case 'pic_name':
       case 'pic.name':
+        // Cannot order by a many-to-many relation, fallback to default
         orderByConfig = { activity_date: 'desc' };
         break;
       default:
@@ -187,20 +202,49 @@ export const restoreDailyActivity = catchAsync(async (req: Request, res: Respons
 
 export const updateDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
 
-  if (!activity_date || !activity || !pic_id || !category_id || !sub_category_id) {
+  if (!activity_date || !activity || (!pic_ids && !pic_id) || !category_id || !sub_category_id) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
 
-  const pic = await prisma.pics.findUnique({
-    where: { id: BigInt(pic_id) }
+  const rawPicIds = pic_ids || (pic_id ? [pic_id] : []);
+  const normalizedPicIds = Array.isArray(rawPicIds) ? rawPicIds : [rawPicIds];
+
+  const oldActivity = await prisma.daily_activities.findUnique({
+    where: { id: BigInt(id as string) },
+    include: { daily_activity_pics: { include: { pic: true } } }
   });
-  
-  if (!pic) {
-    res.status(400).json({ error: 'Invalid pic_id' });
+
+  const newPics = await prisma.pics.findMany({
+    where: { id: { in: normalizedPicIds.map((pid: any) => BigInt(pid)) } }
+  });
+
+  if (newPics.length !== normalizedPicIds.length) {
+    res.status(400).json({ error: 'Invalid pic_ids' });
     return;
+  }
+
+  if (oldActivity) {
+    const oldPicNames = oldActivity.daily_activity_pics.map(dap => dap.pic.name).sort().join(', ');
+    const newPicNames = newPics.map(p => p.name).sort().join(', ');
+
+    if (oldPicNames !== newPicNames) {
+      await prisma.audit_logs.create({
+        data: {
+          entity_type: 'daily_activities',
+          entity_id: BigInt(id as string),
+          action: 'UPDATE',
+          changes: JSON.stringify({
+            pic_id: {
+              old: oldPicNames,
+              new: newPicNames
+            }
+          })
+        }
+      });
+    }
   }
 
   const result = await prisma.daily_activities.update({
@@ -215,9 +259,12 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
       cost: cost !== undefined && cost !== null ? Number(cost) : null,
       description_result,
       document_link,
-      pic_id: BigInt(pic_id),
       category_id: BigInt(category_id),
-      sub_category_id: BigInt(sub_category_id)
+      sub_category_id: BigInt(sub_category_id),
+      daily_activity_pics: {
+        deleteMany: {},
+        create: normalizedPicIds.map((pid: any) => ({ pic_id: BigInt(pid) }))
+      }
     }
   });
 
@@ -248,9 +295,9 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
   const result = await prisma.$transaction(async (tx) => {
     let count = 0;
     for (const r of rows) {
-      const picId = r.pic_id || (Array.isArray(r.pic_ids) ? r.pic_ids[0] : null);
-      if (!r.category_id || !r.sub_category_id || !picId) {
-        const err: any = new Error('Field referensi (category_id, sub_category_id, pic_id) wajib diisi untuk setiap baris');
+      const picIds = Array.isArray(r.pic_ids) && r.pic_ids.length > 0 ? r.pic_ids : (r.pic_id ? [r.pic_id] : []);
+      if (!r.category_id || !r.sub_category_id || picIds.length === 0) {
+        const err: any = new Error('Field referensi (category_id, sub_category_id, pic_ids) wajib diisi untuk setiap baris');
         err.status = 400;
         throw err;
       }
@@ -263,7 +310,11 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
           address: String(r.address || ''),
           category_id: BigInt(r.category_id),
           sub_category_id: BigInt(r.sub_category_id),
-          pic_id: BigInt(picId),
+          daily_activity_pics: {
+            create: picIds.map((id: any) => ({
+              pic_id: BigInt(id)
+            }))
+          },
           focus: String(r.focus || ''),
           location: String(r.location || ''),
           cost: Number(r.cost) || 0,
