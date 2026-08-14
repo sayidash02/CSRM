@@ -198,8 +198,16 @@ function isRowIdentical(row1: ExcelJS.Row, row2: ExcelJS.Row): boolean {
 function detectSheetHeader(worksheet: ExcelJS.Worksheet): { sheetType: keyof ImportPreviewSummary; headerRowIndex: number } | null {
   const sheetNameLower = worksheet.name.toLowerCase().trim();
 
-  // Ignore sheets that are typically raw dumps, pivot tables, or references
-  if (['raw', 'master', 'reference', 'sheet1', 'sheet2', 'sheet3', 'data'].includes(sheetNameLower) || sheetNameLower.startsWith('raw ')) {
+  // Ignore sheets that are typically raw dumps, pivot tables, templates, master data, or references
+  if (
+    ['raw', 'master', 'reference', 'sheet1', 'sheet2', 'sheet3', 'data'].includes(sheetNameLower) ||
+    sheetNameLower.startsWith('raw') ||
+    sheetNameLower.includes('master') ||
+    sheetNameLower.includes('jangan dihapus') ||
+    sheetNameLower.includes('reference') ||
+    sheetNameLower.includes('template') ||
+    sheetNameLower.includes('panduan')
+  ) {
     return null;
   }
 
@@ -611,7 +619,12 @@ export class ExcelImportService {
           if (!isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
-          let registration_no = regCol !== -1 ? extractCellString(row.getCell(regCol).value) : '';
+          const rawInst = instCol !== -1 ? extractCellString(row.getCell(instCol).value).trim() : '';
+          const rawPropDesc = descCol !== -1 ? extractCellString(row.getCell(descCol).value).trim() : '';
+          const rawPropReg = regCol !== -1 ? extractCellString(row.getCell(regCol).value).trim() : '';
+          if (!rawInst && !rawPropDesc && !rawPropReg) continue;
+
+          let registration_no = rawPropReg;
           if (!registration_no || usedProposalRegNos.has(registration_no.toLowerCase())) {
             registration_no = `PROP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
           }
@@ -619,7 +632,7 @@ export class ExcelImportService {
           usedProposalRegNos.add(registration_no.toLowerCase());
 
           const date_received = dateCol !== -1 && row.getCell(dateCol).value ? (parseCellDate(row.getCell(dateCol).value) || new Date()) : new Date();
-          const institution = instCol !== -1 ? truncStr(extractCellString(row.getCell(instCol).value), 255, 'Umum') : 'Umum';
+          const institution = truncStr(rawInst, 255, 'Umum');
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
           const proposal_description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
           const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Accept') : 'Accept';
@@ -705,7 +718,12 @@ export class ExcelImportService {
           if (!isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
-          let register_no = regCol !== -1 ? extractCellString(row.getCell(regCol).value) : '';
+          const rawCompName = compCol !== -1 ? extractCellString(row.getCell(compCol).value).trim() : '';
+          const rawGrievanceDesc = descCol !== -1 ? extractCellString(row.getCell(descCol).value).trim() : '';
+          const rawGrievanceReg = regCol !== -1 ? extractCellString(row.getCell(regCol).value).trim() : '';
+          if (!rawCompName && !rawGrievanceDesc && !rawGrievanceReg) continue;
+
+          let register_no = rawGrievanceReg;
           if (!register_no || usedGrievanceRegNos.has(register_no.toLowerCase())) {
             register_no = `GRV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
           }
@@ -713,7 +731,7 @@ export class ExcelImportService {
           usedGrievanceRegNos.add(register_no.toLowerCase());
 
           const log_date = dateCol !== -1 && row.getCell(dateCol).value ? (parseCellDate(row.getCell(dateCol).value) || new Date()) : new Date();
-          const complainant_name = compCol !== -1 ? truncStr(extractCellString(row.getCell(compCol).value), 255, 'Anonim') : 'Anonim';
+          const complainant_name = truncStr(rawCompName, 255, 'Anonim');
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
           const phone = phoneCol !== -1 ? trunc(extractCellString(row.getCell(phoneCol).value), 30) : null;
           const category = catCol !== -1 ? trunc(extractCellString(row.getCell(catCol).value), 100) : null;
