@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
+import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 
 export interface Grievance {
   id: number | string;
@@ -285,6 +286,8 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const [editing, setEditing] = useState<Grievance | null>(null);
   const [toDelete, setToDelete] = useState<Grievance | null>(null);
   const [toRestore, setToRestore] = useState<Grievance | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
   const [addDraft, setAddDraft] = useState({ ...emptyGrievanceDraft });
   
   const nextRegNo = `GRV-2026-${String(items.length + 1).padStart(4, "0")}`;
@@ -336,6 +339,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => { setSelectedHistoryId(g.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={13} /></button>
         <button onClick={() => setEditing(g)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
         <button onClick={() => setToDelete(g)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
       </div>
@@ -382,6 +386,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.register_no} — ${toDelete.complainant_name}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.complainant_name); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={toRestore.complainant_name || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="grievance" entityId={selectedHistoryId} />
     </div>
   );
 }

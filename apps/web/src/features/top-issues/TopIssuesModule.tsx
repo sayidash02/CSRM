@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, Trash2, Search, Plus, Download, FileText, RotateCcw } from "lucide-react";
+import { Edit2, Trash2, Search, Plus, Download, FileText, RotateCcw, History } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
+import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 
 export interface TopIssue {
   id: number | string;
@@ -255,6 +256,8 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
   const [editing, setEditing] = useState<TopIssue | null>(null);
   const [toDelete, setToDelete] = useState<TopIssue | null>(null);
   const [toRestore, setToRestore] = useState<TopIssue | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
   const [periodFilter, setPeriodFilter] = useState("All");
   const [addDraft, setAddDraft] = useState({ ...emptyTopIssueDraft });
   
@@ -293,6 +296,7 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       </div>
     ) : (
       <div className="flex items-center gap-1.5 justify-end">
+        <button onClick={() => { setSelectedHistoryId(issue.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={12} /></button>
         <button onClick={() => setEditing(issue)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(issue)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={12} /></button>
       </div>
@@ -338,6 +342,7 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       {editing && <TopIssueForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.issue} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.issue); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={(toRestore as any).issue_name || toRestore.issue || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="top_issues" entityId={selectedHistoryId} />
     </div>
   );
 }

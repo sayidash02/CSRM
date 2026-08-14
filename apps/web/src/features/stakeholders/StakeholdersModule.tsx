@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
+import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 
 export interface Stakeholder {
   id: string;
@@ -258,6 +259,8 @@ export default function StakeholdersModule({
   const [editing, setEditing] = useState<Stakeholder | null>(null);
   const [toDelete, setToDelete] = useState<Stakeholder | null>(null);
   const [toRestore, setToRestore] = useState<Stakeholder | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
 
   const handleAdd = async (d: Omit<Stakeholder, "id">) => {
     try {
@@ -381,6 +384,7 @@ export default function StakeholdersModule({
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => { setSelectedHistoryId(s.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={12} /></button>
         <button onClick={() => setEditing(s)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
       </div>
@@ -430,6 +434,7 @@ export default function StakeholdersModule({
       {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.stakeholder} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={toRestore.stakeholder || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="stakeholder_engagement" entityId={selectedHistoryId} />
     </div>
   );
 }

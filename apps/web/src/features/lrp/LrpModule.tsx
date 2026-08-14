@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, AlertTriangle, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, AlertTriangle, RotateCcw, History } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
+import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 
 export interface LrpProgram {
   id: string | number;
@@ -168,6 +169,8 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
   const [addDraft, setAddDraft] = useState({ ...emptyLrpDraft });
   const [showDeleted, setShowDeleted] = useState(false);
   const [toRestore, setToRestore] = useState<LrpProgram | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
 
   const fetchData = async () => {
     try {
@@ -275,6 +278,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={12} /></button>
         <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
       </div>
@@ -315,6 +319,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
       {editing && <LrpForm initial={editing} onClose={() => setEditing(null)} onSave={d => { onEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.program} onCancel={() => setToDelete(null)} onConfirm={() => { onDelete(toDelete.id); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={(toRestore as any).program_name || toRestore.program || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="lrp" entityId={selectedHistoryId} />
     </div>
   );
 }

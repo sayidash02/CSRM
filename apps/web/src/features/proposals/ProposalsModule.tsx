@@ -1,12 +1,13 @@
 import React, { useState, useMemo } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { FileInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { useProposals, useCreateProposal, useEditProposal, useDeleteProposal, useRestoreProposal } from '../../hooks/useProposals';
 import { toast } from "sonner";
+import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 
 export interface Proposal {
   id: string | number;
@@ -231,6 +232,8 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
   const [editing, setEditing] = useState<Proposal | null>(null);
   const [toDelete, setToDelete] = useState<Proposal | null>(null);
   const [toRestore, setToRestore] = useState<Proposal | null>(null);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
   
   const displayed = filtered;
   const nextRegNo = `PRP-${activeYear || '2026'}-${String(items.length + 1).padStart(4, "0")}`;
@@ -269,6 +272,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
+        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={12} /></button>
         <button onClick={() => setEditing(p)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
         <button onClick={() => setToDelete(p)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
       </div>
@@ -310,6 +314,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       {editing && <ProposalForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.registration_no} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.registration_no} — ${toDelete.institution}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={`${toRestore.registration_no} — ${toRestore.institution}`} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="proposals" entityId={selectedHistoryId} />
     </div>
   );
 }
