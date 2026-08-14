@@ -16,7 +16,30 @@ export interface Stakeholder {
   document_link: string | null;
 }
 
-const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
+const inputCls = "w-full text-sm rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all";
+
+const formatDate = (d?: string | Date | null) => {
+  if (!d) return "";
+  try {
+    const dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) return String(d);
+    return dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  } catch {
+    return String(d);
+  }
+};
+
+const formatInputDate = (d?: string | Date | null) => {
+  if (!d) return "";
+  if (typeof d === "string" && d.includes("T")) return d.split("T")[0];
+  try {
+    const dateObj = new Date(d);
+    if (isNaN(dateObj.getTime())) return String(d);
+    return dateObj.toISOString().split("T")[0];
+  } catch {
+    return String(d);
+  }
+};
 
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
@@ -115,7 +138,7 @@ function StakeholderForm({
     initial
       ? {
           stakeholder: initial.stakeholder ?? "",
-          date: initial.date ?? "",
+          date: formatInputDate(initial.date),
           venue: initial.venue ?? "",
           concern_issue: initial.concern_issue ?? "",
           document_link: initial.document_link ?? ""
@@ -285,12 +308,15 @@ export default function StakeholdersModule({
   }, [showToast, fetchData]);
 
   const handleExportClick = () => {
-    const exportData = filtered.map(s => ({
-      "Stakeholder": s.stakeholder,
-      "Date/Venue": (s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || ""),
-      "Concern/Issue": s.concern_issue || "",
-      "Document Link": s.document_link || ""
-    }));
+    const exportData = filtered.map(s => {
+      const formattedDate = formatDate(s.date);
+      return {
+        "Stakeholder": s.stakeholder,
+        "Date/Venue": (formattedDate && s.venue) ? `${formattedDate} / ${s.venue}` : (formattedDate || s.venue || ""),
+        "Concern/Issue": s.concern_issue || "",
+        "Document Link": s.document_link || ""
+      };
+    });
     onExport("Stakeholders_Engagement", exportData);
   };
 
@@ -304,7 +330,19 @@ export default function StakeholdersModule({
         <span className="text-sm font-medium text-foreground">{s.stakeholder}</span>
       )
     },
-    { header: "Date & Venue", accessor: "date", sortable: true, render: (s) => <span className="text-xs text-muted-foreground font-mono">{(s.date && s.venue) ? `${s.date} / ${s.venue}` : (s.date || s.venue || "")}</span> },
+    { 
+      header: "Date & Venue", 
+      accessor: "date", 
+      sortable: true, 
+      render: (s) => {
+        const formattedDate = formatDate(s.date);
+        return (
+          <span className="text-xs text-muted-foreground font-mono">
+            {(formattedDate && s.venue) ? `${formattedDate} / ${s.venue}` : (formattedDate || s.venue || "")}
+          </span>
+        );
+      } 
+    },
     { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
     { 
       header: "Docs", 
