@@ -1,6 +1,19 @@
 import fs from 'fs';
 import ExcelJS from 'exceljs';
 import prisma from '../lib/prisma';
+import { extractCellString } from './excel/ExcelCellUtils';
+import {
+  makeCsrProjectIdentity,
+  makeDailyActivityIdentity,
+  makeGrievanceFallbackIdentity,
+  makeGrievanceIdentity,
+  makeImportIdentity,
+  makeProposalFallbackIdentity,
+  makeProposalIdentity,
+  makeStakeholderIdentity,
+  makeTopIssueIdentity
+} from './excel/ImportIdentity';
+import { mergeImportedRows } from './excel/ImportDuplicateGuard';
 
 export interface ParsedDailyActivityRow {
   tempId: string;
@@ -61,20 +74,6 @@ function truncStr(val: string | null | undefined, max: number, defaultVal: strin
   const s = String(val).trim();
   if (!s) return defaultVal;
   return s.length > max ? s.slice(0, max) : s;
-}
-
-function extractCellString(val: any): string {
-  if (val === null || val === undefined) return '';
-  if (val instanceof Date) return val.toISOString();
-  if (typeof val === 'object') {
-    if (val.hyperlink !== undefined && val.hyperlink !== null) return String(val.hyperlink).trim();
-    if (val.result !== undefined && val.result !== null) return String(val.result).trim();
-    if (val.text !== undefined && val.text !== null) return String(val.text).trim();
-    if (Array.isArray(val.richText)) {
-      return val.richText.map((r: any) => r.text || '').join('').trim();
-    }
-  }
-  return String(val).trim();
 }
 
 export function parseCellDate(val: any): Date | null {
@@ -413,6 +412,7 @@ export class ExcelImportService {
 
     const rawProposals: Array<{
       registration_no: string;
+      source_registration_no: string | null;
       date_received: Date;
       institution: string;
       address: string | null;
@@ -439,6 +439,7 @@ export class ExcelImportService {
 
     const rawGrievance: Array<{
       register_no: string;
+      source_register_no: string | null;
       log_date: Date;
       complainant_name: string;
       address: string | null;
@@ -635,9 +636,12 @@ export class ExcelImportService {
           const rawPropReg = regCol !== -1 ? extractCellString(row.getCell(regCol).value).trim() : '';
           if (!rawInst && !rawPropDesc && !rawPropReg) continue;
 
-          let registration_no = rawPropReg;
-          if (!registration_no || usedProposalRegNos.has(registration_no.toLowerCase())) {
-            registration_no = `PROP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const source_registration_no = rawPropReg ? truncStr(rawPropReg, 50) : null;
+          let registration_no = source_registration_no;
+          if (!registration_no) {
+            do {
+              registration_no = `PROP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+            } while (usedProposalRegNos.has(registration_no.toLowerCase()));
           }
           registration_no = truncStr(registration_no, 50);
           usedProposalRegNos.add(registration_no.toLowerCase());
@@ -652,6 +656,7 @@ export class ExcelImportService {
 
           rawProposals.push({
             registration_no,
+            source_registration_no,
             date_received,
             institution,
             address,
@@ -738,9 +743,12 @@ export class ExcelImportService {
           const rawGrievanceReg = regCol !== -1 ? extractCellString(row.getCell(regCol).value).trim() : '';
           if (!rawCompName && !rawGrievanceDesc && !rawGrievanceReg) continue;
 
-          let register_no = rawGrievanceReg;
-          if (!register_no || usedGrievanceRegNos.has(register_no.toLowerCase())) {
-            register_no = `GRV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+          const source_register_no = rawGrievanceReg ? truncStr(rawGrievanceReg, 50) : null;
+          let register_no = source_register_no;
+          if (!register_no) {
+            do {
+              register_no = `GRV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+            } while (usedGrievanceRegNos.has(register_no.toLowerCase()));
           }
           register_no = truncStr(register_no, 50);
           usedGrievanceRegNos.add(register_no.toLowerCase());
@@ -762,6 +770,7 @@ export class ExcelImportService {
 
           rawGrievance.push({
             register_no,
+            source_register_no,
             log_date,
             complainant_name,
             address,
@@ -861,80 +870,218 @@ export class ExcelImportService {
         }
 
         // 4. Insert Daily Activities
-        if (rawDailyActivities.length > 0) {
-          for (const item of rawDailyActivities) {
-            const catId = categoryMap.get(item.category_name.trim().toLowerCase())!;
-            const subKey = `${catId}:${item.sub_category_name.trim().toLowerCase()}`;
-            const subCatId = subCategoryMap.get(subKey)!;
-            const pIds = item.pic_names.map(p => picMap.get(p.trim().toLowerCase())!).filter(Boolean);
+        const existingDailyActivities = rawDailyActivities.length > 0
+          ? await tx.daily_activities.findMany({
+              where: { is_deleted: false },
+              include: { daily_activity_pics: { select: { pic_id: true } } }
+            })
+          : [];
+        const dailyImportRows = rawDailyActivities.map((item) => {
+          const categoryId = categoryMap.get(item.category_name.trim().toLowerCase())!;
+          const subCategoryId = subCategoryMap.get(`${categoryId}:${item.sub_category_name.trim().toLowerCase()}`)!;
+          const picIds = item.pic_names.map(p => picMap.get(p.trim().toLowerCase())!).filter(Boolean);
+          return {
+            item,
+            categoryId,
+            subCategoryId,
+            picIds,
+            identity: makeDailyActivityIdentity(item, categoryId, subCategoryId, picIds)
+          };
+        });
 
-            await tx.daily_activities.create({
-              data: {
-                activity_date: item.activity_date,
-                activity: item.activity,
-                institution_group: item.institution_group ? truncStr(item.institution_group, 255) : null,
-                address: item.address,
-                focus: item.focus,
-                location: item.location,
-                keterangan: item.keterangan,
-                hasil: item.hasil,
-                description_result: item.description_result,
-                category_id: catId,
-                sub_category_id: subCatId,
-                cost: item.cost,
-                document_link: item.document_link,
-                daily_activity_pics: {
-                  create: pIds.map(id => ({ pic_id: id }))
-                }
+        await mergeImportedRows({
+          existing: existingDailyActivities,
+          incoming: dailyImportRows,
+          getIncomingIdentity: row => row.identity,
+          getExistingIdentities: row => [
+            makeDailyActivityIdentity(row, row.category_id, row.sub_category_id, row.daily_activity_pics.map(pic => pic.pic_id))
+          ],
+          create: row => tx.daily_activities.create({
+            data: {
+              activity_date: row.item.activity_date,
+              activity: row.item.activity,
+              institution_group: row.item.institution_group ? truncStr(row.item.institution_group, 255) : null,
+              address: row.item.address,
+              focus: row.item.focus,
+              location: row.item.location,
+              keterangan: row.item.keterangan,
+              hasil: row.item.hasil,
+              description_result: row.item.description_result,
+              category_id: row.categoryId,
+              sub_category_id: row.subCategoryId,
+              cost: row.item.cost,
+              document_link: row.item.document_link,
+              daily_activity_pics: {
+                create: row.picIds.map(id => ({ pic_id: id }))
               }
-            });
+            },
+            include: { daily_activity_pics: { select: { pic_id: true } } }
+          }),
+          mergeExisting: async (existing, row) => {
+            if (row.item.document_link && existing.document_link !== row.item.document_link) {
+              await tx.daily_activities.update({
+                where: { id: existing.id },
+                data: { document_link: row.item.document_link }
+              });
+              existing.document_link = row.item.document_link;
+            }
           }
-        }
+        });
 
         // 5. Insert Stakeholders Engagement
-        if (rawStakeholders.length > 0) {
-          const stakeholderEngagementsData = rawStakeholders.map(s => {
-            return {
-              stakeholder: s.stakeholder ? truncStr(s.stakeholder, 255) : null,
-              date: s.date,
-              venue: s.venue,
-              concern_issue: s.concern_issue,
-              document_link: s.document_link
-            };
-          });
+        const existingStakeholders = rawStakeholders.length > 0
+          ? await tx.stakeholder_engagement.findMany({ where: { is_deleted: false } })
+          : [];
+        const stakeholderImportRows = rawStakeholders.map((s) => ({
+          stakeholder: s.stakeholder ? truncStr(s.stakeholder, 255) : null,
+          date: s.date,
+          venue: s.venue,
+          concern_issue: s.concern_issue,
+          document_link: s.document_link
+        }));
 
-          await tx.stakeholder_engagement.createMany({
-            data: stakeholderEngagementsData
-          });
-        }
+        await mergeImportedRows({
+          existing: existingStakeholders,
+          incoming: stakeholderImportRows,
+          getIncomingIdentity: row => makeStakeholderIdentity(row),
+          getExistingIdentities: row => [makeStakeholderIdentity(row)],
+          create: row => tx.stakeholder_engagement.create({ data: row }),
+          mergeExisting: async (existing, row) => {
+            if (row.document_link && existing.document_link !== row.document_link) {
+              await tx.stakeholder_engagement.update({
+                where: { id: existing.id },
+                data: { document_link: row.document_link }
+              });
+              existing.document_link = row.document_link;
+            }
+          }
+        });
 
         // 6. Insert Top Issues
-        if (rawTopIssues.length > 0) {
-          await tx.top_issues.createMany({
-            data: rawTopIssues
-          });
-        }
+        const existingTopIssues = rawTopIssues.length > 0
+          ? await tx.top_issues.findMany({ where: { is_deleted: false } })
+          : [];
+        await mergeImportedRows({
+          existing: existingTopIssues,
+          incoming: rawTopIssues,
+          getIncomingIdentity: row => makeTopIssueIdentity(row.period, row.issue),
+          getExistingIdentities: row => [makeTopIssueIdentity(row.period, row.issue)],
+          create: row => tx.top_issues.create({ data: row }),
+          mergeExisting: async (existing, row) => {
+            const updateData: {
+              main_document?: string;
+              supporting_document?: string;
+            } = {};
+
+            if (!existing.main_document && row.main_document) {
+              updateData.main_document = row.main_document;
+              existing.main_document = row.main_document;
+            }
+            if (!existing.supporting_document && row.supporting_document) {
+              updateData.supporting_document = row.supporting_document;
+              existing.supporting_document = row.supporting_document;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              await tx.top_issues.update({ where: { id: existing.id }, data: updateData });
+            }
+          }
+        });
 
         // 7. Insert Proposals
-        if (rawProposals.length > 0) {
-          await tx.proposals.createMany({
-            data: rawProposals
-          });
-        }
+        const existingProposalsForImport = rawProposals.length > 0
+          ? await tx.proposals.findMany({ orderBy: { is_deleted: 'asc' } })
+          : [];
+        await mergeImportedRows({
+          existing: existingProposalsForImport,
+          incoming: rawProposals,
+          getIncomingIdentity: row => makeProposalIdentity(row),
+          getExistingIdentities: row => [
+            makeImportIdentity('proposal-registration', row.registration_no),
+            makeProposalFallbackIdentity(row)
+          ],
+          create: row => {
+            const { source_registration_no: _sourceRegistrationNo, ...proposalData } = row;
+            return tx.proposals.create({ data: proposalData });
+          },
+          mergeExisting: async (existing, row) => {
+            const updateData: {
+              proposal_file?: string;
+              assessment_file?: string;
+            } = {};
+
+            if (!existing.is_deleted && !existing.proposal_file && row.proposal_file) {
+              updateData.proposal_file = row.proposal_file;
+              existing.proposal_file = row.proposal_file;
+            }
+            if (!existing.is_deleted && !existing.assessment_file && row.assessment_file) {
+              updateData.assessment_file = row.assessment_file;
+              existing.assessment_file = row.assessment_file;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              await tx.proposals.update({ where: { id: existing.id }, data: updateData });
+            }
+          }
+        });
 
         // 8. Insert CSR
-        if (rawCsr.length > 0) {
-          await tx.csr_projects.createMany({
-            data: rawCsr
-          });
-        }
+        const existingCsrProjects = rawCsr.length > 0
+          ? await tx.csr_projects.findMany({ where: { is_deleted: false } })
+          : [];
+        await mergeImportedRows({
+          existing: existingCsrProjects,
+          incoming: rawCsr,
+          getIncomingIdentity: row => makeCsrProjectIdentity(row),
+          getExistingIdentities: row => [makeCsrProjectIdentity(row)],
+          create: row => tx.csr_projects.create({ data: row }),
+          mergeExisting: async (existing, row) => {
+            const updateData: {
+              documentation_image?: string;
+              document?: string;
+            } = {};
+
+            if (!existing.documentation_image && row.documentation_image) {
+              updateData.documentation_image = row.documentation_image;
+              existing.documentation_image = row.documentation_image;
+            }
+            if (!existing.document && row.document) {
+              updateData.document = row.document;
+              existing.document = row.document;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              await tx.csr_projects.update({ where: { id: existing.id }, data: updateData });
+            }
+          }
+        });
 
         // 9. Insert Grievance
-        if (rawGrievance.length > 0) {
-          await tx.grievance.createMany({
-            data: rawGrievance
-          });
-        }
+        const existingGrievancesForImport = rawGrievance.length > 0
+          ? await tx.grievance.findMany({ orderBy: { is_deleted: 'asc' } })
+          : [];
+        await mergeImportedRows({
+          existing: existingGrievancesForImport,
+          incoming: rawGrievance,
+          getIncomingIdentity: row => makeGrievanceIdentity(row),
+          getExistingIdentities: row => [
+            makeImportIdentity('grievance-register', row.register_no),
+            makeGrievanceFallbackIdentity(row)
+          ],
+          create: row => {
+            const { source_register_no: _sourceRegisterNo, ...grievanceData } = row;
+            return tx.grievance.create({ data: grievanceData });
+          },
+          mergeExisting: async (existing, row) => {
+            if (!existing.is_deleted && !existing.supporting_files && row.supporting_files) {
+              await tx.grievance.update({
+                where: { id: existing.id },
+                data: { supporting_files: row.supporting_files }
+              });
+              existing.supporting_files = row.supporting_files;
+            }
+          }
+        });
       },
       {
         maxWait: 30000,
