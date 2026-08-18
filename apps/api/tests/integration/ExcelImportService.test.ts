@@ -1,6 +1,9 @@
-import { parseDailyActivitiesExcel } from '../../src/services/ExcelImportService';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import ExcelJS from 'exceljs';
 import prisma from '../../src/lib/prisma';
+import { ExcelImportService, parseDailyActivitiesExcel } from '../../src/services/ExcelImportService';
 
 describe('ExcelImportService', () => {
   beforeAll(async () => {
@@ -78,5 +81,39 @@ describe('ExcelImportService', () => {
     expect(result.validRows.length).toBe(0);
     expect(result.errorRows.length).toBe(1);
     expect(result.errorRows[0]!.errors).toContain("Biaya 'invalid-cost' bukan berupa angka");
+  });
+
+  it('should preserve hyperlinks from Docs and Supporting Docs columns when importing Top Issue rows', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'crms-top-issue-import-'));
+    const filePath = path.join(tempDir, 'top-issue-links.xlsx');
+    const issue = 'Import hyperlink regression issue';
+    const mainDocument = 'https://company.sharepoint.com/sites/csr/main-document.pdf';
+    const supportingDocument = 'https://company.sharepoint.com/sites/csr/supporting-document.png';
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Top Issue');
+      worksheet.addRow(['No', 'Periode', 'Issue', 'Deskripsi', 'Follow Up', 'Docs', 'Supporting Docs', 'Next Plan']);
+      worksheet.addRow([
+        1,
+        '2025',
+        issue,
+        'Description',
+        'Follow up',
+        { text: 'Main document', hyperlink: mainDocument },
+        { text: 'Supporting document', hyperlink: supportingDocument },
+        'Next plan'
+      ]);
+      await workbook.xlsx.writeFile(filePath);
+
+      await ExcelImportService.confirm(filePath);
+
+      const imported = await prisma.top_issues.findFirst({ where: { issue } });
+      expect(imported?.main_document).toBe(mainDocument);
+      expect(imported?.supporting_document).toBe(supportingDocument);
+    } finally {
+      await prisma.top_issues.deleteMany({ where: { issue } });
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 });

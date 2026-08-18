@@ -586,8 +586,8 @@ export class ExcelImportService {
         const issueCol = findColIndex(colMap, ['top issue', 'issue', 'isu', 'masalah']);
         const descCol = findColIndex(colMap, ['description', 'deskripsi', 'keterangan']);
         const folCol = findColIndex(colMap, ['tindak lanjut', 'follow_up', 'follow up']);
-        const mainDocCol = findColIndex(colMap, ['dokumen utama', 'main_document', 'main document', 'dokumen']);
-        const suppDocCol = findColIndex(colMap, ['dokumen pendukung', 'supporting_document', 'supporting document', 'pendukung']);
+        const mainDocCol = findColIndex(colMap, ['docs', 'dokumen utama', 'main_document', 'main document', 'dokumen']);
+        const suppDocCol = findColIndex(colMap, ['supporting docs', 'dokumen pendukung', 'supporting_document', 'supporting document', 'pendukung']);
         const planCol = findColIndex(colMap, ['rencana selanjutnya', 'next_plan', 'next plan', 'rencana']);
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
