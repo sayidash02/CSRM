@@ -58,6 +58,12 @@ function addLrpSheet(workbook: ExcelJS.Workbook): void {
  * a test fixture or a recovery template.
  */
 export function sanitizeWorkbookForTemplate(workbook: ExcelJS.Workbook): void {
+  // Legacy company workbooks can contain defined names that point to external
+  // workbooks and span millions of rows. ExcelJS expands those ranges into a
+  // cell matrix while loading, so they are never useful in the operational
+  // export template and must not be carried forward.
+  workbook.definedNames.model = [];
+
   for (const worksheet of [...workbook.worksheets]) {
     if (worksheet.state !== 'visible') {
       workbook.removeWorksheet(worksheet.id);
