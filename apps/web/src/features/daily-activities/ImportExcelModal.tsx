@@ -81,7 +81,7 @@ export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; 
             >
               {file ? file.name : "Pilih File Excel"}
             </button>
-            <p className="text-xs text-muted-foreground mb-4">Format .xlsx atau .xls (Maks 5MB)</p>
+            <p className="text-xs text-muted-foreground mb-4">Format .xlsx atau .xls (Maks 100MB)</p>
             {file && (
               <button 
                 type="button"

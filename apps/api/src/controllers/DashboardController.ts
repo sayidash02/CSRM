@@ -2,7 +2,52 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 
-export const getDashboardStats = catchAsync(async (_req: Request, res: Response): Promise<void> => {
+type DashboardYear = number | null;
+
+const parseDashboardYear = (value: unknown): DashboardYear => {
+  if (value === undefined || value === null || value === '' || value === 'All' || value === 'Semua') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1900 || parsed > 2100) {
+    throw new Error('Parameter year tidak valid');
+  }
+  return parsed;
+};
+
+const yearDateRange = (year: DashboardYear) => year === null
+  ? undefined
+  : { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
+
+const withDateYear = (base: Record<string, unknown>, field: string, year: DashboardYear) => ({
+  ...base,
+  ...(year === null ? {} : { [field]: yearDateRange(year) })
+});
+
+const withNumericYear = (base: Record<string, unknown>, field: string, year: DashboardYear) => ({
+  ...base,
+  ...(year === null ? {} : { [field]: year })
+});
+
+export const getDashboardStats = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  let selectedYear: DashboardYear;
+  try {
+    selectedYear = parseDashboardYear(req.query.year);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+    return;
+  }
+
+  const activeRecord = { is_deleted: false, is_archived: false };
+  const dailyWhere = withDateYear(activeRecord, 'activity_date', selectedYear);
+  const stakeholderWhere = withDateYear(activeRecord, 'date', selectedYear);
+  const proposalWhere = withDateYear(activeRecord, 'date_received', selectedYear);
+  const csrWhere = withNumericYear(activeRecord, 'project_year', selectedYear);
+  const grievanceWhere = withDateYear(activeRecord, 'log_date', selectedYear);
+  const topIssueWhere = withNumericYear(activeRecord, 'year', selectedYear);
+  const lrpWhere = withNumericYear(activeRecord, 'year', selectedYear);
+
   const now = new Date();
   const firstDayThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -10,13 +55,6 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
   
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-
-  // Get last sync date
-  const lastSync = await prisma.sync_log.findFirst({
-    where: { status: 'SUCCESS' },
-    orderBy: { synced_at: 'desc' }
-  });
-  const lastSyncDate = lastSync ? lastSync.synced_at : new Date(0);
 
   const [
     totalDaily,
@@ -39,35 +77,35 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
     dailyByCategory,
     allProposals
   ] = await Promise.all([
-    prisma.daily_activities.count({ where: { is_deleted: false } }),
-    prisma.daily_activities.count({ where: { is_deleted: false, activity_date: { gte: firstDayThisMonth } } }),
-    prisma.daily_activities.count({ where: { is_deleted: false, activity_date: { gte: firstDayLastMonth, lte: lastDayLastMonth } } }),
-    prisma.daily_activities.count({ where: { is_deleted: false, activity_date: { gte: sevenDaysAgo } } }),
-    prisma.daily_activities.count({ where: { is_deleted: false, activity_date: { gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
+    prisma.daily_activities.count({ where: dailyWhere }),
+    prisma.daily_activities.count({ where: { ...dailyWhere, activity_date: { ...(dailyWhere.activity_date as object || {}), gte: firstDayThisMonth } } }),
+    prisma.daily_activities.count({ where: { ...dailyWhere, activity_date: { ...(dailyWhere.activity_date as object || {}), gte: firstDayLastMonth, lte: lastDayLastMonth } } }),
+    prisma.daily_activities.count({ where: { ...dailyWhere, activity_date: { ...(dailyWhere.activity_date as object || {}), gte: sevenDaysAgo } } }),
+    prisma.daily_activities.count({ where: { ...dailyWhere, activity_date: { ...(dailyWhere.activity_date as object || {}), gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
     
-    prisma.stakeholder_engagement.count({ where: { is_deleted: false } }),
-    prisma.top_issues.count({ where: { is_deleted: false } }),
+    prisma.stakeholder_engagement.count({ where: stakeholderWhere }),
+    prisma.top_issues.count({ where: topIssueWhere }),
     
-    prisma.proposals.count({ where: { is_deleted: false } }),
+    prisma.proposals.count({ where: proposalWhere }),
     
-    prisma.csr_projects.count({ where: { is_deleted: false } }),
-    prisma.csr_projects.count({ where: { status: 'On Going', is_deleted: false } }),
+    prisma.csr_projects.count({ where: csrWhere }),
+    prisma.csr_projects.count({ where: { ...csrWhere, status: 'On Going' } }),
     
-    prisma.grievance.count({ where: { is_deleted: false } }),
-    prisma.grievance.count({ where: { is_deleted: false, status: { in: ['Open', 'On Progress'] }, significance: { in: ['High', 'Critical'] } } }),
-    prisma.grievance.count({ where: { is_deleted: false, status: { in: ['Open', 'On Progress'] }, significance: { in: ['High', 'Critical'] }, investigation: null, resolution: null } }),
+    prisma.grievance.count({ where: grievanceWhere }),
+    prisma.grievance.count({ where: { ...grievanceWhere, status: { in: ['Open', 'On Progress'] }, significance: { in: ['High', 'Critical'] } } }),
+    prisma.grievance.count({ where: { ...grievanceWhere, status: { in: ['Open', 'On Progress'] }, significance: { in: ['High', 'Critical'] }, investigation: null, resolution: null } }),
     
-    prisma.lrp.count({ where: { is_deleted: false } }),
+    prisma.lrp.count({ where: lrpWhere }),
     
     prisma.daily_activities.findMany({
-      where: { is_deleted: false },
+      where: dailyWhere,
       orderBy: { activity_date: 'desc' },
       take: 5,
       include: { daily_activity_pics: { include: { pic: true } }, sub_category: true }
     }),
     prisma.grievance.findMany({
       where: {
-        is_deleted: false,
+        ...grievanceWhere,
         status: { in: ['Open', 'On Progress'] },
         significance: { in: ['High', 'Critical'] }
       },
@@ -75,29 +113,17 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
       take: 2
     }),
     prisma.csr_projects.findMany({
-      where: { is_deleted: false, status: 'On Going' }
+      where: { ...csrWhere, status: 'On Going' }
     }),
     prisma.daily_activities.findMany({
-      where: { is_deleted: false },
+      where: dailyWhere,
       include: { sub_category: true }
     }),
     prisma.proposals.findMany({
-      where: { is_deleted: false },
+      where: proposalWhere,
       select: { status: true }
     })
   ]);
-
-  // Unsynced count calculation
-  const [uns1, uns2, uns3, uns4, uns5, uns6, uns7] = await Promise.all([
-    prisma.daily_activities.count({ where: { is_deleted: false, updated_at: { gt: lastSyncDate } } }),
-    prisma.stakeholder_engagement.count({ where: { is_deleted: false, updated_at: { gt: lastSyncDate } } }),
-    prisma.top_issues.count({ where: { is_deleted: false, updated_at: { gt: lastSyncDate } } }),
-    prisma.proposals.count({ where: { is_deleted: false, updated_at: { gt: lastSyncDate } } }),
-    prisma.csr_projects.count({ where: { is_deleted: false, updated_at: { gt: lastSyncDate } } }),
-    prisma.grievance.count({ where: { is_deleted: false, updated_at: { gt: lastSyncDate } } }),
-    prisma.lrp.count({ where: { is_deleted: false, updated_at: { gt: lastSyncDate } } }),
-  ]);
-  const unsyncedCount = uns1 + uns2 + uns3 + uns4 + uns5 + uns6 + uns7;
 
   const dailyTrend = lastMonthDaily === 0 ? (thisMonthDaily > 0 ? 100 : 0) : Math.round(((thisMonthDaily - lastMonthDaily) / lastMonthDaily) * 100);
   const weeklyTrend = lastWeekDaily === 0 ? (thisWeekDaily > 0 ? 100 : 0) : Math.round(((thisWeekDaily - lastWeekDaily) / lastWeekDaily) * 100);
@@ -117,6 +143,9 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
 
   res.status(200).json({
     data: {
+      filters: {
+        year: selectedYear
+      },
       totals: {
         daily: totalDaily, stakeholder: totalStakeholders, issues: totalIssues,
         proposals: totalProposals, csr: totalCsr, grievance: totalGrievances, lrp: totalLrp
@@ -142,10 +171,6 @@ export const getDashboardStats = catchAsync(async (_req: Request, res: Response)
         })),
         onGoingCsr
       },
-      sync: {
-        unsyncedCount,
-        lastSyncDate: lastSync ? lastSync.synced_at.toISOString() : null
-      }
     }
   });
 });

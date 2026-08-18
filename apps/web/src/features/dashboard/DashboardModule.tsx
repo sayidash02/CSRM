@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import {
   Calendar, Users, AlertTriangle, FileText, Leaf, MessageSquareWarning,
   TrendingUp, TrendingDown, ChevronRight, BarChart2, Check, ArrowUpRight,
-  UploadCloud, AlertCircle, RefreshCw
+  UploadCloud, AlertCircle
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -37,10 +37,6 @@ export interface DashboardStats {
     activities: Array<{ id: string; activity: string; activity_date: string; pic?: { name: string } | null; sub_category?: { name: string } | null; }>;
     highPriorityGrievances: Array<{ id: string; regNo: string; name: string; description: string; significance: string; }>;
     onGoingCsr: Array<{ id: string; program: string; budget: number; }>;
-  };
-  sync?: {
-    unsyncedCount: number;
-    lastSyncDate: string | null;
   };
 }
 
@@ -104,16 +100,6 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
           <p className="text-xs text-muted-foreground mt-0.5">Ringkasan statistik dan aktivitas terkini CRMS</p>
         </div>
         <div className="flex items-center gap-4">
-          {/* Sync Indicator */}
-          {stats.sync && (
-            <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${stats.sync.unsyncedCount > 0 ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
-              {stats.sync.unsyncedCount > 0 ? (
-                <><RefreshCw size={14} className="animate-spin" /> {stats.sync.unsyncedCount} pending sync</>
-              ) : (
-                <><Check size={14} /> Tersinkronisasi</>
-              )}
-            </div>
-          )}
           <button onClick={() => setShowImportWizard(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150">
             <UploadCloud size={15} /> Import Master Excel
           </button>

@@ -11,13 +11,23 @@ afterAll(async () => {
 });
 
 describe('POST /api/stakeholders', () => {
+  it('rejects non-HTTPS attachment links before touching the database', async () => {
+    const res = await request(app).post('/api/stakeholders').send({
+      stakeholder: 'Test stakeholder',
+      document_link: 'javascript:alert(1)',
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('document_link');
+  });
+
   it('Positive: Should create a new stakeholder engagement', async () => {
     const payload = {
       stakeholder: 'Government Official',
       date: '2026-07-25',
       venue: 'City Hall',
       concern_issue: 'Infrastructure',
-      document_link: 'http://example.com/doc'
+      document_link: 'https://example.com/doc'
     };
     const res = await request(app).post('/api/stakeholders').send(payload);
     expect(res.status).toBe(201);

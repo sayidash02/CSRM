@@ -106,7 +106,9 @@ CREATE TABLE daily_activities (
   focus VARCHAR(255),                     -- kolom "Fokus": teks bebas, tidak ada dropdown di Excel asli
   location VARCHAR(255),
   cost DECIMAL(15,2),                     -- kolom "Biaya"
-  description_result TEXT,                -- gabungan "Keterangan" + "Hasil" — dikonfirmasi ke pegawai, memang boleh disatukan
+  keterangan TEXT,                         -- kolom Keterangan pada workbook perusahaan
+  hasil TEXT,                              -- kolom Hasil pada workbook perusahaan
+  description_result TEXT,                -- legacy compatibility value; diturunkan dari keterangan + hasil
   document_link TEXT,             -- kolom "link" — cuma 1 kolom link di Excel, bukan 2
   category_id BIGINT NOT NULL,
   sub_category_id BIGINT NOT NULL,

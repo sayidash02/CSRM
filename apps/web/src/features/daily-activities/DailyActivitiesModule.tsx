@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw, History } from "lucide-react";
-import { FileInput } from '../../components/ui/FileInput';
+import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
 import { ImportExcelModal } from "./ImportExcelModal";
@@ -27,7 +27,10 @@ export interface DailyActivity {
   pic_ids: (string | number)[];
   category_id: string | number;
   sub_category_id: string | number;
-  description_result: string;
+  keterangan: string | null;
+  hasil: string | null;
+  /** Legacy compatibility value; new writes derive it from keterangan + hasil. */
+  description_result: string | null;
   document_link: string | null;
   updated_at?: string;
   // Included relations from backend
@@ -123,7 +126,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 const emptyDailyDraft = {
   activity_date: "", activity: "", stakeholder_id: "", institution_group: "", address: "",
   focus: "", location: "", cost: "", pic_ids: [] as (string | number)[], category_id: "",
-  sub_category_id: "", description_result: "", document_link: ""
+  sub_category_id: "", keterangan: "", hasil: "", description_result: "", document_link: ""
 };
 
 function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast }: { initial?: DailyActivity; defaultValues?: typeof emptyDailyDraft; onDraftChange?: (v: typeof emptyDailyDraft) => void; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] }; onRefreshReferences: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
@@ -143,6 +146,8 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           pic_ids: initial.pics ? initial.pics.map((p: any) => String(p.id)) : (initial.pic_ids ? initial.pic_ids.map(id => String(id)) : []),
           category_id: initial.category_id != null ? String(initial.category_id) : "",
           sub_category_id: initial.sub_category_id != null ? String(initial.sub_category_id) : "",
+          keterangan: initial.keterangan ?? (initial.hasil ? "" : initial.description_result ?? ""),
+          hasil: initial.hasil ?? "",
           description_result: initial.description_result ?? "",
           document_link: initial.document_link ?? "",
         }
@@ -179,11 +184,13 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
       }
       return;
     }
+    const legacyDescription = [f.keterangan, f.hasil].filter(Boolean).join(" - ");
     onSave({
       ...f,
       pic_ids: f.pic_ids,
       stakeholder_id: f.stakeholder_id || null,
       cost: Number(f.cost) || 0,
+      description_result: legacyDescription || null,
       document_link: f.document_link || null
     } as any);
     if (!initial) onDraftChange?.({ ...emptyDailyDraft });
@@ -246,14 +253,15 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
             <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0" title="Atur PIC"><Settings size={14} /></button>
           </div>
         </Field>
-        <div className="col-span-3"><Field label="Keterangan & Hasil"><textarea rows={2} value={f.description_result} onChange={e => set("description_result", e.target.value)} placeholder="Uraian kegiatan dan hasil yang dicapai" className={`${inputCls} resize-none`} /></Field></div>
+        <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Keterangan"><textarea rows={3} value={f.keterangan} onChange={e => set("keterangan", e.target.value)} placeholder="Uraian kegiatan" className={`${inputCls} resize-none`} /></Field>
+          <Field label="Hasil"><textarea rows={3} value={f.hasil} onChange={e => set("hasil", e.target.value)} placeholder="Hasil yang dicapai" className={`${inputCls} resize-none`} /></Field>
+        </div>
         <div className="col-span-3">
-          <Field label="Dokumen Lampiran" hint="Pilih file dokumen (maks 5MB). Pastikan Tanggal dan PIC sudah terisi.">
-            <FileInput 
+          <Field label="Link Dokumen Lampiran" hint="Upload file ke SharePoint perusahaan, lalu tempel link HTTPS-nya.">
+            <SharePointLinkInput
               value={f.document_link || null} 
-              onChange={(fData: any) => set("document_link", typeof fData === 'string' ? fData : fData?.url || "")}
-              picName={refs.pics.filter(p => f.pic_ids.map(String).includes(String(p.id))).map(p => p.name).join(", ")}
-              activityDate={f.activity_date}
+              onChange={(url) => set("document_link", url)}
             />
           </Field>
         </div>
@@ -427,7 +435,8 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         { header: "Biaya", key: "cost", width: 20 },
         { header: "Category", key: "category_name", width: 20 },
         { header: "Sub Category", key: "sub_category_name", width: 25 },
-        { header: "Keterangan & Hasil", key: "description_result", width: 40 },
+        { header: "Keterangan", key: "keterangan", width: 35 },
+        { header: "Hasil", key: "hasil", width: 35 },
         { header: "Dokumen", key: "document_link", width: 30 }
       ];
 
@@ -461,7 +470,8 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     { header: "PIC", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.length > 0 ? a.pics.map((p: any) => p.name).join(', ') : '-'}</span> },
     { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
     { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
-    { header: "Keterangan & Hasil", accessor: "description_result", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[250px]">{a.description_result || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Keterangan", accessor: "keterangan", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[200px]">{a.keterangan || (!a.hasil ? a.description_result : null) || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Hasil", accessor: "hasil", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[200px]">{a.hasil || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Terakhir Diubah", accessor: "updated_at", sortable: true, render: (a) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{a.updated_at ? formatDate(a.updated_at) : '—'}</span> },
     { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span> },
     { header: "", render: (a) => showDeleted ? (

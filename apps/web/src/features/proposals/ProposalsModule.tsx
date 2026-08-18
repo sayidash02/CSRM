@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
-import { FileInput } from '../../components/ui/FileInput';
+import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -147,20 +147,16 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
         <Field label="Alamat"><input type="text" value={f.address || ''} onChange={e => set("address", e.target.value)} placeholder="Alamat lengkap" className={inputCls} /></Field>
         <Field label="Keterangan Proposal"><textarea rows={3} value={f.proposal_description || ''} onChange={e => set("proposal_description", e.target.value)} placeholder="Ringkasan isi proposal" className={`${inputCls} resize-none`} /></Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="File Proposal">
-            <FileInput 
+          <Field label="Link Proposal">
+            <SharePointLinkInput
               value={f.proposal_file || null} 
               onChange={url => set("proposal_file", url)}
-              activityDate={f.date_received}
-              picName={f.institution}
             />
           </Field>
-          <Field label="File Assessment">
-            <FileInput 
+          <Field label="Link Assessment">
+            <SharePointLinkInput
               value={f.assessment_file || null} 
               onChange={url => set("assessment_file", url)}
-              activityDate={f.date_received}
-              picName={f.institution}
             />
           </Field>
         </div>

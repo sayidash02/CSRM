@@ -2,6 +2,11 @@ import ExcelJS from 'exceljs';
 import { ISharePointClient } from './sharepoint/ISharePointClient';
 import prisma from '../lib/prisma';
 
+/**
+ * @deprecated The HTTP sync route is disabled. Keep this legacy service only
+ * for compatibility with older tests; new exports use WorkbookExportService
+ * and are handed off to SharePoint manually by the user.
+ */
 export class SyncService {
   constructor(private sharePointClient: ISharePointClient) {}
 
@@ -78,74 +83,7 @@ export class SyncService {
   }
 
   public async executeSync(triggeredBy: string = 'System', year?: number): Promise<void> {
-    const startedAt = new Date();
-    const syncYear = year ?? new Date().getFullYear();
-
-    // Year filter helpers
-    const dateRange = {
-      gte: new Date(`${syncYear}-01-01T00:00:00.000Z`),
-      lte: new Date(`${syncYear}-12-31T23:59:59.999Z`)
-    };
-
-    try {
-      // 1. Fetch data from 7 tables (scoped to syncYear)
-      const [
-        dailyActivities,
-        stakeholders,
-        topIssues,
-        proposals,
-        csrProjects,
-        grievance,
-        lrps
-      ] = await Promise.all([
-        prisma.daily_activities.findMany({ where: { is_deleted: false, is_archived: false, activity_date: dateRange }, include: { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true } }),
-        prisma.stakeholder_engagement.findMany({ where: { is_deleted: false, is_archived: false, date: dateRange } }),
-        prisma.top_issues.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
-        prisma.proposals.findMany({ where: { is_deleted: false, is_archived: false, date_received: dateRange } }),
-        prisma.csr_projects.findMany({ where: { is_deleted: false, is_archived: false, project_year: syncYear } }),
-        prisma.grievance.findMany({ where: { is_deleted: false, is_archived: false, log_date: dateRange } }),
-        prisma.lrp.findMany({ where: { is_deleted: false, is_archived: false, year: syncYear } }),
-      ]);
-
-      // 2. Generate Workbook Buffer
-      const buffer = await this.generateWorkbookBuffer(
-        dailyActivities,
-        stakeholders,
-        topIssues,
-        proposals,
-        csrProjects,
-        grievance,
-        lrps
-      );
-
-      // 3. Upload to SharePoint
-      const masterPath = '0. Testing/Master';
-      const fileName = `CRMS_Master_Data_${syncYear}.xlsx`;
-      const fileUrl = await this.sharePointClient.uploadFile(masterPath, fileName, buffer, buffer.byteLength);
-
-      // 4. Update sync_log (with synced_year)
-      await prisma.sync_log.create({
-        data: {
-          synced_at: startedAt,
-          synced_year: syncYear,
-          status: 'SUCCESS',
-          file_url: fileUrl,
-          triggered_by: triggeredBy
-        }
-      });
-    } catch (error) {
-      // Update sync_log with error
-      await prisma.sync_log.create({
-        data: {
-          synced_at: startedAt,
-          synced_year: syncYear,
-          status: 'FAILED',
-          error_message: error instanceof Error ? error.message : String(error),
-          triggered_by: triggeredBy
-        }
-      });
-      throw error;
-    }
+    throw new Error('Automatic SharePoint sync is disabled; export the workbook and upload it manually.');
   }
 
   private formatDate(d: Date | null | undefined): string {

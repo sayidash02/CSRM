@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Search, Plus, Download, AlertTriangle, RotateCcw, History } from "lucide-react";
-import { FileInput } from '../../components/ui/FileInput';
+import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -147,11 +147,10 @@ function LrpForm({
     <Modal title={initial ? "Edit Program LRP" : "Tambah Program LRP"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
         <Field label="Nama Program" required><input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama / judul program LRP" className={inputCls} /></Field>
-        <Field label="SharePoint Link" required hint="Upload file dokumen atau gambar untuk program LRP.">
-          <FileInput 
+        <Field label="SharePoint Link" required hint="Upload file ke SharePoint perusahaan, lalu tempel link HTTPS-nya.">
+          <SharePointLinkInput
             value={f.sharepoint_link || null} 
             onChange={url => set("sharepoint_link", url)}
-            picName="LRP Program"
           />
         </Field>
       </div>

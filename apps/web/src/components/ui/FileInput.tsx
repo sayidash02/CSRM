@@ -1,96 +1,146 @@
 import React, { useState } from 'react';
-import { ExternalLink, X } from 'lucide-react';
-import { toast } from 'sonner';
-import { apiClient } from '../../lib/apiClient';
+import { ExternalLink, Link2, X } from 'lucide-react';
+import {
+  isSafeSharePointUrl,
+  parseSharePointLinks,
+  serializeSharePointLinks,
+} from './sharePointLinks';
 
-interface FileInputProps {
+interface SharePointLinkInputProps {
   value: string | null;
-  onChange: (val: string) => void;
-  activityDate?: string;
-  picName?: string;
+  onChange: (value: string) => void;
   multiple?: boolean;
 }
 
-export function FileInput({ value, onChange, activityDate, picName, multiple = true }: FileInputProps) {
-  const [uploading, setUploading] = useState(false);
-
-  // Helper to parse legacy strings or JSON array strings
-  let fileList: string[] = [];
-  if (value) {
-    if (value.startsWith('[') && value.endsWith(']')) {
-      try {
-        fileList = JSON.parse(value);
-      } catch {
-        fileList = [value];
-      }
-    } else {
-      fileList = [value];
-    }
+function linkLabel(value: string, index: number): string {
+  try {
+    const url = new URL(value);
+    const lastSegment = decodeURIComponent(url.pathname.split('/').filter(Boolean).pop() ?? '');
+    return lastSegment || `Link SharePoint ${index + 1}`;
+  } catch {
+    return `Link SharePoint ${index + 1}`;
   }
+}
 
-  const handleRemove = (urlToRemove: string) => {
-    const newList = fileList.filter(url => url !== urlToRemove);
-    if (newList.length === 0) onChange("");
-    else onChange(JSON.stringify(newList));
+/**
+ * Manual SharePoint URL field used by every attachment slot in the seven
+ * modules. Files are uploaded to the company's SharePoint outside CRMS; this
+ * component only stores and displays the URL pasted by the user.
+ */
+export function SharePointLinkInput({
+  value,
+  onChange,
+  multiple = true,
+}: SharePointLinkInputProps) {
+  const [draftLink, setDraftLink] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const links = parseSharePointLinks(value);
+
+  const addLink = () => {
+    const candidate = draftLink.trim();
+    if (!candidate) return;
+
+    if (!isSafeSharePointUrl(candidate)) {
+      setValidationError('Tempel URL SharePoint lengkap yang diawali https://.');
+      return;
+    }
+
+    if (links.includes(candidate)) {
+      setValidationError('Link tersebut sudah ditambahkan.');
+      return;
+    }
+
+    const nextLinks = multiple ? [...links, candidate] : [candidate];
+    onChange(serializeSharePointLinks(nextLinks));
+    setDraftLink('');
+    setValidationError('');
+  };
+
+  const removeLink = (linkToRemove: string) => {
+    onChange(serializeSharePointLinks(links.filter((link) => link !== linkToRemove)));
+    setValidationError('');
   };
 
   return (
     <div className="flex flex-col gap-2 w-full">
-      {fileList.length > 0 && (
-        <div className="flex flex-col gap-1.5 mt-1">
-          {fileList.map((url, i) => {
-            const fileName = url.split('/').pop()?.split('?')[0] || `Document ${i+1}`;
-            return (
-              <div key={i} className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded border border-border w-fit max-w-full">
-                <a href={url} target="_blank" rel="noreferrer" className="text-sm text-blue-600 flex items-center gap-1.5 hover:underline truncate" title={fileName}>
-                  <ExternalLink size={14} className="shrink-0" />
-                  <span className="truncate max-w-[200px]">{fileName}</span>
-                </a>
-                <button type="button" onClick={() => handleRemove(url)} className="text-red-500 hover:bg-red-50 p-1 rounded-full shrink-0" title="Hapus file">
-                  <X size={14} />
-                </button>
-              </div>
-            );
-          })}
+      {links.length > 0 && (
+        <div className="flex flex-col gap-1.5 mt-1" aria-label="Link SharePoint tersimpan">
+          {links.map((link, index) => (
+            <div
+              key={`${link}-${index}`}
+              className="flex items-center gap-2 bg-muted/30 px-3 py-1.5 rounded border border-border w-fit max-w-full"
+            >
+              <a
+                href={link}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm text-blue-600 flex items-center gap-1.5 hover:underline truncate"
+                title={link}
+              >
+                <ExternalLink size={14} className="shrink-0" aria-hidden="true" />
+                <span className="truncate max-w-[260px]">{linkLabel(link, index)}</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => removeLink(link)}
+                className="text-red-500 hover:bg-red-50 p-1 rounded-full shrink-0"
+                title="Hapus link SharePoint"
+                aria-label={`Hapus ${linkLabel(link, index)}`}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="flex items-center gap-2">
-        <input 
-          type="file"
-          multiple={multiple}
-          disabled={uploading}
-          onChange={async (e) => {
-            if (!e.target.files || e.target.files.length === 0) return;
-            const fileArray = Array.from(e.target.files);
-            
-            setUploading(true);
-            const newUrls: string[] = [];
-            const originalButtonText = e.target.className;
-            
-            try {
-              for (let i = 0; i < fileArray.length; i++) {
-                const fd = new FormData();
-                fd.append("file", fileArray[i]);
-                if (activityDate) fd.append("activity_date", activityDate);
-                if (picName) fd.append("pic_name", picName);
-
-                const res = await apiClient.post('/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-                newUrls.push(res.data.data.url);
+      <div className="flex items-start gap-2">
+        <div className="relative flex-1">
+          <Link2
+            size={15}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <input
+            type="url"
+            value={draftLink}
+            onChange={(event) => {
+              setDraftLink(event.target.value);
+              if (validationError) setValidationError('');
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                addLink();
               }
-
-              const combined = [...fileList, ...newUrls];
-              onChange(JSON.stringify(combined));
-            } catch (err: any) {
-              toast.error("Beberapa file gagal diunggah: " + (err.response?.data?.error || err.message));
-            } finally {
-              setUploading(false);
-              e.target.value = "";
-            }
-          }} 
-          className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer disabled:opacity-50" 
-        />
+            }}
+            placeholder="Tempel link SharePoint"
+            aria-label="Link SharePoint"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={addLink}
+          disabled={!draftLink.trim()}
+          className="px-3 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Tambah link
+        </button>
       </div>
+
+      <p className="text-[11px] text-muted-foreground">
+        Upload file terlebih dahulu ke SharePoint perusahaan, lalu tempel link HTTPS-nya di sini.
+      </p>
+      {validationError && (
+        <p role="alert" className="text-[11px] text-red-600">
+          {validationError}
+        </p>
+      )}
     </div>
   );
 }
+
+// Backward-compatible export while existing consumers migrate to the explicit
+// SharePointLinkInput name.
+export const FileInput = SharePointLinkInput;

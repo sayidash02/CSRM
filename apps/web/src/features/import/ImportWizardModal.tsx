@@ -176,7 +176,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                     Klik untuk memilih file atau drag & drop ke sini
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Format file yang didukung: <strong>.xlsx</strong> (Maksimal 5MB)
+                    Format file yang didukung: <strong>.xlsx</strong> (Maksimal 100MB)
                   </p>
                 </div>
               </label>

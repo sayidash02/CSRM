@@ -13,6 +13,8 @@ export interface ParsedDailyActivityRow {
   focus: string;
   location: string;
   cost: number;
+  keterangan: string;
+  hasil: string;
   description_result: string;
   document_link: string;
   pic_ids: string[];
@@ -65,6 +67,7 @@ function extractCellString(val: any): string {
   if (val === null || val === undefined) return '';
   if (val instanceof Date) return val.toISOString();
   if (typeof val === 'object') {
+    if (val.hyperlink !== undefined && val.hyperlink !== null) return String(val.hyperlink).trim();
     if (val.result !== undefined && val.result !== null) return String(val.result).trim();
     if (val.text !== undefined && val.text !== null) return String(val.text).trim();
     if (Array.isArray(val.richText)) {
@@ -380,6 +383,8 @@ export class ExcelImportService {
       address: string | null;
       focus: string | null;
       location: string | null;
+      keterangan: string | null;
+      hasil: string | null;
       description_result: string | null;
       cost: number | null;
       document_link: string | null;
@@ -412,6 +417,8 @@ export class ExcelImportService {
       institution: string;
       address: string | null;
       proposal_description: string | null;
+      proposal_file: string | null;
+      assessment_file: string | null;
       status: string;
     }> = [];
 
@@ -510,13 +517,13 @@ export class ExcelImportService {
           let sub_category_name = subCatCol !== -1 ? extractCellString(row.getCell(subCatCol).value).trim() : '';
           if (!sub_category_name || sub_category_name.length > 100) sub_category_name = 'Umum';
 
+          const keterangan = ketCol !== -1 ? (extractCellString(row.getCell(ketCol).value) || null) : null;
+          const hasil = hasCol !== -1 ? (extractCellString(row.getCell(hasCol).value) || null) : null;
           let description_result: string | null = null;
           if (descCol !== -1) {
             description_result = extractCellString(row.getCell(descCol).value) || null;
           } else {
-            const ketStr = ketCol !== -1 ? extractCellString(row.getCell(ketCol).value) : '';
-            const hasStr = hasCol !== -1 ? extractCellString(row.getCell(hasCol).value) : '';
-            description_result = [ketStr, hasStr].filter(Boolean).join(' - ') || null;
+            description_result = [keterangan, hasil].filter(Boolean).join(' - ') || null;
           }
 
           rawDailyActivities.push({
@@ -526,6 +533,8 @@ export class ExcelImportService {
             address,
             focus,
             location,
+            keterangan,
+            hasil,
             description_result,
             cost,
             document_link,
@@ -612,6 +621,8 @@ export class ExcelImportService {
         const instCol = findColIndex(colMap, ['instansi', 'institution', 'lembaga']);
         const addrCol = findColIndex(colMap, ['alamat', 'address']);
         const descCol = findColIndex(colMap, ['deskripsi proposal', 'proposal_description', 'deskripsi', 'perihal', 'keterangan']);
+        const proposalFileCol = findColIndex(colMap, ['proposal', 'proposal_file', 'link proposal', 'file proposal']);
+        const assessmentFileCol = findColIndex(colMap, ['assessment', 'assessment_file', 'link assessment', 'file assessment']);
         const statusCol = findColIndex(colMap, ['status']);
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
@@ -635,6 +646,8 @@ export class ExcelImportService {
           const institution = truncStr(rawInst, 255, 'Umum');
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
           const proposal_description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
+          const proposal_file = proposalFileCol !== -1 ? (extractCellString(row.getCell(proposalFileCol).value) || null) : null;
+          const assessment_file = assessmentFileCol !== -1 ? (extractCellString(row.getCell(assessmentFileCol).value) || null) : null;
           const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Accept') : 'Accept';
 
           rawProposals.push({
@@ -643,6 +656,8 @@ export class ExcelImportService {
             institution,
             address,
             proposal_description,
+            proposal_file,
+            assessment_file,
             status
           });
         }
@@ -861,6 +876,8 @@ export class ExcelImportService {
                 address: item.address,
                 focus: item.focus,
                 location: item.location,
+                keterangan: item.keterangan,
+                hasil: item.hasil,
                 description_result: item.description_result,
                 category_id: catId,
                 sub_category_id: subCatId,
@@ -920,8 +937,8 @@ export class ExcelImportService {
         }
       },
       {
-        maxWait: 10000,
-        timeout: 60000
+        maxWait: 30000,
+        timeout: 180000
       }
     );
 
@@ -1027,6 +1044,8 @@ export async function parseDailyActivitiesExcel(buffer: Buffer): Promise<ExcelIm
       focus,
       location,
       cost,
+      keterangan,
+      hasil,
       description_result,
       document_link,
       pic_ids: picMatches.map(p => p ? String(p.id) : '').filter(Boolean),

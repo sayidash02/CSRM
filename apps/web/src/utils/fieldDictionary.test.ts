@@ -45,12 +45,11 @@ describe('translateValue', () => {
     expect(translateValue('pic_id', 259)).toBe('259');
   });
 
-  it('returns raw value if not a relation field', () => {
-    expect(translateValue('cost', 50000, mockReferences)).toBe('50000');
+  it('formats currency values for non-relation fields', () => {
+    expect(translateValue('cost', 50000, mockReferences)).toBe('Rp 50.000');
   });
 
   it('handles null/undefined gracefully', () => {
     expect(translateValue('pic_id', null, mockReferences)).toBe('-');
   });
 });
-

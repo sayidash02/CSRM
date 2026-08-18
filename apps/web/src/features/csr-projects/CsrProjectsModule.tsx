@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
-import { FileInput } from '../../components/ui/FileInput';
+import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
@@ -213,18 +213,16 @@ function CsrForm({
           <Field label="Realisasi"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Docx">
-            <FileInput 
+          <Field label="Link Dokumen">
+            <SharePointLinkInput
               value={f.document || null} 
               onChange={url => set("document", url)}
-              picName="CSR Project"
             />
           </Field>
-          <Field label="Image Dokumentasi">
-            <FileInput 
+          <Field label="Link Dokumentasi">
+            <SharePointLinkInput
               value={f.documentation_image || null} 
               onChange={url => set("documentation_image", url)}
-              picName="CSR Project"
             />
           </Field>
         </div>

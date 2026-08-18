@@ -12,7 +12,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.proposals.deleteMany({ where: { registration_no: 'PRP-TEST-001' } });
+  await prisma.proposals.deleteMany({ where: { registration_no: { in: ['PRP-TEST-001', 'PRP-YEAR-2025', 'PRP-YEAR-2026'] } } });
   await prisma.grievance.deleteMany({ where: { register_no: 'GRV-TEST-001' } });
   await prisma.$disconnect();
 });
@@ -51,7 +51,7 @@ describe('GET /api/dashboard/stats', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toBeDefined();
     
-    const { actionable, trends, sync } = res.body.data;
+    const { actionable, trends } = res.body.data;
     
     // Check Actionable
     expect(actionable.untouchedGrievances).toBe(1);
@@ -61,8 +61,40 @@ describe('GET /api/dashboard/stats', () => {
     expect(trends).toHaveProperty('weeklyLastWeek');
     expect(trends).toHaveProperty('weeklyTrend');
     
-    // Check Sync
-    expect(sync).toHaveProperty('unsyncedCount');
-    expect(sync).toHaveProperty('lastSyncDate');
+    expect(res.body.data.filters.year).toBeNull();
+  });
+
+  it('Should scope statistics to a selected year or all years', async () => {
+    await prisma.proposals.createMany({
+      data: [
+        {
+          registration_no: 'PRP-YEAR-2025',
+          date_received: new Date('2025-06-01T00:00:00.000Z'),
+          institution: 'Year 2025',
+          status: 'Accept',
+          is_deleted: false
+        },
+        {
+          registration_no: 'PRP-YEAR-2026',
+          date_received: new Date('2026-06-01T00:00:00.000Z'),
+          institution: 'Year 2026',
+          status: 'Accept',
+          is_deleted: false
+        }
+      ]
+    });
+
+    const selected = await request(app).get('/api/dashboard/stats?year=2025');
+    expect(selected.status).toBe(200);
+    expect(selected.body.data.filters.year).toBe(2025);
+    expect(selected.body.data.totals.proposals).toBe(1);
+
+    const all = await request(app).get('/api/dashboard/stats?year=All');
+    expect(all.status).toBe(200);
+    expect(all.body.data.filters.year).toBeNull();
+    expect(all.body.data.totals.proposals).toBe(3);
+
+    const invalid = await request(app).get('/api/dashboard/stats?year=1800');
+    expect(invalid.status).toBe(400);
   });
 });

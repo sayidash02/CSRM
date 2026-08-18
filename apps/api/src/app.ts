@@ -9,7 +9,6 @@ import csrProjectsRouter from './routes/csrProjects';
 import grievanceRouter from './routes/grievance';
 import lrpRouter from './routes/lrp';
 import picsRouter from './routes/pics';
-import uploadRouter from './routes/upload';
 import syncRouter from './routes/sync';
 import exportRouter from './routes/export';
 import dashboardRouter from './routes/dashboard';
@@ -19,6 +18,7 @@ import yearsRouter from './routes/years';
 import devRoutes from './routes/dev';
 import auditLogRoutes from './routes/auditLog.routes';
 import { errorHandler } from './lib/errorHandler';
+import { attachmentLinkValidationMiddleware } from './lib/sharePointLinkValidation';
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -26,8 +26,9 @@ import { errorHandler } from './lib/errorHandler';
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(attachmentLinkValidationMiddleware);
 
 app.use('/api/daily-activities', dailyActivitiesRouter);
 app.use('/api/references', referencesRouter);
@@ -37,7 +38,6 @@ app.use('/api/proposals', proposalsRouter);
 app.use('/api/csr-projects', csrProjectsRouter);
 app.use('/api/grievance', grievanceRouter);
 app.use('/api/lrp', lrpRouter);
-app.use('/api/upload', uploadRouter);
 app.use('/api/sync', syncRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/pics', picsRouter);

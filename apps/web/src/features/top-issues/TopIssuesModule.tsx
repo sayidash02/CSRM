@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, Trash2, Search, Plus, Download, FileText, RotateCcw, History } from "lucide-react";
-import { FileInput } from '../../components/ui/FileInput';
+import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -160,18 +160,16 @@ function TopIssueForm({
         <Field label="Follow Up"><textarea rows={2} value={f.follow_up} onChange={e => set("follow_up", e.target.value)} placeholder="Tindakan yang sudah / sedang dilakukan" className={`${inputCls} resize-none`} /></Field>
         <Field label="Next Plan"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut berikutnya" className={`${inputCls} resize-none`} /></Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Main Document">
-            <FileInput 
+          <Field label="Link Dokumen Utama">
+            <SharePointLinkInput
               value={f.main_document || null} 
               onChange={url => set("main_document", url)}
-              picName="Top Issue"
             />
           </Field>
-          <Field label="Supporting Document">
-            <FileInput 
+          <Field label="Link Dokumen Pendukung">
+            <SharePointLinkInput
               value={f.supporting_document || null} 
               onChange={url => set("supporting_document", url)}
-              picName="Top Issue"
             />
           </Field>
         </div>

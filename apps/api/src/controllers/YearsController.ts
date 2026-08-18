@@ -11,37 +11,37 @@ export const getAvailableYears = catchAsync(async (_req: Request, res: Response)
       prisma.$queryRaw<{ y: number }[]>`
         SELECT DISTINCT YEAR(activity_date) AS y
         FROM daily_activities
-        WHERE is_deleted = FALSE AND activity_date IS NOT NULL`,
+        WHERE is_deleted = FALSE AND is_archived = FALSE AND activity_date IS NOT NULL`,
 
       prisma.$queryRaw<{ y: number }[]>`
         SELECT DISTINCT YEAR(date) AS y
         FROM stakeholder_engagement
-        WHERE is_deleted = FALSE AND date IS NOT NULL`,
+        WHERE is_deleted = FALSE AND is_archived = FALSE AND date IS NOT NULL`,
 
       prisma.$queryRaw<{ y: number }[]>`
         SELECT DISTINCT YEAR(date_received) AS y
         FROM proposals
-        WHERE is_deleted = FALSE`,
+        WHERE is_deleted = FALSE AND is_archived = FALSE`,
 
       prisma.$queryRaw<{ y: number }[]>`
         SELECT DISTINCT project_year AS y
         FROM csr_projects
-        WHERE is_deleted = FALSE`,
+        WHERE is_deleted = FALSE AND is_archived = FALSE`,
 
       prisma.$queryRaw<{ y: number }[]>`
         SELECT DISTINCT YEAR(log_date) AS y
         FROM grievance
-        WHERE is_deleted = FALSE`,
+        WHERE is_deleted = FALSE AND is_archived = FALSE`,
 
       prisma.$queryRaw<{ y: number }[]>`
         SELECT DISTINCT year AS y
         FROM top_issues
-        WHERE is_deleted = FALSE`,
+        WHERE is_deleted = FALSE AND is_archived = FALSE`,
 
       prisma.$queryRaw<{ y: number }[]>`
         SELECT DISTINCT year AS y
         FROM lrp
-        WHERE is_deleted = FALSE`,
+        WHERE is_deleted = FALSE AND is_archived = FALSE`,
     ]);
 
   const allRaw = [

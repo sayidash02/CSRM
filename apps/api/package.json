@@ -12,7 +12,8 @@
   "scripts": {
     "test": "dotenv -e .env.test -- jest --runInBand",
     "dev": "nodemon src/server.ts",
-    "seed": "ts-node src/seed.ts"
+    "seed": "ts-node src/seed.ts",
+    "template:sanitize": "ts-node --transpile-only scripts/create-sanitized-template.ts"
   },
   "keywords": [],
   "author": "",

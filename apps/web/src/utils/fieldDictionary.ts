@@ -1,6 +1,8 @@
 export const FIELD_DICTIONARY: Record<string, string> = {
   // Daily Activities
   cost: 'Biaya',
+  keterangan: 'Keterangan',
+  hasil: 'Hasil',
   description_result: 'Keterangan & Hasil',
   status: 'Status',
   activity: 'Aktivitas',
@@ -120,4 +122,3 @@ export const translateValue = (field: string, value: any, references?: any): str
 
   return String(value);
 };
-

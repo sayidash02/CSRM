@@ -41,6 +41,8 @@ model daily_activities {
   focus               String?               @db.VarChar(255)
   location            String?               @db.VarChar(255)
   description_result  String?               @db.Text
+  keterangan          String?               @db.Text
+  hasil               String?               @db.Text
   category_id         BigInt
   sub_category_id     BigInt
   is_deleted          Boolean               @default(false)

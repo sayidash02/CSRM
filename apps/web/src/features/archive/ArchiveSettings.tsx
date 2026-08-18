@@ -284,7 +284,7 @@ export default function ArchiveSettings() {
           <span>Informasi Keamanan &amp; Backup Arsip</span>
         </h4>
         <p className="text-muted-foreground leading-relaxed">
-          Sistem secara otomatis akan mengekspor backup Excel ke SharePoint master saat proses pengarsipan dilakukan. Proses pengarsipan bersifat reversible (dapat dipulihkan kapan saja) tanpa kehilangan riwayat data.
+          Download workbook melalui tombol Download Excel sebelum mengarsipkan bila membutuhkan backup SharePoint. Pengarsipan hanya mengubah status lokal dan bersifat reversible tanpa mengunggah file secara otomatis.
         </p>
       </div>
 

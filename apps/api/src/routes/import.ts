@@ -9,7 +9,7 @@ const uploadDir = path.join(os.tmpdir(), 'crms-imports');
 const upload = multer({
   dest: uploadDir,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 100 * 1024 * 1024 // 100MB limit to support full-year sheets with embedded media
   }
 });
 

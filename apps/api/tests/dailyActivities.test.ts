@@ -42,11 +42,16 @@ describe('POST /api/daily-activities', () => {
       activity: 'Kunjungan Lapangan',
       pic_id: picId.toString(),
       category_id: catId.toString(),
-      sub_category_id: subCatId.toString()
+      sub_category_id: subCatId.toString(),
+      keterangan: 'Ket API',
+      hasil: 'Hasil API'
     };
     const res = await request(app).post('/api/daily-activities').send(payload);
     expect(res.status).toBe(201);
     expect(res.body.data.activity).toBe('Kunjungan Lapangan');
+    expect(res.body.data.keterangan).toBe('Ket API');
+    expect(res.body.data.hasil).toBe('Hasil API');
+    expect(res.body.data.description_result).toBe('Ket API - Hasil API');
   });
 
   it('Negative: Should fail if required field missing', async () => {
@@ -157,13 +162,18 @@ describe('PUT /api/daily-activities/:id', () => {
       pic_id: picId.toString(),
       category_id: catId.toString(),
       sub_category_id: subCatId.toString(),
-      cost: 500000
+      cost: 500000,
+      keterangan: 'Keterangan diperbarui',
+      hasil: 'Hasil diperbarui'
     };
     
     const res = await request(app).put(`/api/daily-activities/${id}`).send(updatePayload);
     expect(res.status).toBe(200);
     expect(res.body.data.activity).toBe('Kunjungan Lapangan Updated');
     expect(res.body.data.cost).toBe('500000');
+    expect(res.body.data.keterangan).toBe('Keterangan diperbarui');
+    expect(res.body.data.hasil).toBe('Hasil diperbarui');
+    expect(res.body.data.description_result).toBe('Keterangan diperbarui - Hasil diperbarui');
   });
 
   it('Should record audit log when PICs change during update', async () => {

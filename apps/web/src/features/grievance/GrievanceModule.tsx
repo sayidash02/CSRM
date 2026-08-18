@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
-import { FileInput } from '../../components/ui/FileInput';
+import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -202,12 +202,10 @@ function GrievanceForm({
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Open</option><option>On Progress</option><option>Resolved</option><option>Closed</option></select></Field>
           <Field label="Tanggal Selesai"><input type="date" value={f.completion_date} onChange={e => set("completion_date", e.target.value)} className={inputCls} /></Field>
         </div>
-        <Field label="Dokumen Pendukung">
-          <FileInput 
+        <Field label="Link Dokumen Pendukung">
+          <SharePointLinkInput
             value={f.supporting_files || null} 
             onChange={url => set("supporting_files", url)}
-            activityDate={f.log_date}
-            picName={f.complainant_name}
           />
         </Field>
       </div>

@@ -6,7 +6,7 @@ import { parseDailyActivitiesExcel } from '../services/ExcelImportService';
 import { catchAsync } from '../lib/catchAsync';
 
 const upload = multer({
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const isExcelExt = file.originalname.match(/\.(xlsx|xls)$/i);
     const validMimeTypes = [
@@ -21,8 +21,34 @@ const upload = multer({
   }
 });
 
+const hasOwn = (value: object, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const normalizeText = (value: unknown): string | null => {
+  if (value === undefined || value === null) return null;
+  const normalized = String(value).trim();
+  return normalized || null;
+};
+
+/**
+ * Keep the legacy combined column available while treating the new
+ * `keterangan` and `hasil` fields as the source of truth whenever either is
+ * supplied by a client.
+ */
+const normalizeDailyActivityText = (body: Record<string, unknown>) => {
+  const keterangan = normalizeText(body.keterangan);
+  const hasil = normalizeText(body.hasil);
+  const hasStructuredText = hasOwn(body, 'keterangan') || hasOwn(body, 'hasil');
+  const description_result = hasStructuredText
+    ? [keterangan, hasil].filter((value): value is string => Boolean(value)).join(' - ') || null
+    : normalizeText(body.description_result);
+
+  return { keterangan, hasil, description_result, hasStructuredText };
+};
+
 export const createDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
+  const dailyText = normalizeDailyActivityText(req.body);
 
   const rawPicIds = pic_ids || (pic_id ? [pic_id] : []);
   const resolvedPicIds = Array.isArray(rawPicIds) ? rawPicIds : [rawPicIds];
@@ -50,7 +76,9 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
       focus,
       location,
       cost: cost !== undefined && cost !== null ? Number(cost) : null,
-      description_result,
+      keterangan: dailyText.keterangan,
+      hasil: dailyText.hasil,
+      description_result: dailyText.description_result,
       document_link,
       category_id: BigInt(category_id),
       sub_category_id: BigInt(sub_category_id),
@@ -93,7 +121,9 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     const q = search as string;
     where.OR = [
       { activity: { contains: q } },
-      { location: { contains: q } }
+      { location: { contains: q } },
+      { keterangan: { contains: q } },
+      { hasil: { contains: q } }
     ];
   }
 
@@ -108,6 +138,8 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       case 'focus':
       case 'location':
       case 'cost':
+      case 'keterangan':
+      case 'hasil':
       case 'description_result':
         orderByConfig = { [sort_by as string]: dir };
         break;
@@ -202,7 +234,8 @@ export const restoreDailyActivity = catchAsync(async (req: Request, res: Respons
 
 export const updateDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { activity_date, activity, institution_group, address, focus, location, cost, description_result, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
+  const dailyText = normalizeDailyActivityText(req.body);
 
   if (!activity_date || !activity || (!pic_ids && !pic_id) || !category_id || !sub_category_id) {
     res.status(400).json({ error: 'Missing required fields' });
@@ -247,6 +280,16 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
     }
   }
 
+  const textUpdate = dailyText.hasStructuredText
+    ? {
+        keterangan: dailyText.keterangan,
+        hasil: dailyText.hasil,
+        description_result: dailyText.description_result
+      }
+    : hasOwn(req.body, 'description_result')
+      ? { description_result: dailyText.description_result }
+      : {};
+
   const result = await prisma.daily_activities.update({
     where: { id: BigInt(id as string) },
     data: {
@@ -257,10 +300,10 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
       focus,
       location,
       cost: cost !== undefined && cost !== null ? Number(cost) : null,
-      description_result,
       document_link,
       category_id: BigInt(category_id),
       sub_category_id: BigInt(sub_category_id),
+      ...textUpdate,
       daily_activity_pics: {
         deleteMany: {},
         create: normalizedPicIds.map((pid: any) => ({ pic_id: BigInt(pid) }))
@@ -301,6 +344,13 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
         err.status = 400;
         throw err;
       }
+
+      const dailyTextBody: Record<string, unknown> = {
+        description_result: r.description_result
+      };
+      if (hasOwn(r, 'keterangan')) dailyTextBody.keterangan = r.keterangan;
+      if (hasOwn(r, 'hasil')) dailyTextBody.hasil = r.hasil;
+      const dailyText = normalizeDailyActivityText(dailyTextBody);
       
       await tx.daily_activities.create({
         data: {
@@ -316,7 +366,9 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
           focus: String(r.focus || ''),
           location: String(r.location || ''),
           cost: Number(r.cost) || 0,
-          description_result: String(r.description_result || ''),
+          keterangan: dailyText.keterangan,
+          hasil: dailyText.hasil,
+          description_result: dailyText.description_result,
           document_link: String(r.document_link || ''),
           is_deleted: false,
           created_at: new Date(),
