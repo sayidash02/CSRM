@@ -102,12 +102,13 @@ describe('DailyActivityMomExportService Unit Tests', () => {
     expect(allCellValues.some(v => v.includes('Sub Kategori') || v.includes('Sub Category'))).toBe(true);
     expect(allCellValues.some(v => v.includes('Fokus'))).toBe(true);
     expect(allCellValues.some(v => v.includes('Biaya') || v.includes('Anggaran'))).toBe(true);
-    expect(allCellValues.some(v => v.includes('Attendees'))).toBe(true);
-    expect(allCellValues.some(v => v.includes('Keterangan Pertemuan'))).toBe(true);
-    expect(allCellValues.some(v => v.includes('Hasil Pertemuan'))).toBe(true);
-    expect(allCellValues.some(v => v.includes('Kesimpulan'))).toBe(true);
-    expect(allCellValues.some(v => v.toLowerCase().includes('next plan'))).toBe(true);
-    expect(allCellValues.some(v => v.includes('Supporting Documents'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('ATTENDEES') || v.includes('Daftar Hadir'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('AGENDA') || v.includes('Keterangan'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('HASIL') || v.includes('Pembahasan'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('KESIMPULAN') || v.includes('Kesimpulan'))).toBe(true);
+    expect(allCellValues.some(v => v.toLowerCase().includes('next plan') || v.toLowerCase().includes('tindak lanjut'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('LAMPIRAN') || v.includes('Supporting Documents'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Dibuat Oleh'))).toBe(true);
   });
 
   it('generateMomWorkbookBuffer should produce a multi-sheet workbook with Rekap and individual MOM sheets', async () => {

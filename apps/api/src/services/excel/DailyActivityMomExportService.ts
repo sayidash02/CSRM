@@ -110,25 +110,36 @@ export class DailyActivityMomExportService {
 
     let currentRow = 1;
 
-    // Row 1: Company Banner (A1:D1)
-    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 4, {
+    const yearStr = activity.activity_date ? String(new Date(activity.activity_date).getFullYear()) : '2026';
+    const docIdStr = activity.id ? String(activity.id).padStart(3, '0') : '001';
+
+    // Row 1: Company Banner & Document Control (A1:C1 and D1)
+    worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 3, {
       font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FFFFFFFF' } },
       fill: BANNER_FILL,
-      alignment: { vertical: 'middle', horizontal: 'center' }
+      alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
     });
     worksheet.getCell(`A${currentRow}`).value = 'PT JAWA SATU POWER — EXTERNAL AFFAIRS & CSR';
+
+    const cellD1 = worksheet.getCell(`D${currentRow}`);
+    applyCellStyle(cellD1, {
+      font: { name: 'Times New Roman', size: 9, bold: true, color: { argb: 'FFFFFFFF' } },
+      fill: BANNER_FILL,
+      alignment: { vertical: 'middle', horizontal: 'right', indent: 1 }
+    });
+    cellD1.value = `DOC ID: JSP-EA-MOM-${yearStr}-${docIdStr}`;
     worksheet.getRow(currentRow).height = 24;
     currentRow++;
 
     // Row 2: Document Header Title (A2:D2)
     worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
     applyMergedRowStyles(worksheet, currentRow, 4, {
-      font: { name: 'Times New Roman', size: 12.5, bold: true, color: { argb: 'FF1E3A8A' } },
+      font: { name: 'Times New Roman', size: 13, bold: true, color: { argb: 'FF1E3A8A' } },
       fill: SUBHEADER_FILL,
       alignment: { vertical: 'middle', horizontal: 'center' }
     });
-    worksheet.getCell(`A${currentRow}`).value = 'MINUTES OF MEETING (DAILY NOTES)';
+    worksheet.getCell(`A${currentRow}`).value = 'MINUTES OF MEETING & DAILY ACTIVITY REPORT';
     worksheet.getRow(currentRow).height = 28;
     currentRow++;
 
@@ -139,7 +150,7 @@ export class DailyActivityMomExportService {
       fill: TITLE_FILL,
       alignment: { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
     });
-    worksheet.getCell(`A${currentRow}`).value = `Daily Title : ${activity.activity || '-'}`;
+    worksheet.getCell(`A${currentRow}`).value = `Topik / Daily Title : ${activity.activity || '-'}`;
     worksheet.getRow(currentRow).height = 32;
     currentRow++;
 
@@ -242,36 +253,90 @@ export class DailyActivityMomExportService {
       currentRow++;
     };
 
-    // 1. Attendees
+    // 1. Attendees Matrix (2-Column Subtable)
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 10.5, bold: true, color: { argb: 'FF1E3A8A' } },
+      fill: SECTION_FILL,
+      alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
+    });
+    worksheet.getCell(`A${currentRow}`).value = 'I. DAFTAR HADIR (ATTENDEES MATRIX)';
+    worksheet.getRow(currentRow).height = 24;
+    currentRow++;
+
+    // Subheaders for Attendees Matrix
+    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 2, {
+      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF1E3A8A' } },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } },
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    worksheet.getCell(`A${currentRow}`).value = 'Tim Internal PT Jawa Satu Power (JSP)';
+
+    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF1E3A8A' } },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } },
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    // Fix cell C styling
+    applyCellStyle(worksheet.getCell(`C${currentRow}`), {
+      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF1E3A8A' } },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } },
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    worksheet.getCell(`C${currentRow}`).value = 'Peserta Eksternal / Stakeholders';
+    worksheet.getRow(currentRow).height = 22;
+    currentRow++;
+
+    // Content for Attendees Matrix
+    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 2, {
+      font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
+      alignment: { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 }
+    });
+    const internalList = picNames !== '-'
+      ? picNames.split(', ').map((p: string) => `• ${p}`).join('\n')
+      : '• Tim Internal JSP';
+    worksheet.getCell(`A${currentRow}`).value = internalList;
+
+    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
+      alignment: { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 }
+    });
+    applyCellStyle(worksheet.getCell(`C${currentRow}`), {
+      font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
+      alignment: { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 }
+    });
+
     let externalAttendees = activity.institution_group || '';
-    const attendeesLines: string[] = [
-      `• Tim Internal PT Jawa Satu Power (JSP) : ${picNames}`
-    ];
+    let extListText = '-';
     if (externalAttendees) {
       const extLines = externalAttendees.split('\n').map((l: string) => l.trim()).filter(Boolean);
       if (extLines.length > 1) {
-        extLines.forEach((l: string, idx: number) => {
-          attendeesLines.push(`• Peserta Eksternal (${idx + 1}): ${l.replace(/^[-*•\d.]+\s*/, '')}`);
-        });
+        extListText = extLines.map((l: string, idx: number) => `${idx + 1}. ${l.replace(/^[-*•\d.]+\s*/, '')}`).join('\n');
       } else {
-        attendeesLines.push(`• Peserta Eksternal: ${externalAttendees.replace(/^[-*•\d.]+\s*/, '')}`);
+        extListText = `1. ${externalAttendees.replace(/^[-*•\d.]+\s*/, '')}`;
       }
-    } else {
-      attendeesLines.push('• Peserta Eksternal: -');
     }
-    addSectionBlock('Attendees', attendeesLines.join('\n'), 45);
+    worksheet.getCell(`C${currentRow}`).value = extListText;
+
+    const maxAttLines = Math.max(internalList.split('\n').length, extListText.split('\n').length);
+    worksheet.getRow(currentRow).height = Math.max(45, maxAttLines * 20);
+    currentRow++;
 
     // 2. Keterangan Pertemuan
-    addSectionBlock('Keterangan Pertemuan', activity.keterangan || activity.description_result || '-', 50);
+    addSectionBlock('II. RINGKASAN & AGENDA PERTEMUAN', activity.keterangan || activity.description_result || '-', 50);
 
     // 3. Hasil Pertemuan
-    addSectionBlock('Hasil Pertemuan', activity.hasil || activity.description_result || '-', 90);
+    addSectionBlock('III. POIN PEMBAHASAN & HASIL PERTEMUAN', activity.hasil || activity.description_result || '-', 90);
 
     // 4. Kesimpulan
-    addSectionBlock('Kesimpulan', activity.kesimpulan || '-', 50);
+    addSectionBlock('IV. KESIMPULAN (EXECUTIVE SUMMARY)', activity.kesimpulan || '-', 50);
 
     // 5. Next Plan
-    addSectionBlock('Next Plan', activity.next_plan || '-', 50);
+    addSectionBlock('V. RENCANA TINDAK LANJUT (NEXT PLAN / ACTION ITEMS)', activity.next_plan || '-', 50);
 
     // 6. Supporting Documents
     worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
@@ -280,7 +345,7 @@ export class DailyActivityMomExportService {
       fill: SECTION_FILL,
       alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
     });
-    worksheet.getCell(`A${currentRow}`).value = 'Supporting Documents / Documentation';
+    worksheet.getCell(`A${currentRow}`).value = 'VI. LAMPIRAN DOKUMEN & DOKUMENTASI RESMI';
     worksheet.getRow(currentRow).height = 24;
     currentRow++;
 
@@ -301,6 +366,60 @@ export class DailyActivityMomExportService {
       docCell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF64748B' } };
     }
     worksheet.getRow(currentRow).height = 30;
+    currentRow++;
+
+    // 7. Lembar Pengesahan / Formal Sign-Off
+    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 2, {
+      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
+      fill: KEY_FILL,
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    worksheet.getCell(`A${currentRow}`).value = 'Dibuat Oleh,';
+
+    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
+      fill: KEY_FILL,
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    applyCellStyle(worksheet.getCell(`C${currentRow}`), {
+      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
+      fill: KEY_FILL,
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    worksheet.getCell(`C${currentRow}`).value = 'Diketahui / Disetujui Oleh,';
+    worksheet.getRow(currentRow).height = 22;
+    currentRow++;
+
+    // Signature Space Row
+    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 2, {});
+    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {});
+    worksheet.getRow(currentRow).height = 55;
+    currentRow++;
+
+    // Signee Names Row
+    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 2, {
+      font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF0F172A' } },
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    const creatorName = picNames !== '-' ? picNames : 'Tim CRS / External Affairs';
+    worksheet.getCell(`A${currentRow}`).value = `( ${creatorName} )`;
+
+    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF0F172A' } },
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    applyCellStyle(worksheet.getCell(`C${currentRow}`), {
+      font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF0F172A' } },
+      alignment: { vertical: 'middle', horizontal: 'center' }
+    });
+    worksheet.getCell(`C${currentRow}`).value = '( External Affairs & CSR Manager )';
+    worksheet.getRow(currentRow).height = 24;
   }
 
   /**
