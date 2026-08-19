@@ -39,9 +39,23 @@ export function validateAttachmentLinkValue(value: unknown): boolean {
   if (!links) return false;
 
   return links.every((link) => {
+    // Allow safe internal uploaded file paths (e.g. /uploads/...)
+    if (link.startsWith('/uploads/') && !link.includes('..')) {
+      return true;
+    }
+    if (link.startsWith('file://') && !link.includes('javascript:')) {
+      return true;
+    }
+
     try {
       const url = new URL(link);
-      return url.protocol === 'https:' && Boolean(url.hostname);
+      if (url.protocol === 'https:' && Boolean(url.hostname)) {
+        return true;
+      }
+      if (url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')) {
+        return true;
+      }
+      return false;
     } catch {
       return false;
     }
