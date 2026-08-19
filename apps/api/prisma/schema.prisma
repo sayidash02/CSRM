@@ -43,6 +43,8 @@ model daily_activities {
   description_result  String?               @db.Text
   keterangan          String?               @db.Text
   hasil               String?               @db.Text
+  kesimpulan          String?               @db.Text
+  next_plan           String?               @db.Text
   category_id         BigInt
   sub_category_id     BigInt
   is_deleted          Boolean               @default(false)

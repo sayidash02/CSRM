@@ -3,6 +3,7 @@ import multer from 'multer';
 import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { parseDailyActivitiesExcel } from '../services/ExcelImportService';
+import { DailyActivityMomExportService } from '../services/excel/DailyActivityMomExportService';
 import { catchAsync } from '../lib/catchAsync';
 
 const upload = multer({
@@ -47,7 +48,7 @@ const normalizeDailyActivityText = (body: Record<string, unknown>) => {
 };
 
 export const createDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan } = req.body;
   const dailyText = normalizeDailyActivityText(req.body);
 
   const rawPicIds = pic_ids || (pic_id ? [pic_id] : []);
@@ -78,6 +79,8 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
       cost: cost !== undefined && cost !== null ? Number(cost) : null,
       keterangan: dailyText.keterangan,
       hasil: dailyText.hasil,
+      kesimpulan: normalizeText(kesimpulan),
+      next_plan: normalizeText(next_plan),
       description_result: dailyText.description_result,
       document_link,
       category_id: BigInt(category_id),
@@ -122,8 +125,13 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     where.OR = [
       { activity: { contains: q } },
       { location: { contains: q } },
+      { institution_group: { contains: q } },
+      { address: { contains: q } },
+      { focus: { contains: q } },
       { keterangan: { contains: q } },
-      { hasil: { contains: q } }
+      { hasil: { contains: q } },
+      { kesimpulan: { contains: q } },
+      { next_plan: { contains: q } }
     ];
   }
 
@@ -137,9 +145,12 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       case 'activity':
       case 'focus':
       case 'location':
+      case 'address':
       case 'cost':
       case 'keterangan':
       case 'hasil':
+      case 'kesimpulan':
+      case 'next_plan':
       case 'description_result':
         orderByConfig = { [sort_by as string]: dir };
         break;
@@ -163,7 +174,6 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       case 'pic':
       case 'pic_name':
       case 'pic.name':
-        // Cannot order by a many-to-many relation, fallback to default
         orderByConfig = { activity_date: 'desc' };
         break;
       default:
@@ -234,7 +244,7 @@ export const restoreDailyActivity = catchAsync(async (req: Request, res: Respons
 
 export const updateDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan } = req.body;
   const dailyText = normalizeDailyActivityText(req.body);
 
   if (!activity_date || !activity || (!pic_ids && !pic_id) || !category_id || !sub_category_id) {
@@ -290,6 +300,10 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
       ? { description_result: dailyText.description_result }
       : {};
 
+  const extraFields: Record<string, unknown> = {};
+  if (hasOwn(req.body, 'kesimpulan')) extraFields.kesimpulan = normalizeText(kesimpulan);
+  if (hasOwn(req.body, 'next_plan')) extraFields.next_plan = normalizeText(next_plan);
+
   const result = await prisma.daily_activities.update({
     where: { id: BigInt(id as string) },
     data: {
@@ -304,6 +318,7 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
       category_id: BigInt(category_id),
       sub_category_id: BigInt(sub_category_id),
       ...textUpdate,
+      ...extraFields,
       daily_activity_pics: {
         deleteMany: {},
         create: normalizedPicIds.map((pid: any) => ({ pic_id: BigInt(pid) }))
@@ -368,6 +383,8 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
           cost: Number(r.cost) || 0,
           keterangan: dailyText.keterangan,
           hasil: dailyText.hasil,
+          kesimpulan: normalizeText(r.kesimpulan),
+          next_plan: normalizeText(r.next_plan),
           description_result: dailyText.description_result,
           document_link: String(r.document_link || ''),
           is_deleted: false,
@@ -383,3 +400,33 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
   res.json({ status: 200, data: { count: result.count } });
 });
 
+export const exportSingleMom = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  if (!id) {
+    res.status(400).json({ error: 'ID kegiatan wajib disertakan' });
+    return;
+  }
+  const { buffer, fileName } = await DailyActivityMomExportService.generateSingleMomBuffer(id as string);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.setHeader('Content-Length', buffer.byteLength);
+  res.status(200).send(buffer);
+});
+
+export const exportMomWorkbook = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { year, is_deleted, search, cat, sub_cat, start, end } = req.query;
+  const { buffer, fileName, count } = await DailyActivityMomExportService.generateMomWorkbookBuffer({
+    year: year as string,
+    is_deleted: is_deleted === 'true',
+    search: search as string,
+    cat: cat as string,
+    sub_cat: sub_cat as string,
+    start: start as string,
+    end: end as string
+  });
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.setHeader('Content-Length', buffer.byteLength);
+  res.setHeader('X-Total-Count', String(count));
+  res.status(200).send(buffer);
+});

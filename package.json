@@ -1,5 +1,14 @@
 {
-	"devDependencies": {
-		"ts-jest": "^29.4.12"
-	}
+  "name": "crms-root",
+  "private": true,
+  "scripts": {
+    "dev:api": "pnpm --dir apps/api dev",
+    "dev:web": "pnpm --dir apps/web dev",
+    "test:api": "pnpm --dir apps/api test",
+    "build:web": "pnpm --dir apps/web build"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "ts-jest": "^29.4.12"
+  }
 }

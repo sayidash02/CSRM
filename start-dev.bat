@@ -1,0 +1,3 @@
+@echo off
+echo Memulai CRMS Backend & Frontend...
+pnpm dev

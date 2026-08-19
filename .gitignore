@@ -8,3 +8,5 @@ dist/
 .sharepoint_mock/
 **/.sharepoint_mock/
 .worktrees/
+~$*
+*.tmp

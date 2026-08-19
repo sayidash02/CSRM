@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw, History } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw, History, FileSpreadsheet, ChevronDown } from "lucide-react";
 import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
@@ -29,6 +29,8 @@ export interface DailyActivity {
   sub_category_id: string | number;
   keterangan: string | null;
   hasil: string | null;
+  kesimpulan?: string | null;
+  next_plan?: string | null;
   /** Legacy compatibility value; new writes derive it from keterangan + hasil. */
   description_result: string | null;
   document_link: string | null;
@@ -43,7 +45,6 @@ export interface DailyActivity {
   stakeholder?: any;
 }
 
-
 // Helpers
 const formatIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 const formatDate = (d?: string | Date | null) => {
@@ -52,10 +53,6 @@ const formatDate = (d?: string | Date | null) => {
   if (isNaN(dateObj.getTime())) return "-";
   return dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 };
-
-
-
-// Re-usable UI from App.tsx (We should technically extract these to shared, but for now we inline them or import if exported. Since they are not exported, we inline the ones we need or just assume they are available. Wait, App.tsx doesn't export them. I will copy them here to avoid breaking App.tsx)
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -69,14 +66,34 @@ function Field({ label, required, hint, children }: { label: string; required?: 
   );
 }
 
-function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, categories, catFilter, onCatFilterChange, subCategories, subCatFilter, onSubCatFilterChange, showDeleted }: {
+function TopBar({ 
+  title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, 
+  onExportRekap, onExportMomWorkbook, onExportFullWorkbook,
+  children, categories, catFilter, onCatFilterChange, subCategories, subCatFilter, onSubCatFilterChange, showDeleted 
+}: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
-  onExport?: () => void; children?: React.ReactNode;
+  onExportRekap?: () => void;
+  onExportMomWorkbook?: () => void;
+  onExportFullWorkbook?: () => void;
+  children?: React.ReactNode;
   categories?: any[]; catFilter?: string; onCatFilterChange?: (v: string) => void;
   subCategories?: any[]; subCatFilter?: string; onSubCatFilterChange?: (v: string) => void;
   showDeleted?: boolean;
 }) {
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
       <div className="shrink-0">
@@ -116,7 +133,65 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
             </div>
           </>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
+
+        {/* Dedicated Direct MOM Button */}
+        <button
+          onClick={onExportMomWorkbook}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-xs"
+          title="Unduh All-in-One Workbook (Rekap + Notulensi MOM tiap kegiatan)"
+        >
+          <FileSpreadsheet size={14} />
+          <span>Download MOM (Excel)</span>
+        </button>
+
+        {/* Export Dropdown Menu */}
+        <div className="relative" ref={menuRef}>
+          <button 
+            onClick={() => setShowExportMenu(!showExportMenu)} 
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"
+          >
+            <Download size={13} />
+            Export
+            <ChevronDown size={12} className={`transition-transform duration-200 ${showExportMenu ? 'rotate-180' : ''}`} />
+          </button>
+
+          {showExportMenu && (
+            <div className="absolute right-0 mt-1 w-64 bg-white border border-border rounded-lg shadow-lg z-50 py-1.5 text-xs animate-in fade-in-50 zoom-in-95">
+              <button
+                onClick={() => { setShowExportMenu(false); onExportRekap?.(); }}
+                className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors"
+              >
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Download size={13} className="text-blue-600" /> Export Rekap Master (Excel)
+                </span>
+                <span className="text-[11px] text-muted-foreground mt-0.5">Tabel rekapitulasi semua kegiatan</span>
+              </button>
+
+              <button
+                onClick={() => { setShowExportMenu(false); onExportMomWorkbook?.(); }}
+                className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors border-t border-border/50"
+              >
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  <FileSpreadsheet size={13} className="text-emerald-600" /> Export All-in-One (Rekap + MOMs)
+                </span>
+                <span className="text-[11px] text-muted-foreground mt-0.5">1 File Excel: Master sheet + Tab notulensi tiap kegiatan</span>
+              </button>
+
+              {onExportFullWorkbook && (
+                <button
+                  onClick={() => { setShowExportMenu(false); onExportFullWorkbook?.(); }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors border-t border-border/50"
+                >
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Download size={13} className="text-indigo-600" /> Export CRMS Full Workbook
+                  </span>
+                  <span className="text-[11px] text-muted-foreground mt-0.5">Semua 7 modul operasional perusahaan</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
       </div>
     </div>
@@ -126,10 +201,18 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 const emptyDailyDraft = {
   activity_date: "", activity: "", stakeholder_id: "", institution_group: "", address: "",
   focus: "", location: "", cost: "", pic_ids: [] as (string | number)[], category_id: "",
-  sub_category_id: "", keterangan: "", hasil: "", description_result: "", document_link: ""
+  sub_category_id: "", keterangan: "", hasil: "", kesimpulan: "", next_plan: "", description_result: "", document_link: ""
 };
 
-function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast }: { initial?: DailyActivity; defaultValues?: typeof emptyDailyDraft; onDraftChange?: (v: typeof emptyDailyDraft) => void; onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; refs: { pics: any[], categories: any[], sub_categories: any[] }; onRefreshReferences: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
+function DailyForm({ 
+  initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast, onDownloadMom 
+}: { 
+  initial?: DailyActivity; defaultValues?: typeof emptyDailyDraft; onDraftChange?: (v: typeof emptyDailyDraft) => void; 
+  onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void; 
+  refs: { pics: any[], categories: any[], sub_categories: any[] }; 
+  onRefreshReferences: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void;
+  onDownloadMom?: () => void;
+}) {
   const [showPicManager, setShowPicManager] = useState(false);
 
   const [f, setF] = useState(
@@ -148,6 +231,8 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           sub_category_id: initial.sub_category_id != null ? String(initial.sub_category_id) : "",
           keterangan: initial.keterangan ?? (initial.hasil ? "" : initial.description_result ?? ""),
           hasil: initial.hasil ?? "",
+          kesimpulan: initial.kesimpulan ?? "",
+          next_plan: initial.next_plan ?? "",
           description_result: initial.description_result ?? "",
           document_link: initial.document_link ?? "",
         }
@@ -169,10 +254,10 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
     const missing: string[] = (
       [
         [!f.activity_date, "Tanggal Kegiatan"],
-        [!f.activity, "Aktivitas"],
+        [!f.activity, "Daily Title / Kegiatan"],
         [!f.pic_ids || f.pic_ids.length === 0, "PIC"],
-        [!f.category_id, "Kategori"],
-        [!f.sub_category_id, "Sub Kategori"],
+        [!f.category_id, "Category"],
+        [!f.sub_category_id, "Sub Category"],
       ] as [boolean, string][]
     ).filter(([cond]) => cond).map(([, label]) => label);
 
@@ -190,6 +275,8 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
       pic_ids: f.pic_ids,
       stakeholder_id: f.stakeholder_id || null,
       cost: Number(f.cost) || 0,
+      kesimpulan: f.kesimpulan || null,
+      next_plan: f.next_plan || null,
       description_result: legacyDescription || null,
       document_link: f.document_link || null
     } as any);
@@ -198,67 +285,81 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
   };
   
   return (
-    <Modal title={initial ? "Edit Kegiatan" : "Tambah Kegiatan Baru"} onClose={onClose}>
-      <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <Modal title={initial ? "Edit Kegiatan & Daily Notes" : "Tambah Kegiatan Baru"} onClose={onClose}>
+      <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[75vh] overflow-y-auto">
         <Field label="Tanggal Kegiatan" required><input type="date" value={String(f.activity_date).split('T')[0]} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
-        <div className="col-span-2"><Field label="Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Deskripsi kegiatan" className={inputCls} /></Field></div>
-        <Field label="Stakeholder / Institusi">
-          <input
-            type="text"
-            value={f.institution_group}
-            onChange={e => set("institution_group", e.target.value)}
-            placeholder="Nama institusi / stakeholder"
-            className={inputCls}
-          />
-        </Field>
-        <Field label="Alamat"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Alamat institusi" className={inputCls} /></Field>
-        <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi kegiatan" className={inputCls} /></Field>
-        <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Fokus kegiatan" className={inputCls} /></Field>
+        <div className="col-span-2"><Field label="Daily Title / Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Judul / Deskripsi kegiatan" className={inputCls} /></Field></div>
+        
+        <Field label="Lokasi (Desa / Wilayah)"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Contoh: Cilamaya Girang" className={inputCls} /></Field>
+        <Field label="Venue / Tempat"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Contoh: Rumah Bapak Asep" className={inputCls} /></Field>
+        <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Topik / Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
 
         <Field label="Category" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
         <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
-        <Field label="PIC" required>
-          <div className="flex gap-2 items-start">
-            <div className="flex-1">
-              <div className="flex flex-wrap gap-1.5 p-2 bg-input-background border border-border rounded-md min-h-[42px]">
-                {refs.pics.length === 0 && <span className="text-xs text-muted-foreground self-center">Belum ada PIC</span>}
-                {refs.pics.map(p => {
-                  const isSelected = f.pic_ids.map(String).includes(String(p.id));
-                  return (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        let newIds = [...f.pic_ids.map(String)];
-                        if (isSelected) {
-                          newIds = newIds.filter(id => id !== String(p.id));
-                        } else {
-                          newIds.push(String(p.id));
-                        }
-                        set("pic_ids", newIds);
-                      }}
-                      className={`px-3 py-1 text-xs font-medium rounded-full border transition-all active:scale-95 ${
-                        isSelected 
-                          ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
-                          : 'bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground'
-                      }`}
-                    >
-                      {p.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0" title="Atur PIC"><Settings size={14} /></button>
-          </div>
-        </Field>
-        <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Keterangan"><textarea rows={3} value={f.keterangan} onChange={e => set("keterangan", e.target.value)} placeholder="Uraian kegiatan" className={`${inputCls} resize-none`} /></Field>
-          <Field label="Hasil"><textarea rows={3} value={f.hasil} onChange={e => set("hasil", e.target.value)} placeholder="Hasil yang dicapai" className={`${inputCls} resize-none`} /></Field>
-        </div>
+        
         <div className="col-span-3">
-          <Field label="Link Dokumen Lampiran" hint="Upload file ke SharePoint perusahaan, lalu tempel link HTTPS-nya.">
+          <Field label="PIC (Tim Internal JSP)" required>
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <div className="flex flex-wrap gap-1.5 p-2 bg-input-background border border-border rounded-md min-h-[42px]">
+                  {refs.pics.length === 0 && <span className="text-xs text-muted-foreground self-center">Belum ada PIC</span>}
+                  {refs.pics.map(p => {
+                    const isSelected = f.pic_ids.map(String).includes(String(p.id));
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          let newIds = [...f.pic_ids.map(String)];
+                          if (isSelected) {
+                            newIds = newIds.filter(id => id !== String(p.id));
+                          } else {
+                            newIds.push(String(p.id));
+                          }
+                          set("pic_ids", newIds);
+                        }}
+                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all active:scale-95 ${
+                          isSelected 
+                            ? 'bg-primary text-primary-foreground border-primary shadow-sm' 
+                            : 'bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                        }`}
+                      >
+                        {p.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0" title="Atur PIC"><Settings size={14} /></button>
+            </div>
+          </Field>
+        </div>
+
+        <div className="col-span-3">
+          <Field label="Attendees Eksternal / Instansi" hint="Daftar peserta eksternal (dapat berupa teks baris baru atau penomoran 1., 2.)">
+            <textarea
+              rows={2}
+              value={f.institution_group}
+              onChange={e => set("institution_group", e.target.value)}
+              placeholder="Contoh:&#10;1. Anggota kelompok nelayan ex class action&#10;2. Tokoh masyarakat setempat"
+              className={`${inputCls} resize-none`}
+            />
+          </Field>
+        </div>
+
+        <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Keterangan Pertemuan"><textarea rows={3} value={f.keterangan} onChange={e => set("keterangan", e.target.value)} placeholder="Latar belakang / agenda pertemuan" className={`${inputCls} resize-none`} /></Field>
+          <Field label="Hasil Pertemuan"><textarea rows={3} value={f.hasil} onChange={e => set("hasil", e.target.value)} placeholder="Poin-poin pembahasan / hasil yang dicapai" className={`${inputCls} resize-none`} /></Field>
+        </div>
+
+        <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Kesimpulan"><textarea rows={2} value={f.kesimpulan} onChange={e => set("kesimpulan", e.target.value)} placeholder="Kesimpulan akhir dari pertemuan" className={`${inputCls} resize-none`} /></Field>
+          <Field label="Next Plan"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut / action items" className={`${inputCls} resize-none`} /></Field>
+        </div>
+
+        <div className="col-span-3">
+          <Field label="Link Dokumen Lampiran / Dokumentasi" hint="Upload file ke SharePoint perusahaan, lalu tempel link HTTPS-nya.">
             <SharePointLinkInput
               value={f.document_link || null} 
               onChange={(url) => set("document_link", url)}
@@ -266,13 +367,46 @@ function DailyForm({ initial, defaultValues, onDraftChange, onClose, onSave, ref
           </Field>
         </div>
       </div>
-      <ModalFooter
-        onClose={onClose}
-        onSave={handleSave}
-        onClear={!initial ? handleClear : undefined}
-        saveLabel={initial ? "Simpan Perubahan" : "Simpan Kegiatan"}
-        isEdit={!!initial}
-      />
+      <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-gray-50/50">
+        <div>
+          {initial && onDownloadMom && (
+            <button
+              type="button"
+              onClick={onDownloadMom}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 rounded-md border border-emerald-300 transition-colors shadow-2xs"
+              title="Unduh lembar Daily Notes (MOM) untuk kegiatan ini"
+            >
+              <FileSpreadsheet size={14} className="text-emerald-600" />
+              <span>Unduh MOM (Excel)</span>
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!initial && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-md transition-colors"
+            >
+              Reset Form
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted rounded-md transition-colors"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors shadow-xs"
+          >
+            {initial ? "Simpan Perubahan" : "Simpan Kegiatan"}
+          </button>
+        </div>
+      </div>
       {showPicManager && <PicManagementModal onClose={() => { setShowPicManager(false); onRefreshReferences(); }} showToast={showToast} />}
     </Modal>
   );
@@ -351,22 +485,24 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     }
   };
 
-  const handleAdd = async (d: Omit<DailyActivity, "id">) => {
+  const handleCreate = async (d: Omit<DailyActivity, "id">) => {
     try {
       await apiClient.post('/daily-activities', d);
       fetchData();
-      showToast(`Kegiatan '${d.activity}' berhasil ditambahkan`, "success");
+      showToast("Kegiatan baru berhasil disimpan", "success");
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
-  const handleEdit = async (id: string | number, d: Omit<DailyActivity, "id">) => {
+  const handleUpdate = async (d: Omit<DailyActivity, "id">) => {
+    if (!editing) return;
     try {
-      await apiClient.put(`/daily-activities/${id}`, d);
+      await apiClient.put(`/daily-activities/${editing.id}`, d);
       fetchData();
-      showToast(`Kegiatan '${d.activity}' berhasil diperbarui`, "success");
+      setEditing(null);
+      showToast("Data kegiatan berhasil diperbarui", "success");
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
@@ -395,15 +531,58 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
     }
   };
 
-  const displayed = items.map(a => ({
-    ...a,
-    category_name: references.categories?.find((c: any) => String(c.id) === String(a.category_id))?.name || "-",
-    sub_category_name: references.sub_categories?.find((s: any) => String(s.id) === String(a.sub_category_id))?.name || "-"
-  }));
-
-  const handleExportClick = async () => {
+  const handleDownloadSingleMom = async (id: string | number, activityName: string, date: string) => {
     try {
-      showToast("Sedang menyiapkan data export...", "info");
+      showToast("Menyiapkan lembar Daily Notes (MOM)...", "info");
+      const res = await apiClient.get(`/daily-activities/${id}/mom`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const safeTitle = (activityName || 'Kegiatan').replace(/[/\\?%*:|"<>]/g, ' ').trim().substring(0, 35);
+      const dateStr = formatDate(date).replace(/\s+/g, '_');
+      link.setAttribute('download', `MOM_${safeTitle}_${dateStr}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Lembar Daily Notes (MOM) berhasil diunduh", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Gagal mengunduh lembar Daily Notes", "error");
+    }
+  };
+
+  const handleExportMomWorkbook = async () => {
+    try {
+      showToast("Menyiapkan All-in-One Workbook (Rekap + MOMs)...", "info");
+      const params = new URLSearchParams();
+      if (activeYear && activeYear !== 'Semua' && activeYear !== 'All') params.append('year', activeYear);
+      params.append('is_deleted', String(showDeleted));
+      if (q) params.append('search', q);
+      if (catFilter !== 'All') params.append('cat', catFilter);
+      if (subCatFilter !== 'All') params.append('sub_cat', subCatFilter);
+      if (dateRange.start) params.append('start', dateRange.start);
+      if (dateRange.end) params.append('end', dateRange.end);
+
+      const res = await apiClient.get(`/daily-activities/export/mom-workbook?${params.toString()}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Daily_Activities_MOM_Workbook_${activeYear || 'All'}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Workbook Daily Activities (Rekap + MOMs) berhasil diunduh", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Gagal mengekspor All-in-One Workbook", "error");
+    }
+  };
+
+  const handleExportRekapMaster = async () => {
+    try {
+      showToast("Sedang menyiapkan data export rekap...", "info");
       const params = new URLSearchParams();
       if (activeYear && activeYear !== 'Semua' && activeYear !== 'All') params.append('year', activeYear);
       params.append('is_deleted', String(showDeleted));
@@ -427,17 +606,19 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
 
       const exportColumns = [
         { header: "Tanggal", key: "activity_date", width: 15 },
-        { header: "Aktivitas", key: "activity", width: 40 },
-        { header: "Institusi/Kelompok", key: "institution_group", width: 25 },
-        { header: "Alamat", key: "address", width: 30 },
+        { header: "Daily Title / Kegiatan", key: "activity", width: 40 },
+        { header: "Attendees / Instansi", key: "institution_group", width: 25 },
+        { header: "Venue (Tempat)", key: "address", width: 30 },
         { header: "Lokasi", key: "location", width: 20 },
-        { header: "PIC", key: "pic_names", width: 25 },
+        { header: "PIC (JSP)", key: "pic_names", width: 25 },
         { header: "Biaya", key: "cost", width: 20 },
         { header: "Category", key: "category_name", width: 20 },
         { header: "Sub Category", key: "sub_category_name", width: 25 },
-        { header: "Keterangan", key: "keterangan", width: 35 },
-        { header: "Hasil", key: "hasil", width: 35 },
-        { header: "Dokumen", key: "document_link", width: 30 }
+        { header: "Keterangan Pertemuan", key: "keterangan", width: 35 },
+        { header: "Hasil Pertemuan", key: "hasil", width: 35 },
+        { header: "Kesimpulan", key: "kesimpulan", width: 35 },
+        { header: "Next Plan", key: "next_plan", width: 35 },
+        { header: "Supporting Documents", key: "document_link", width: 30 }
       ];
 
       const exportData = exportItems.map((a: any) => ({
@@ -457,24 +638,39 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{(meta.page - 1) * meta.limit + i + 1}</span> },
     { header: "Tanggal", accessor: "activity_date", sortable: true, render: (a) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{formatDate(a.activity_date)}</span> },
-    { header: "Kegiatan", accessor: "activity", sortable: true, render: (a) => <div className="text-sm font-medium text-foreground whitespace-normal max-w-[200px]">{a.activity}</div> },
-    { header: "Fokus", accessor: "focus", sortable: true, render: (a) => <div className="text-xs text-muted-foreground whitespace-normal max-w-[150px]">{a.focus || <span className="text-muted-foreground/50">—</span>}</div> },
-    { header: "Institusi & Alamat", accessor: "institution_group", sortable: true, render: (a) => (
+    { header: "Daily Title / Kegiatan", accessor: "activity", sortable: true, render: (a) => <div className="text-sm font-medium text-foreground whitespace-normal max-w-[200px]">{a.activity}</div> },
+    { header: "Fokus", accessor: "focus", sortable: true, render: (a) => <div className="text-xs text-muted-foreground whitespace-normal max-w-[130px]">{a.focus || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Attendees / Instansi & Venue", accessor: "institution_group", sortable: true, render: (a) => (
       <div className="max-w-[200px]">
-        <div className="text-sm font-medium text-foreground">{a.stakeholder?.name || a.institution_group || <span className="text-muted-foreground/50">—</span>}</div>
-        {a.address && <div className="text-xs text-muted-foreground mt-0.5 whitespace-normal">{a.address}</div>}
+        <div className="text-sm font-medium text-foreground whitespace-normal line-clamp-2">{a.stakeholder?.name || a.institution_group || <span className="text-muted-foreground/50">—</span>}</div>
+        {a.address && <div className="text-xs text-muted-foreground mt-0.5 whitespace-normal line-clamp-1">📍 {a.address}</div>}
       </div>
     )},
-    { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[150px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-foreground max-w-[120px] whitespace-normal">{a.location || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
-    { header: "PIC", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics?.length > 0 ? a.pics.map((p: any) => p.name).join(', ') : '-'}</span> },
-    { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
-    { header: "Sub Kategori", accessor: "sub_category_name", sortable: true },
-    { header: "Keterangan", accessor: "keterangan", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[200px]">{a.keterangan || (!a.hasil ? a.description_result : null) || <span className="text-muted-foreground/50">—</span>}</div> },
-    { header: "Hasil", accessor: "hasil", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[200px]">{a.hasil || <span className="text-muted-foreground/50">—</span>}</div> },
-    { header: "Terakhir Diubah", accessor: "updated_at", sortable: true, render: (a) => <span className="text-xs text-muted-foreground font-mono whitespace-nowrap">{a.updated_at ? formatDate(a.updated_at) : '—'}</span> },
-    { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <span className="text-blue-600 cursor-pointer" title="Ada Lampiran Dokumen"><ExternalLink size={12} /></span> : <span className="text-muted-foreground text-xs">—</span> },
-    { header: "", render: (a) => showDeleted ? (
+    { header: "PIC (JSP)", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics && a.pics.length > 0 ? a.pics.map((p: any) => p.name).join(', ') : '-'}</span> },
+    { header: "Category", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
+    { header: "Sub Category", accessor: "sub_category_name", sortable: true },
+    { header: "Keterangan", accessor: "keterangan", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[180px] line-clamp-3" title={a.keterangan || ''}>{a.keterangan || (!a.hasil ? a.description_result : null) || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Hasil", accessor: "hasil", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[180px] line-clamp-3" title={a.hasil || ''}>{a.hasil || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Kesimpulan", accessor: "kesimpulan", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[160px] line-clamp-3" title={a.kesimpulan || ''}>{a.kesimpulan || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Next Plan", accessor: "next_plan", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[160px] line-clamp-3" title={a.next_plan || ''}>{a.next_plan || <span className="text-muted-foreground/50">—</span>}</div> },
+    { header: "Docs", className: "text-center", render: (a) => a.document_link && a.document_link !== "[]" ? <a href={a.document_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 inline-block p-1" title="Buka Dokumen SharePoint"><ExternalLink size={12} /></a> : <span className="text-muted-foreground text-xs">—</span> },
+    { 
+      header: "Daily Notes (MOM)", 
+      className: "text-center whitespace-nowrap", 
+      render: (a) => (
+        <button 
+          onClick={() => handleDownloadSingleMom(a.id, a.activity, a.activity_date)} 
+          title={`Unduh lembar Daily Notes / Notulensi MOM: ${a.activity}`} 
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 rounded-md border border-emerald-300 transition-all shadow-2xs active:scale-95"
+        >
+          <FileSpreadsheet size={13} className="text-emerald-600" />
+          <span>Unduh MOM</span>
+        </button>
+      ) 
+    },
+    { header: "Aksi", render: (a) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(a)} 
@@ -496,11 +692,13 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar 
-        title="Daily Activities" subtitle="Rekaman kegiatan harian tim CRS" 
+        title="Daily Activities" subtitle="Rekaman kegiatan harian & notulensi tim CRS" 
         onAdd={!showDeleted ? () => setShowForm(true) : undefined} addLabel="Tambah Kegiatan" 
         showDeleted={showDeleted}
         showSearch searchValue={q} onSearch={(val) => { setQ(val); setPage(1); }} 
-        onExport={handleExportClick}
+        onExportRekap={handleExportRekapMaster}
+        onExportMomWorkbook={handleExportMomWorkbook}
+        onExportFullWorkbook={() => onExport("CRMS Full Workbook")}
         categories={references.categories}
         catFilter={catFilter}
         onCatFilterChange={(val) => { setCatFilter(val); setSubCatFilter("All"); setPage(1); }}
@@ -518,51 +716,94 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
           />
         </div>
         <DateRangeFilter value={dateRange} onChange={(dr) => { setDateRange(dr); setPage(1); }} />
-        <button 
-          type="button" 
-          onClick={() => setShowImport(true)} 
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white text-foreground border border-border rounded-md hover:bg-muted transition-colors"
-        >
-          <Download size={13} className="rotate-180" />
-          Import Excel
-        </button>
+        {!showDeleted && (
+          <button 
+            onClick={() => setShowImport(true)} 
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"
+          >
+            Import
+          </button>
+        )}
       </TopBar>
-      <div className="flex-1 overflow-auto p-6 h-full flex flex-col">
-        <div className="flex-1 min-h-0">
-          {isLoading && <div className="p-4 text-center text-sm text-muted-foreground">Memuat data...</div>}
-          {!isLoading && (
-            <DataTable 
-              data={displayed} 
-              columns={columns} 
-              onSortChange={(key, dir) => { setSortBy(key); setSortDir(dir); setPage(1); }}
-              serverSortConfig={{ key: sortBy, direction: sortDir }}
-            />
-          )}
-        </div>
-        <Pagination 
-          page={meta.page} 
-          limit={meta.limit} 
-          totalItems={meta.totalItems} 
-          totalPages={meta.totalPages} 
-          onPageChange={setPage} 
-          onLimitChange={(newLimit) => { setLimit(newLimit); setPage(1); }} 
+
+      <div className="flex-1 overflow-auto p-6">
+        <DataTable
+          columns={columns}
+          data={items}
+          isLoading={isLoading}
+          sortBy={sortBy}
+          sortDir={sortDir}
+          onSort={(col, dir) => { setSortBy(col); setSortDir(dir); }}
+        />
+        <Pagination
+          page={page}
+          currentPage={page}
+          totalPages={meta.totalPages || 1}
+          totalItems={meta.totalItems || 0}
+          limit={limit}
+          onPageChange={setPage}
+          onLimitChange={(lim) => { setLimit(lim); setPage(1); }}
         />
       </div>
-      {showForm && <DailyForm defaultValues={addDraft} onDraftChange={setAddDraft} refs={references} onRefreshReferences={fetchReferences} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
-      {editing && <DailyForm refs={references} onRefreshReferences={fetchReferences} initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
-      {toDelete && <DeleteConfirmModal label={toDelete.activity} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.activity); setToDelete(null); }} />}
-      {showImport && (
-        <ImportExcelModal 
-          onClose={() => setShowImport(false)} 
-          onSuccess={() => { 
-            setShowImport(false); 
-            fetchData(); 
-            showToast("Data kegiatan berhasil diimport dari Excel", "success"); 
-          }} 
+
+      {showForm && (
+        <DailyForm 
+          onClose={() => setShowForm(false)} 
+          onSave={handleCreate} 
+          refs={references} 
+          defaultValues={addDraft} 
+          onDraftChange={setAddDraft} 
+          onRefreshReferences={fetchReferences}
+          showToast={showToast}
         />
       )}
-      {toRestore && <RestoreConfirmModal label={toRestore.activity || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
-      <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="daily_activities" entityId={selectedHistoryId} references={references} />
+
+      {editing && (
+        <DailyForm 
+          initial={editing} 
+          onClose={() => setEditing(null)} 
+          onSave={handleUpdate} 
+          refs={references} 
+          onRefreshReferences={fetchReferences}
+          showToast={showToast}
+          onDownloadMom={() => handleDownloadSingleMom(editing.id, editing.activity, editing.activity_date)}
+        />
+      )}
+
+      {showImport && (
+        <ImportExcelModal
+          onClose={() => setShowImport(false)}
+          onSuccess={() => { setShowImport(false); fetchData(); }}
+          refs={references}
+        />
+      )}
+
+      {toDelete && (
+        <DeleteConfirmModal
+          title="Hapus Kegiatan"
+          message={`Apakah Anda yakin ingin menghapus data kegiatan '${toDelete.activity}'?`}
+          onConfirm={() => { handleDelete(toDelete.id, toDelete.activity); setToDelete(null); }}
+          onClose={() => setToDelete(null)}
+        />
+      )}
+
+      {toRestore && (
+        <RestoreConfirmModal
+          title="Pulihkan Kegiatan"
+          message={`Apakah Anda yakin ingin memulihkan data kegiatan '${toRestore.activity}'?`}
+          onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }}
+          onClose={() => setToRestore(null)}
+        />
+      )}
+
+      {historyDrawerOpen && (
+        <AuditHistoryDrawer
+          isOpen={historyDrawerOpen}
+          onClose={() => setHistoryDrawerOpen(false)}
+          entityType="daily_activities"
+          entityId={selectedHistoryId}
+        />
+      )}
     </div>
   );
 }

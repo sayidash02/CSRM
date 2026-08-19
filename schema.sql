@@ -108,6 +108,8 @@ CREATE TABLE daily_activities (
   cost DECIMAL(15,2),                     -- kolom "Biaya"
   keterangan TEXT,                         -- kolom Keterangan pada workbook perusahaan
   hasil TEXT,                              -- kolom Hasil pada workbook perusahaan
+  kesimpulan TEXT,                         -- kolom Kesimpulan pada format MOM / Daily Notes
+  next_plan TEXT,                          -- kolom Next Plan pada format MOM / Daily Notes
   description_result TEXT,                -- legacy compatibility value; diturunkan dari keterangan + hasil
   document_link TEXT,             -- kolom "link" — cuma 1 kolom link di Excel, bukan 2
   category_id BIGINT NOT NULL,

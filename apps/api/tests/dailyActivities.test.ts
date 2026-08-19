@@ -211,5 +211,88 @@ describe('PUT /api/daily-activities/:id', () => {
     expect(picLog.changes.pic_id.old).toBe('Ziya Ramadhani');
     expect(picLog.changes.pic_id.new).toBe('Adji K');
   });
+
+  it('Positive: Should support kesimpulan and next_plan in create and update', async () => {
+    const createPayload = {
+      activity_date: '2026-05-25',
+      activity: 'MOM Nelayan Cilamaya',
+      institution_group: '1. Anggota Nelayan\n2. Tokoh Masyarakat',
+      address: 'Rumah Bapak Asep',
+      location: 'Cilamaya Girang',
+      focus: 'Pengajuan Bantuan Nelayan',
+      cost: 500000,
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString(),
+      keterangan: 'Komunikasi perihal pengajuan bantuan',
+      hasil: 'Perlu verifikasi kelompok penerima',
+      kesimpulan: 'Kelompok nelayan sepakat menyusun proposal terpadu',
+      next_plan: 'Follow up verifikasi proposal minggu depan'
+    };
+
+    const res = await request(app).post('/api/daily-activities').send(createPayload);
+    expect(res.status).toBe(201);
+    expect(res.body.data.kesimpulan).toBe('Kelompok nelayan sepakat menyusun proposal terpadu');
+    expect(res.body.data.next_plan).toBe('Follow up verifikasi proposal minggu depan');
+
+    const id = res.body.data.id;
+
+    const updatePayload = {
+      ...createPayload,
+      kesimpulan: 'Kesimpulan telah diperbarui',
+      next_plan: 'Next plan telah diperbarui'
+    };
+
+    const updateRes = await request(app).put(`/api/daily-activities/${id}`).send(updatePayload);
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.data.kesimpulan).toBe('Kesimpulan telah diperbarui');
+    expect(updateRes.body.data.next_plan).toBe('Next plan telah diperbarui');
+  });
 });
 
+describe('MOM Excel Export Endpoints', () => {
+  let createdActivityId: string;
+
+  beforeAll(async () => {
+    const payload = {
+      activity_date: '2026-05-25',
+      activity: 'Komunikasi dengan nelayan ex class action',
+      institution_group: '1. Kelompok Nelayan Cilamaya Girang\n2. KUD Mina Bahari',
+      address: 'Aula KUD Mina Bahari',
+      location: 'Cilamaya Girang',
+      focus: 'Pengajuan bantuan nelayan',
+      cost: 750000,
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString(),
+      keterangan: 'Pemaparan program CRS dan diskusi aspirasi',
+      hasil: 'Nelayan menyambut baik tawaran program pendampingan',
+      kesimpulan: 'Disepakati pembentukan tim perwakilan nelayan',
+      next_plan: 'Mengadakan rapat lanjutan penyusunan daftar penerima manfaat',
+      document_link: 'https://sharepoint.com/sites/crms/doc1.pdf'
+    };
+    const res = await request(app).post('/api/daily-activities').send(payload);
+    createdActivityId = res.body.data.id;
+  });
+
+  it('GET /api/daily-activities/:id/mom - should export single MOM sheet in excel format', async () => {
+    const res = await request(app).get(`/api/daily-activities/${createdActivityId}/mom`);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(res.headers['content-disposition']).toContain('attachment; filename="MOM_');
+    expect(Number(res.headers['content-length'])).toBeGreaterThan(1000);
+  });
+
+  it('GET /api/daily-activities/:id/mom - should return 404 if activity not found', async () => {
+    const res = await request(app).get('/api/daily-activities/99999999/mom');
+    expect(res.status).toBe(404);
+  });
+
+  it('GET /api/daily-activities/export/mom-workbook - should export all-in-one workbook with master and MOM sheets', async () => {
+    const res = await request(app).get('/api/daily-activities/export/mom-workbook');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    expect(res.headers['content-disposition']).toContain('attachment; filename="Daily_Activities_MOM_Workbook_');
+    expect(Number(res.headers['content-length'])).toBeGreaterThan(2000);
+  });
+});
