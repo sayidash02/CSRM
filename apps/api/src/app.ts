@@ -17,6 +17,8 @@ import archiveRoutes from './routes/archive';
 import yearsRouter from './routes/years';
 import devRoutes from './routes/dev';
 import auditLogRoutes from './routes/auditLog.routes';
+import uploadRouter from './routes/upload';
+import path from 'path';
 import { errorHandler } from './lib/errorHandler';
 import { attachmentLinkValidationMiddleware } from './lib/sharePointLinkValidation';
 
@@ -29,6 +31,10 @@ app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(attachmentLinkValidationMiddleware);
+
+// Static uploads serving for local dev/testing
+app.use('/uploads', express.static(path.resolve(process.cwd(), '.sharepoint_mock')));
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'apps/api/.sharepoint_mock')));
 
 app.use('/api/daily-activities', dailyActivitiesRouter);
 app.use('/api/references', referencesRouter);

@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
 import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { parseDailyActivitiesExcel } from '../services/ExcelImportService';
@@ -17,6 +19,17 @@ const upload = multer({
     ];
     if (!isExcelExt || !validMimeTypes.includes(file.mimetype)) {
       return cb(new Error('Hanya file Excel (.xlsx, .xls) yang diperbolehkan'));
+    }
+    cb(null, true);
+  }
+});
+
+const photoUpload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const isAllowedExt = file.originalname.match(/\.(jpg|jpeg|png|webp|gif|pdf|docx)$/i);
+    if (!isAllowedExt) {
+      return cb(new Error('Hanya file gambar (JPG, PNG, WEBP) atau PDF/Word yang diperbolehkan'));
     }
     cb(null, true);
   }
@@ -430,3 +443,39 @@ export const exportMomWorkbook = catchAsync(async (req: Request, res: Response):
   res.setHeader('X-Total-Count', String(count));
   res.status(200).send(buffer);
 });
+
+export const uploadPhoto = (req: Request, res: Response, next: NextFunction) => {
+  photoUpload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: 'Upload error: ' + err.message });
+    if (!req.file) return res.status(400).json({ error: 'File is required' });
+
+    try {
+      const { activity_date, pic_name } = req.body;
+      const actDate = activity_date ? new Date(activity_date) : new Date();
+      const finalPic = pic_name || 'User';
+
+      const year = isNaN(actDate.getTime()) ? new Date().getFullYear() : actDate.getFullYear();
+      const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const month = monthNames[isNaN(actDate.getTime()) ? new Date().getMonth() : actDate.getMonth()];
+      const day = isNaN(actDate.getTime()) ? new Date().getDate() : actDate.getDate();
+      const weekNumber = Math.ceil(day / 7);
+
+      const targetSubDir = path.join('0. Testing', String(year), month, `Week ${weekNumber}`);
+      const baseMockDir = path.resolve(process.cwd(), '.sharepoint_mock');
+      const fullDirPath = path.join(baseMockDir, targetSubDir);
+      await fs.promises.mkdir(fullDirPath, { recursive: true });
+
+      const datePrefix = `${year}${String((isNaN(actDate.getTime()) ? new Date().getMonth() : actDate.getMonth()) + 1).padStart(2, '0')}${String(day).padStart(2, '0')}`;
+      const safePic = finalPic.replace(/[^a-zA-Z0-9]/g, '_');
+      const safeFileName = `${datePrefix}_${safePic}_${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const fullFilePath = path.join(fullDirPath, safeFileName);
+
+      await fs.promises.writeFile(fullFilePath, req.file.buffer);
+
+      const relativeUrl = `/uploads/${targetSubDir.replace(/\\/g, '/')}/${safeFileName}`;
+      res.status(200).json({ data: { url: relativeUrl, path: fullFilePath } });
+    } catch (error: any) {
+      next(error);
+    }
+  });
+};

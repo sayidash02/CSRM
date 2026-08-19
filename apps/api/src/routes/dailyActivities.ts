@@ -8,10 +8,12 @@ import {
   importParseExcel, 
   importCommitExcel,
   exportSingleMom,
-  exportMomWorkbook
+  exportMomWorkbook,
+  uploadPhoto
 } from '../controllers/DailyActivitiesController';
 
 const router = Router();
+router.post('/upload-photo', uploadPhoto);
 router.post('/import/parse', importParseExcel);
 router.post('/import/commit', importCommitExcel);
 router.get('/export/mom-workbook', exportMomWorkbook);

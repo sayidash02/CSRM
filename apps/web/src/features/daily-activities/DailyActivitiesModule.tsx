@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw, History, FileSpreadsheet, ChevronDown } from "lucide-react";
+import { Edit2, ExternalLink, Trash2, Calendar, Search, Plus, Download, Settings, RotateCcw, History, FileSpreadsheet, ChevronDown, Image, Upload, Check, X } from "lucide-react";
 import { SharePointLinkInput } from '../../components/ui/FileInput';
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { PicManagementModal } from './PicManagementModal';
@@ -204,6 +204,226 @@ const emptyDailyDraft = {
   sub_category_id: "", keterangan: "", hasil: "", kesimpulan: "", next_plan: "", description_result: "", document_link: ""
 };
 
+function PhotoAttachmentInput({
+  value,
+  onChange,
+  activityDate,
+  picName,
+  showToast
+}: {
+  value: string | null;
+  onChange: (url: string) => void;
+  activityDate?: string;
+  picName?: string;
+  showToast?: (msg: string, type?: "success" | "error" | "info") => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'upload' | 'link'>('upload');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [manualLink, setManualLink] = useState(value || '');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const displayImageSrc = useMemo(() => {
+    if (previewUrl) return previewUrl;
+    if (!value) return null;
+    if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:')) {
+      return value;
+    }
+    return value.replace(/^file:\/\//, '/uploads/').replace(/\\/g, '/');
+  }, [value, previewUrl]);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast?.("Ukuran file melebihi batas 5MB", "error");
+      return;
+    }
+
+    if (file.type.startsWith('image/')) {
+      const localUrl = URL.createObjectURL(file);
+      setPreviewUrl(localUrl);
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('activity_date', activityDate || new Date().toISOString());
+      formData.append('pic_name', picName || 'User');
+
+      const res = await fetch('/api/daily-activities/upload-photo', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Upload gagal (${res.status})`);
+      }
+
+      const resData = await res.json();
+      const uploadedUrl = resData?.data?.url || resData?.url || '';
+      onChange(uploadedUrl);
+      setManualLink(uploadedUrl);
+      showToast?.("Foto dokumentasi berhasil diunggah!", "success");
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      showToast?.(err.message || "Gagal mengunggah foto ke server", "error");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemove = () => {
+    onChange('');
+    setManualLink('');
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleApplyManualLink = () => {
+    const trimmed = manualLink.trim();
+    onChange(trimmed);
+    showToast?.("Link dokumentasi berhasil disimpan", "success");
+  };
+
+  return (
+    <div className="flex flex-col gap-3 w-full bg-slate-50/80 p-3.5 rounded-lg border border-border">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+          <Image size={15} className="text-blue-600" />
+          <span>Dokumentasi Foto / Lampiran Kegiatan</span>
+        </span>
+        <div className="flex rounded-md bg-slate-200/70 p-0.5 text-[11px] font-medium">
+          <button
+            type="button"
+            onClick={() => setActiveTab('upload')}
+            className={`px-2.5 py-1 rounded transition-colors ${activeTab === 'upload' ? 'bg-white text-blue-700 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Upload Langsung
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('link')}
+            className={`px-2.5 py-1 rounded transition-colors ${activeTab === 'link' ? 'bg-white text-blue-700 shadow-2xs font-semibold' : 'text-slate-600 hover:text-slate-900'}`}
+          >
+            Link SharePoint
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'upload' ? (
+        <div className="flex flex-col gap-2.5">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/jpeg,image/png,image/jpg,image/webp,application/pdf"
+            className="hidden"
+          />
+
+          {value ? (
+            <div className="flex items-center gap-3 bg-white p-2.5 rounded-md border border-slate-200 shadow-2xs">
+              {displayImageSrc && (
+                <div className="relative w-16 h-16 rounded overflow-hidden border border-slate-200 shrink-0 bg-slate-100 flex items-center justify-center">
+                  <img
+                    src={displayImageSrc}
+                    alt="Preview Dokumentasi"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <Image size={20} className="text-slate-400 absolute" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700">
+                  <Check size={13} />
+                  <span>File Dokumentasi Terlampir</span>
+                </div>
+                <p className="text-[11px] text-slate-500 truncate mt-0.5" title={value}>
+                  {value}
+                </p>
+                {value.startsWith('http') && (
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:underline mt-1"
+                  >
+                    <ExternalLink size={11} />
+                    <span>Buka File Asli</span>
+                  </a>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="px-2.5 py-1 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded border border-slate-300 transition-colors"
+                >
+                  Ganti
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemove}
+                  disabled={uploading}
+                  className="p-1 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                  title="Hapus foto / lampiran"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white/80 hover:bg-blue-50/40 p-4 rounded-lg flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all group"
+            >
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-full group-hover:scale-110 transition-transform">
+                <Upload size={18} />
+              </div>
+              <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">
+                {uploading ? "Sedang Mengunggah..." : "Klik untuk Pilih & Unggah Foto Dokumentasi"}
+              </span>
+              <span className="text-[11px] text-slate-400">
+                Mendukung file JPG, PNG, WEBP, PDF (Maksimal 5MB)
+              </span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2">
+            <input
+              type="url"
+              value={manualLink}
+              onChange={(e) => setManualLink(e.target.value)}
+              placeholder="https://jawasatupower.sharepoint.com/..."
+              className="flex-1 px-3 py-1.5 text-xs bg-white border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button
+              type="button"
+              onClick={handleApplyManualLink}
+              className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors shadow-2xs"
+            >
+              Terapkan
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-500">
+            Tempel URL SharePoint atau link penyimpanan cloud resmi JSP.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DailyForm({ 
   initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast, onDownloadMom 
 }: { 
@@ -359,12 +579,13 @@ function DailyForm({
         </div>
 
         <div className="col-span-3">
-          <Field label="Link Dokumen Lampiran / Dokumentasi" hint="Upload file ke SharePoint perusahaan, lalu tempel link HTTPS-nya.">
-            <SharePointLinkInput
-              value={f.document_link || null} 
-              onChange={(url) => set("document_link", url)}
-            />
-          </Field>
+          <PhotoAttachmentInput
+            value={f.document_link || null} 
+            onChange={(url) => set("document_link", url)}
+            activityDate={f.activity_date}
+            picName={refs.pics.find(p => f.pic_ids.map(String).includes(String(p.id)))?.name}
+            showToast={showToast}
+          />
         </div>
       </div>
       <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-gray-50/50">
