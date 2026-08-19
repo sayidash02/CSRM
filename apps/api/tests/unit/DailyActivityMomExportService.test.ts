@@ -82,34 +82,32 @@ describe('DailyActivityMomExportService Unit Tests', () => {
     const sheet = workbook.getWorksheet('Daily Notes');
     expect(sheet).toBeDefined();
 
-    const headerCell = sheet!.getCell('A1');
-    expect(headerCell.value).toBe('External Affairs - Daily Notes');
-
-    const titleCell = sheet!.getCell('A2');
-    expect(String(titleCell.value)).toContain('Komunikasi Nelayan Cilamaya Girang');
-
-    const colAValues: string[] = [];
+    const allCellValues: string[] = [];
     sheet!.eachRow((row) => {
-      const val = row.getCell(1).value;
-      if (typeof val === 'string') {
-        colAValues.push(val);
-      }
+      row.eachCell((cell) => {
+        const val = cell.value;
+        if (typeof val === 'string') {
+          allCellValues.push(val);
+        }
+      });
     });
 
-    expect(colAValues.some(v => v.includes('Lokasi'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Venue'))).toBe(true);
-    expect(colAValues.some(v => v.toLowerCase().includes('hari'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Tanggal'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Category'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Sub Category'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Fokus'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Biaya'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Attendees'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Keterangan Pertemuan'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Hasil Pertemuan'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Kesimpulan'))).toBe(true);
-    expect(colAValues.some(v => v.toLowerCase().includes('next plan'))).toBe(true);
-    expect(colAValues.some(v => v.includes('Supporting Documents'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('MINUTES OF MEETING') || v.includes('Daily Notes'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Komunikasi Nelayan Cilamaya Girang'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Lokasi'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Venue'))).toBe(true);
+    expect(allCellValues.some(v => v.toLowerCase().includes('hari'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Tanggal'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Kategori') || v.includes('Category'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Sub Kategori') || v.includes('Sub Category'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Fokus'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Biaya') || v.includes('Anggaran'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Attendees'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Keterangan Pertemuan'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Hasil Pertemuan'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Kesimpulan'))).toBe(true);
+    expect(allCellValues.some(v => v.toLowerCase().includes('next plan'))).toBe(true);
+    expect(allCellValues.some(v => v.includes('Supporting Documents'))).toBe(true);
   });
 
   it('generateMomWorkbookBuffer should produce a multi-sheet workbook with Rekap and individual MOM sheets', async () => {

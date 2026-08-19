@@ -31,19 +31,25 @@ const formatCurrency = (val: number | string | null | undefined): string => {
 const BANNER_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FF1E3A8A' } // Deep Navy Blue
+  fgColor: { argb: 'FF1E3A8A' } // Deep Navy
 };
 
 const SUBHEADER_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FFF1F5F9' } // Subtle Slate White
+  fgColor: { argb: 'FFDBEAFE' } // Soft Executive Blue Accent
+};
+
+const TITLE_FILL: ExcelJS.Fill = {
+  type: 'pattern',
+  pattern: 'solid',
+  fgColor: { argb: 'FFF1F5F9' } // Light Slate
 };
 
 const SECTION_FILL: ExcelJS.Fill = {
   type: 'pattern',
   pattern: 'solid',
-  fgColor: { argb: 'FFD9E2F3' } // Soft Executive Blue
+  fgColor: { argb: 'FFDBEAFE' } // Soft Accent Blue
 };
 
 const KEY_FILL: ExcelJS.Fill = {
@@ -53,10 +59,10 @@ const KEY_FILL: ExcelJS.Fill = {
 };
 
 const THIN_BORDER: Partial<ExcelJS.Borders> = {
-  top: { style: 'thin', color: { argb: 'FFA6B9D0' } },
-  left: { style: 'thin', color: { argb: 'FFA6B9D0' } },
-  bottom: { style: 'thin', color: { argb: 'FFA6B9D0' } },
-  right: { style: 'thin', color: { argb: 'FFA6B9D0' } }
+  top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+  left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+  bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+  right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
 };
 
 const applyCellStyle = (
@@ -71,169 +77,229 @@ const applyCellStyle = (
   cell.font = options?.font || { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } };
   if (options?.fill) cell.fill = options.fill;
   cell.border = options?.border || THIN_BORDER;
-  cell.alignment = options?.alignment || { vertical: 'top', horizontal: 'left', wrapText: true };
+  cell.alignment = options?.alignment || { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 };
+};
+
+const applyMergedRowStyles = (
+  worksheet: ExcelJS.Worksheet,
+  rowNumber: number,
+  colEnd = 4,
+  options?: {
+    font?: Partial<ExcelJS.Font> | undefined;
+    fill?: ExcelJS.Fill | undefined;
+    border?: Partial<ExcelJS.Borders> | undefined;
+    alignment?: Partial<ExcelJS.Alignment> | undefined;
+  }
+) => {
+  for (let c = 1; c <= colEnd; c++) {
+    const cell = worksheet.getRow(rowNumber).getCell(c);
+    applyCellStyle(cell, options);
+  }
 };
 
 export class DailyActivityMomExportService {
   /**
-   * Populate a single worksheet with an elegant, executive-level MOM (Minutes of Meeting) / Daily Notes format.
-   * Styled cleanly with Times New Roman typography, refined section headers, and professional layout.
+   * Populate a single worksheet with an executive-level, 4-column balanced layout MOM (Minutes of Meeting).
+   * Styled with Times New Roman typography, 2x2 metadata grid, dynamic row heights, and clean borders.
    */
   public static populateMomWorksheet(worksheet: ExcelJS.Worksheet, activity: any): void {
-    worksheet.getColumn('A').width = 30;
-    worksheet.getColumn('B').width = 95;
+    worksheet.getColumn('A').width = 24;
+    worksheet.getColumn('B').width = 38;
+    worksheet.getColumn('C').width = 24;
+    worksheet.getColumn('D').width = 38;
 
     let currentRow = 1;
 
-    // Row 1: Banner Header (External Affairs - Daily Notes)
-    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-    const bannerCell = worksheet.getCell(`A${currentRow}`);
-    bannerCell.value = 'External Affairs - Daily Notes';
-    applyCellStyle(bannerCell, {
-      font: { name: 'Times New Roman', size: 12, bold: true, color: { argb: 'FFFFFFFF' } },
+    // Row 1: Company Banner (A1:D1)
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FFFFFFFF' } },
       fill: BANNER_FILL,
       alignment: { vertical: 'middle', horizontal: 'center' }
     });
-    applyCellStyle(worksheet.getCell(`B${currentRow}`), { fill: BANNER_FILL });
-    worksheet.getRow(currentRow).height = 30;
+    worksheet.getCell(`A${currentRow}`).value = 'PT JAWA SATU POWER — EXTERNAL AFFAIRS & CSR';
+    worksheet.getRow(currentRow).height = 24;
     currentRow++;
 
-    // Row 2: Daily Title Subheader
-    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-    const titleCell = worksheet.getCell(`A${currentRow}`);
-    titleCell.value = `Daily Title : ${activity.activity || '-'}`;
-    applyCellStyle(titleCell, {
-      font: { name: 'Times New Roman', size: 11, bold: true, color: { argb: 'FF0F172A' } },
+    // Row 2: Document Header Title (A2:D2)
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 12.5, bold: true, color: { argb: 'FF1E3A8A' } },
       fill: SUBHEADER_FILL,
-      alignment: { vertical: 'middle', horizontal: 'left', wrapText: true }
+      alignment: { vertical: 'middle', horizontal: 'center' }
     });
-    applyCellStyle(worksheet.getCell(`B${currentRow}`), { fill: SUBHEADER_FILL });
+    worksheet.getCell(`A${currentRow}`).value = 'MINUTES OF MEETING (DAILY NOTES)';
+    worksheet.getRow(currentRow).height = 28;
+    currentRow++;
+
+    // Row 3: Daily Activity Title (A3:D3)
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 11, bold: true, color: { argb: 'FF0F172A' } },
+      fill: TITLE_FILL,
+      alignment: { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
+    });
+    worksheet.getCell(`A${currentRow}`).value = `Daily Title : ${activity.activity || '-'}`;
     worksheet.getRow(currentRow).height = 32;
     currentRow++;
 
-    // Metadata Key-Value Helper
-    const addKeyValueRow = (key: string, value: string) => {
-      const cellA = worksheet.getCell(`A${currentRow}`);
-      const cellB = worksheet.getCell(`B${currentRow}`);
-      cellA.value = key;
-      cellB.value = value || '-';
+    // Helper for 2x2 Metadata Rows
+    const addMetadataGridRow = (k1: string, v1: string, k2: string, v2: string) => {
+      const row = worksheet.getRow(currentRow);
+      row.height = 22;
+
+      const cellA = row.getCell(1);
+      const cellB = row.getCell(2);
+      const cellC = row.getCell(3);
+      const cellD = row.getCell(4);
+
+      cellA.value = k1;
       applyCellStyle(cellA, {
-        font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF334155' } },
+        font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
         fill: KEY_FILL,
-        alignment: { vertical: 'middle', horizontal: 'left' }
+        alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
       });
+
+      cellB.value = v1 || '-';
       applyCellStyle(cellB, {
         font: { name: 'Times New Roman', size: 10, color: { argb: 'FF0F172A' } },
-        alignment: { vertical: 'middle', horizontal: 'left', wrapText: true }
+        alignment: { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
       });
-      worksheet.getRow(currentRow).height = 22;
+
+      cellC.value = k2;
+      applyCellStyle(cellC, {
+        font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
+        fill: KEY_FILL,
+        alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
+      });
+
+      cellD.value = v2 || '-';
+      applyCellStyle(cellD, {
+        font: { name: 'Times New Roman', size: 10, color: { argb: 'FF0F172A' } },
+        alignment: { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
+      });
+
       currentRow++;
     };
 
-    addKeyValueRow('Lokasi', activity.location || '-');
-    addKeyValueRow('Venue / Tempat', activity.address || '-');
-    addKeyValueRow('Hari & Tanggal', `${getIndonesianDay(activity.activity_date)}, ${formatIndonesianDate(activity.activity_date)}`);
-    addKeyValueRow('Category', activity.category?.name || '-');
-    if (activity.sub_category?.name) {
-      addKeyValueRow('Sub Category', activity.sub_category.name);
-    }
-    if (activity.focus) {
-      addKeyValueRow('Fokus', activity.focus);
-    }
-    if (activity.cost != null && Number(activity.cost) > 0) {
-      addKeyValueRow('Biaya / Anggaran', formatCurrency(activity.cost));
-    }
+    const picNames = activity.pics?.map((p: any) => p.name).filter(Boolean).join(', ')
+      || activity.daily_activity_pics?.map((d: any) => d.pic?.name).filter(Boolean).join(', ')
+      || '-';
 
-    // Section Header Helper
-    const addSectionHeader = (title: string) => {
-      worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-      const headerCell = worksheet.getCell(`A${currentRow}`);
-      headerCell.value = title;
-      applyCellStyle(headerCell, {
+    addMetadataGridRow(
+      'Hari & Tanggal',
+      `${getIndonesianDay(activity.activity_date)}, ${formatIndonesianDate(activity.activity_date)}`,
+      'Lokasi Wilayah',
+      activity.location || '-'
+    );
+
+    addMetadataGridRow(
+      'Venue / Tempat',
+      activity.address || '-',
+      'PIC Internal JSP',
+      picNames
+    );
+
+    addMetadataGridRow(
+      'Kategori',
+      activity.category?.name || '-',
+      'Sub Kategori',
+      activity.sub_category?.name || '-'
+    );
+
+    addMetadataGridRow(
+      'Fokus Kegiatan',
+      activity.focus || '-',
+      'Anggaran / Biaya',
+      formatCurrency(activity.cost)
+    );
+
+    // Section Content Builder
+    const addSectionBlock = (sectionTitle: string, content: string | null | undefined, defaultMinHeight = 45) => {
+      // Header
+      worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+      applyMergedRowStyles(worksheet, currentRow, 4, {
         font: { name: 'Times New Roman', size: 10.5, bold: true, color: { argb: 'FF1E3A8A' } },
         fill: SECTION_FILL,
-        alignment: { vertical: 'middle', horizontal: 'left' }
+        alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
       });
-      applyCellStyle(worksheet.getCell(`B${currentRow}`), { fill: SECTION_FILL });
+      worksheet.getCell(`A${currentRow}`).value = sectionTitle;
       worksheet.getRow(currentRow).height = 24;
       currentRow++;
-    };
 
-    // Section Content Helper
-    const addSectionContent = (content: string | null | undefined, minHeight = 45) => {
-      worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-      const contentCell = worksheet.getCell(`A${currentRow}`);
-      contentCell.value = content || '-';
-      applyCellStyle(contentCell, {
+      // Content Box
+      worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+      const text = content || '-';
+      const numLines = text.split('\n').length;
+      const calculatedHeight = Math.max(defaultMinHeight, Math.min(300, numLines * 20 + 16));
+
+      applyMergedRowStyles(worksheet, currentRow, 4, {
         font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
-        alignment: { vertical: 'top', horizontal: 'left', wrapText: true }
+        alignment: { vertical: 'top', horizontal: 'left', wrapText: true, indent: 1 }
       });
-      applyCellStyle(worksheet.getCell(`B${currentRow}`));
-      worksheet.getRow(currentRow).height = minHeight;
+      worksheet.getCell(`A${currentRow}`).value = text;
+      worksheet.getRow(currentRow).height = calculatedHeight;
       currentRow++;
     };
 
     // 1. Attendees
-    addSectionHeader('Attendees');
-    const internalPics = activity.pics?.map((p: any) => p.name).filter(Boolean).join(', ')
-      || activity.daily_activity_pics?.map((d: any) => d.pic?.name).filter(Boolean).join(', ')
-      || 'Tim PT Jawa Satu Power (JSP)';
-    
     let externalAttendees = activity.institution_group || '';
     const attendeesLines: string[] = [
-      `1. Tim Internal PT Jawa Satu Power (JSP) : ${internalPics}`
+      `• Tim Internal PT Jawa Satu Power (JSP) : ${picNames}`
     ];
     if (externalAttendees) {
       const extLines = externalAttendees.split('\n').map((l: string) => l.trim()).filter(Boolean);
       if (extLines.length > 1) {
         extLines.forEach((l: string, idx: number) => {
-          attendeesLines.push(`2.${idx + 1}. ${l.replace(/^[-*•\d.]+\s*/, '')}`);
+          attendeesLines.push(`• Peserta Eksternal (${idx + 1}): ${l.replace(/^[-*•\d.]+\s*/, '')}`);
         });
       } else {
-        attendeesLines.push(`2. ${externalAttendees.replace(/^[-*•\d.]+\s*/, '')}`);
+        attendeesLines.push(`• Peserta Eksternal: ${externalAttendees.replace(/^[-*•\d.]+\s*/, '')}`);
       }
     } else {
-      attendeesLines.push('2. -');
+      attendeesLines.push('• Peserta Eksternal: -');
     }
-    addSectionContent(attendeesLines.join('\n'), 45);
+    addSectionBlock('Attendees', attendeesLines.join('\n'), 45);
 
     // 2. Keterangan Pertemuan
-    addSectionHeader('Keterangan Pertemuan');
-    addSectionContent(activity.keterangan || activity.description_result || '-', 50);
+    addSectionBlock('Keterangan Pertemuan', activity.keterangan || activity.description_result || '-', 50);
 
     // 3. Hasil Pertemuan
-    addSectionHeader('Hasil Pertemuan');
-    addSectionContent(activity.hasil || activity.description_result || '-', 90);
+    addSectionBlock('Hasil Pertemuan', activity.hasil || activity.description_result || '-', 90);
 
     // 4. Kesimpulan
-    addSectionHeader('Kesimpulan');
-    addSectionContent(activity.kesimpulan || '-', 50);
+    addSectionBlock('Kesimpulan', activity.kesimpulan || '-', 50);
 
     // 5. Next Plan
-    addSectionHeader('Next Plan');
-    addSectionContent(activity.next_plan || '-', 50);
+    addSectionBlock('Next Plan', activity.next_plan || '-', 50);
 
     // 6. Supporting Documents
-    addSectionHeader('Supporting Documents / Documentation');
-    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 10.5, bold: true, color: { argb: 'FF1E3A8A' } },
+      fill: SECTION_FILL,
+      alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
+    });
+    worksheet.getCell(`A${currentRow}`).value = 'Supporting Documents / Documentation';
+    worksheet.getRow(currentRow).height = 24;
+    currentRow++;
+
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
+      font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
+      alignment: { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
+    });
     const docCell = worksheet.getCell(`A${currentRow}`);
     if (activity.document_link) {
       docCell.value = {
         text: activity.document_link,
         hyperlink: activity.document_link
       };
-      applyCellStyle(docCell, {
-        font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' }, underline: true },
-        alignment: { vertical: 'middle', horizontal: 'left', wrapText: true }
-      });
+      docCell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' }, underline: true };
     } else {
       docCell.value = '-';
-      applyCellStyle(docCell, {
-        font: { name: 'Times New Roman', size: 10, color: { argb: 'FF64748B' } },
-        alignment: { vertical: 'middle', horizontal: 'left', wrapText: true }
-      });
+      docCell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF64748B' } };
     }
-    applyCellStyle(worksheet.getCell(`B${currentRow}`));
     worksheet.getRow(currentRow).height = 30;
   }
 
