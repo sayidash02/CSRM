@@ -145,6 +145,36 @@ const tryGetLocalImagePath = (link: string | null | undefined): string | null =>
   return null;
 };
 
+const parseLinkList = (value: string | null | undefined): string[] => {
+  if (!value) return [];
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === '[]') return [];
+
+  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((item): item is string => typeof item === 'string' && Boolean(item.trim()))
+          .map((s) => s.trim());
+      }
+    } catch {}
+  }
+  return [trimmed];
+};
+
+const tryGetLocalImagePaths = (rawLink: string | null | undefined): string[] => {
+  const links = parseLinkList(rawLink);
+  const results: string[] = [];
+  for (const l of links) {
+    const local = tryGetLocalImagePath(l);
+    if (local && !results.includes(local)) {
+      results.push(local);
+    }
+  }
+  return results;
+};
+
 const getImageDimensions = (buffer: Buffer): { width: number; height: number } => {
   try {
     // 1. PNG
@@ -443,81 +473,149 @@ export class DailyActivityMomExportService {
     worksheet.getRow(currentRow).height = 24;
     currentRow++;
 
-    // Photo Box Canvas Row
-    const photoCanvasRow = currentRow;
-    worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
-    applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
-      font: { name: 'Times New Roman', size: 10, italic: true, color: { argb: 'FF64748B' } },
-      fill: KEY_FILL,
-      alignment: { vertical: 'middle', horizontal: 'center', wrapText: true }
-    });
+    // Photo Box Canvas Rows (Gallery Support)
+    const localImgPaths = tryGetLocalImagePaths(activity.document_link);
 
-    let imageEmbedded = false;
-    let computedPhotoRowHeight = 200;
-    const localImgPath = tryGetLocalImagePath(activity.document_link);
-    if (localImgPath && workbook) {
-      try {
-        const ext = path.extname(localImgPath).replace('.', '').toLowerCase();
-        if (['png', 'jpeg', 'jpg', 'gif', 'webp'].includes(ext)) {
-          const imgBuffer = fs.readFileSync(localImgPath);
-          const origDim = getImageDimensions(imgBuffer);
+    if (localImgPaths.length === 0 || !workbook) {
+      const photoCanvasRow = currentRow;
+      worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
+      applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
+        font: { name: 'Times New Roman', size: 10, italic: true, color: { argb: 'FF64748B' } },
+        fill: KEY_FILL,
+        alignment: { vertical: 'middle', horizontal: 'center', wrapText: true }
+      });
+      worksheet.getCell(`A${photoCanvasRow}`).value = '[ Area Dokumentasi Foto / Lampiran Kegiatan ]\n(Foto dokumentasi pertemuan / kegiatan lapangan dapat dilampirkan di sini)';
+      worksheet.getRow(photoCanvasRow).height = 180;
+      currentRow++;
+    } else if (localImgPaths.length === 1) {
+      const photoCanvasRow = currentRow;
+      worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
+      applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
+        fill: KEY_FILL,
+        alignment: { vertical: 'middle', horizontal: 'center' }
+      });
 
-          // Max container bounds in Excel (pixels)
-          const MAX_CONTAINER_WIDTH = 620;
-          const MAX_CONTAINER_HEIGHT = 380;
+      const localImgPath = localImgPaths[0];
+      const ext = path.extname(localImgPath).replace('.', '').toLowerCase();
+      const imgBuffer = fs.readFileSync(localImgPath);
+      const origDim = getImageDimensions(imgBuffer);
 
-          // Scale proportionally keeping exact aspect ratio
-          const scaleW = MAX_CONTAINER_WIDTH / origDim.width;
-          const scaleH = MAX_CONTAINER_HEIGHT / origDim.height;
-          const scale = Math.min(scaleW, scaleH, 1); // If smaller than max, keep original; if larger, scale down proportionally
+      const MAX_CONTAINER_WIDTH = 620;
+      const MAX_CONTAINER_HEIGHT = 380;
+      const scaleW = MAX_CONTAINER_WIDTH / origDim.width;
+      const scaleH = MAX_CONTAINER_HEIGHT / origDim.height;
+      const scale = Math.min(scaleW, scaleH, 1);
 
-          const targetWidth = Math.max(160, Math.round(origDim.width * scale));
-          const targetHeight = Math.max(120, Math.round(origDim.height * scale));
+      const targetWidth = Math.max(160, Math.round(origDim.width * scale));
+      const targetHeight = Math.max(120, Math.round(origDim.height * scale));
+      const computedPhotoRowHeight = Math.max(140, Math.round(targetHeight * 0.75) + 20);
 
-          // Set dynamic row height in points (approx 0.75 pt per pixel + padding)
-          computedPhotoRowHeight = Math.max(140, Math.round(targetHeight * 0.75) + 20);
+      const imageId = workbook.addImage({
+        buffer: imgBuffer as any,
+        extension: (ext === 'jpg' ? 'jpeg' : (ext === 'webp' ? 'png' : ext)) as any
+      });
 
-          const imageId = workbook.addImage({
-            buffer: imgBuffer as any,
-            extension: (ext === 'jpg' ? 'jpeg' : (ext === 'webp' ? 'png' : ext)) as any
+      worksheet.addImage(imageId, {
+        tl: { col: 0.15, row: photoCanvasRow - 1 + 0.08 },
+        ext: { width: targetWidth, height: targetHeight }
+      });
+      worksheet.getCell(`A${photoCanvasRow}`).value = '';
+      worksheet.getRow(photoCanvasRow).height = computedPhotoRowHeight;
+      currentRow++;
+    } else {
+      // 2 or more photos: Render in pairs (2 photos per row grid)
+      for (let i = 0; i < localImgPaths.length; i += 2) {
+        const photoCanvasRow = currentRow;
+        worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
+        applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
+          fill: KEY_FILL,
+          alignment: { vertical: 'middle', horizontal: 'center' }
+        });
+        worksheet.getCell(`A${photoCanvasRow}`).value = '';
+
+        const path1 = localImgPaths[i];
+        const path2 = localImgPaths[i + 1];
+
+        let maxTargetHeight = 120;
+
+        // Image 1 (Left / Cols A-B)
+        if (path1) {
+          const ext1 = path.extname(path1).replace('.', '').toLowerCase();
+          const buf1 = fs.readFileSync(path1);
+          const dim1 = getImageDimensions(buf1);
+          const maxW1 = path2 ? 300 : 500;
+          const maxH1 = 230;
+          const s1 = Math.min(maxW1 / dim1.width, maxH1 / dim1.height, 1);
+          const w1 = Math.max(120, Math.round(dim1.width * s1));
+          const h1 = Math.max(100, Math.round(dim1.height * s1));
+          maxTargetHeight = Math.max(maxTargetHeight, h1);
+
+          const imgId1 = workbook.addImage({
+            buffer: buf1 as any,
+            extension: (ext1 === 'jpg' ? 'jpeg' : (ext1 === 'webp' ? 'png' : ext1)) as any
           });
 
-          worksheet.addImage(imageId, {
-            tl: { col: 0.15, row: photoCanvasRow - 1 + 0.08 },
-            ext: { width: targetWidth, height: targetHeight }
+          worksheet.addImage(imgId1, {
+            tl: { col: path2 ? 0.15 : 0.8, row: photoCanvasRow - 1 + 0.08 },
+            ext: { width: w1, height: h1 }
           });
-          worksheet.getCell(`A${photoCanvasRow}`).value = '';
-          imageEmbedded = true;
         }
-      } catch (err) {
-        console.warn('Failed to embed image in MOM sheet:', err);
+
+        // Image 2 (Right / Cols C-D)
+        if (path2) {
+          const ext2 = path.extname(path2).replace('.', '').toLowerCase();
+          const buf2 = fs.readFileSync(path2);
+          const dim2 = getImageDimensions(buf2);
+          const maxW2 = 300;
+          const maxH2 = 230;
+          const s2 = Math.min(maxW2 / dim2.width, maxH2 / dim2.height, 1);
+          const w2 = Math.max(120, Math.round(dim2.width * s2));
+          const h2 = Math.max(100, Math.round(dim2.height * s2));
+          maxTargetHeight = Math.max(maxTargetHeight, h2);
+
+          const imgId2 = workbook.addImage({
+            buffer: buf2 as any,
+            extension: (ext2 === 'jpg' ? 'jpeg' : (ext2 === 'webp' ? 'png' : ext2)) as any
+          });
+
+          worksheet.addImage(imgId2, {
+            tl: { col: 2.15, row: photoCanvasRow - 1 + 0.08 },
+            ext: { width: w2, height: h2 }
+          });
+        }
+
+        worksheet.getRow(photoCanvasRow).height = Math.max(130, Math.round(maxTargetHeight * 0.75) + 20);
+        currentRow++;
       }
     }
 
-    if (!imageEmbedded) {
-      worksheet.getCell(`A${photoCanvasRow}`).value = '[ Area Dokumentasi Foto / Lampiran Kegiatan ]\n(Foto dokumentasi pertemuan / kegiatan lapangan dapat dilampirkan di sini)';
-    }
-    worksheet.getRow(photoCanvasRow).height = computedPhotoRowHeight;
-    currentRow++;
-
-    // Document Hyperlink Row
+    // Document Hyperlink Rows
+    const allLinks = parseLinkList(activity.document_link);
     worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
     applyMergedRowStyles(worksheet, currentRow, 4, {
       font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
       alignment: { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
     });
     const docCell = worksheet.getCell(`A${currentRow}`);
-    if (activity.document_link) {
-      docCell.value = {
-        text: `🔗 Link Dokumen / File Lampiran: ${activity.document_link}`,
-        hyperlink: activity.document_link
-      };
-      docCell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' }, underline: true };
+    if (allLinks.length > 0) {
+      if (allLinks.length === 1) {
+        docCell.value = {
+          text: `🔗 Link Dokumen / File Lampiran: ${allLinks[0]}`,
+          hyperlink: allLinks[0]
+        };
+        docCell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' }, underline: true };
+        worksheet.getRow(currentRow).height = 26;
+      } else {
+        const textLines = allLinks.map((l, idx) => `🔗 Lampiran Foto/Dokumen ${idx + 1}: ${l}`).join('\n');
+        docCell.value = textLines;
+        docCell.font = { name: 'Times New Roman', size: 9.5, color: { argb: 'FF1D4ED8' } };
+        worksheet.getRow(currentRow).height = Math.max(30, allLinks.length * 18 + 8);
+      }
     } else {
       docCell.value = '🔗 Link Dokumen / File Lampiran: -';
       docCell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF64748B' } };
+      worksheet.getRow(currentRow).height = 26;
     }
-    worksheet.getRow(currentRow).height = 26;
     currentRow++;
 
     // 7. Lembar Pengesahan / Formal Sign-Off
