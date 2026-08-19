@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
 
@@ -97,12 +99,41 @@ const applyMergedRowStyles = (
   }
 };
 
+const tryGetLocalImagePath = (link: string | null | undefined): string | null => {
+  if (!link) return null;
+  try {
+    // 1. Direct path check
+    if (fs.existsSync(link)) {
+      const stat = fs.statSync(link);
+      if (stat.isFile()) return link;
+    }
+    // 2. Relative to process cwd
+    const relPath = path.resolve(process.cwd(), link);
+    if (fs.existsSync(relPath) && fs.statSync(relPath).isFile()) {
+      return relPath;
+    }
+    // 3. In .sharepoint_mock / local storage
+    const cleanLink = link.replace(/^[/\\]+/, '');
+    const mockPath = path.resolve(process.cwd(), '.sharepoint_mock', cleanLink);
+    if (fs.existsSync(mockPath) && fs.statSync(mockPath).isFile()) {
+      return mockPath;
+    }
+    const apiMockPath = path.resolve(process.cwd(), 'apps', 'api', '.sharepoint_mock', cleanLink);
+    if (fs.existsSync(apiMockPath) && fs.statSync(apiMockPath).isFile()) {
+      return apiMockPath;
+    }
+  } catch (err) {
+    // Ignore fs check errors
+  }
+  return null;
+};
+
 export class DailyActivityMomExportService {
   /**
    * Populate a single worksheet with an executive-level, 4-column balanced layout MOM (Minutes of Meeting).
-   * Styled with Times New Roman typography, 2x2 metadata grid, dynamic row heights, and clean borders.
+   * Styled with Times New Roman typography, 2x2 metadata grid, dynamic row heights, photo documentation frame, and clean borders.
    */
-  public static populateMomWorksheet(worksheet: ExcelJS.Worksheet, activity: any): void {
+  public static populateMomWorksheet(worksheet: ExcelJS.Worksheet, activity: any, workbook?: ExcelJS.Workbook): void {
     worksheet.getColumn('A').width = 24;
     worksheet.getColumn('B').width = 38;
     worksheet.getColumn('C').width = 24;
@@ -338,17 +369,56 @@ export class DailyActivityMomExportService {
     // 5. Next Plan
     addSectionBlock('V. RENCANA TINDAK LANJUT (NEXT PLAN / ACTION ITEMS)', activity.next_plan || '-', 50);
 
-    // 6. Supporting Documents
+    // 6. Supporting Documents / Photo Documentation Frame
     worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
     applyMergedRowStyles(worksheet, currentRow, 4, {
       font: { name: 'Times New Roman', size: 10.5, bold: true, color: { argb: 'FF1E3A8A' } },
       fill: SECTION_FILL,
       alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
     });
-    worksheet.getCell(`A${currentRow}`).value = 'VI. LAMPIRAN DOKUMEN & DOKUMENTASI RESMI';
+    worksheet.getCell(`A${currentRow}`).value = 'VI. LAMPIRAN DOKUMEN & DOKUMENTASI FOTO KEGIATAN';
     worksheet.getRow(currentRow).height = 24;
     currentRow++;
 
+    // Photo Box Canvas Row
+    const photoCanvasRow = currentRow;
+    worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
+    applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
+      font: { name: 'Times New Roman', size: 10, italic: true, color: { argb: 'FF64748B' } },
+      fill: KEY_FILL,
+      alignment: { vertical: 'middle', horizontal: 'center', wrapText: true }
+    });
+
+    let imageEmbedded = false;
+    const localImgPath = tryGetLocalImagePath(activity.document_link);
+    if (localImgPath && workbook) {
+      try {
+        const ext = path.extname(localImgPath).replace('.', '').toLowerCase();
+        if (['png', 'jpeg', 'jpg', 'gif'].includes(ext)) {
+          const imgBuffer = fs.readFileSync(localImgPath);
+          const imageId = workbook.addImage({
+            buffer: imgBuffer,
+            extension: (ext === 'jpg' ? 'jpeg' : ext) as any
+          });
+          worksheet.addImage(imageId, {
+            tl: { col: 0.2, row: photoCanvasRow - 1 + 0.1 },
+            ext: { width: 500, height: 210 }
+          });
+          worksheet.getCell(`A${photoCanvasRow}`).value = '';
+          imageEmbedded = true;
+        }
+      } catch (err) {
+        console.warn('Failed to embed image in MOM sheet:', err);
+      }
+    }
+
+    if (!imageEmbedded) {
+      worksheet.getCell(`A${photoCanvasRow}`).value = '[ Area Dokumentasi Foto / Lampiran Kegiatan ]\n(Foto dokumentasi pertemuan / kegiatan lapangan dapat dilampirkan di sini)';
+    }
+    worksheet.getRow(photoCanvasRow).height = 200;
+    currentRow++;
+
+    // Document Hyperlink Row
     worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
     applyMergedRowStyles(worksheet, currentRow, 4, {
       font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
@@ -357,15 +427,15 @@ export class DailyActivityMomExportService {
     const docCell = worksheet.getCell(`A${currentRow}`);
     if (activity.document_link) {
       docCell.value = {
-        text: activity.document_link,
+        text: `🔗 Link Dokumen / File Lampiran: ${activity.document_link}`,
         hyperlink: activity.document_link
       };
       docCell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' }, underline: true };
     } else {
-      docCell.value = '-';
+      docCell.value = '🔗 Link Dokumen / File Lampiran: -';
       docCell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF64748B' } };
     }
-    worksheet.getRow(currentRow).height = 30;
+    worksheet.getRow(currentRow).height = 26;
     currentRow++;
 
     // 7. Lembar Pengesahan / Formal Sign-Off
@@ -451,17 +521,17 @@ export class DailyActivityMomExportService {
       pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
     });
 
-    this.populateMomWorksheet(worksheet, activity);
+    DailyActivityMomExportService.populateMomWorksheet(worksheet, activity, workbook);
 
-    const rawBuffer = await workbook.xlsx.writeBuffer();
-    const buffer = Buffer.from(rawBuffer);
-
-    const safeTitle = (activity.activity || 'Kegiatan')
-      .replace(/[/\\?%*:|"<>]/g, ' ')
+    const safeTitle = (activity.activity || 'Activity')
+      .replace(/[^a-zA-Z0-9_\-\s]/g, '')
       .trim()
       .substring(0, 40);
     const dateStr = formatIndonesianDate(activity.activity_date).replace(/\s+/g, '_');
     const fileName = `MOM_${safeTitle}_${dateStr}.xlsx`;
+
+    const rawBuffer = await workbook.xlsx.writeBuffer();
+    const buffer = Buffer.from(rawBuffer);
 
     return { buffer, fileName, activity };
   }
@@ -626,7 +696,7 @@ export class DailyActivityMomExportService {
         views: [{ showGridLines: true }],
         pageSetup: { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
       });
-      this.populateMomWorksheet(momSheet, act);
+      DailyActivityMomExportService.populateMomWorksheet(momSheet, act, workbook);
     });
 
     const rawBuffer = await workbook.xlsx.writeBuffer();
