@@ -102,25 +102,42 @@ const applyMergedRowStyles = (
 const tryGetLocalImagePath = (link: string | null | undefined): string | null => {
   if (!link) return null;
   try {
-    // 1. Direct path check
-    if (fs.existsSync(link)) {
-      const stat = fs.statSync(link);
-      if (stat.isFile()) return link;
+    let clean = link.trim();
+
+    // 1. If it's a file:// URI
+    if (clean.startsWith('file://')) {
+      clean = decodeURIComponent(clean.replace(/^file:\/\/\/?/, ''));
     }
-    // 2. Relative to process cwd
-    const relPath = path.resolve(process.cwd(), link);
-    if (fs.existsSync(relPath) && fs.statSync(relPath).isFile()) {
-      return relPath;
+
+    // 2. If it's http(s) URL pointing to /uploads/
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      try {
+        const url = new URL(clean);
+        clean = decodeURIComponent(url.pathname);
+      } catch {}
     }
-    // 3. In .sharepoint_mock / local storage
-    const cleanLink = link.replace(/^[/\\]+/, '');
-    const mockPath = path.resolve(process.cwd(), '.sharepoint_mock', cleanLink);
-    if (fs.existsSync(mockPath) && fs.statSync(mockPath).isFile()) {
-      return mockPath;
+
+    // 3. Direct check
+    if (fs.existsSync(clean) && fs.statSync(clean).isFile()) {
+      return clean;
     }
-    const apiMockPath = path.resolve(process.cwd(), 'apps', 'api', '.sharepoint_mock', cleanLink);
-    if (fs.existsSync(apiMockPath) && fs.statSync(apiMockPath).isFile()) {
-      return apiMockPath;
+
+    // 4. Strip leading /uploads/ or uploads/
+    const withoutUploads = clean.replace(/^[/\\]*(?:uploads[/\\])?/, '');
+
+    const candidates = [
+      path.resolve(process.cwd(), clean),
+      path.resolve(process.cwd(), withoutUploads),
+      path.resolve(process.cwd(), '.sharepoint_mock', withoutUploads),
+      path.resolve(process.cwd(), 'apps', 'api', '.sharepoint_mock', withoutUploads),
+      path.resolve(process.cwd(), '..', '.sharepoint_mock', withoutUploads),
+      path.resolve(process.cwd(), '..', 'apps', 'api', '.sharepoint_mock', withoutUploads)
+    ];
+
+    for (const c of candidates) {
+      if (fs.existsSync(c) && fs.statSync(c).isFile()) {
+        return c;
+      }
     }
   } catch (err) {
     // Ignore fs check errors
