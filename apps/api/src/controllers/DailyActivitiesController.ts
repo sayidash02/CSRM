@@ -456,7 +456,7 @@ export const uploadPhoto = (req: Request, res: Response, next: NextFunction) => 
 
       const year = isNaN(actDate.getTime()) ? new Date().getFullYear() : actDate.getFullYear();
       const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-      const month = monthNames[isNaN(actDate.getTime()) ? new Date().getMonth() : actDate.getMonth()];
+      const month = monthNames[isNaN(actDate.getTime()) ? new Date().getMonth() : actDate.getMonth()] || 'Januari';
       const day = isNaN(actDate.getTime()) ? new Date().getDate() : actDate.getDate();
       const weekNumber = Math.ceil(day / 7);
 
