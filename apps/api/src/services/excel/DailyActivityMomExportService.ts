@@ -397,7 +397,7 @@ export class DailyActivityMomExportService {
         if (['png', 'jpeg', 'jpg', 'gif'].includes(ext)) {
           const imgBuffer = fs.readFileSync(localImgPath);
           const imageId = workbook.addImage({
-            buffer: imgBuffer,
+            buffer: imgBuffer as any,
             extension: (ext === 'jpg' ? 'jpeg' : ext) as any
           });
           worksheet.addImage(imageId, {
