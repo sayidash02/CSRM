@@ -229,7 +229,11 @@ function PhotoAttachmentInput({
     if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:')) {
       return value;
     }
-    return value.replace(/^file:\/\//, '/uploads/').replace(/\\/g, '/');
+    const cleanPath = value.replace(/^file:\/\//, '').replace(/\\/g, '/');
+    if (cleanPath.startsWith('/uploads/')) {
+      return `http://localhost:3000${cleanPath}`;
+    }
+    return `http://localhost:3000/uploads/${cleanPath.replace(/^\/+/, '')}`;
   }, [value, previewUrl]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -253,24 +257,18 @@ function PhotoAttachmentInput({
       formData.append('activity_date', activityDate || new Date().toISOString());
       formData.append('pic_name', picName || 'User');
 
-      const res = await fetch('/api/daily-activities/upload-photo', {
-        method: 'POST',
-        body: formData
+      const res = await apiClient.post('/daily-activities/upload-photo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Upload gagal (${res.status})`);
-      }
-
-      const resData = await res.json();
-      const uploadedUrl = resData?.data?.url || resData?.url || '';
+      const uploadedUrl = res.data?.data?.url || res.data?.url || '';
       onChange(uploadedUrl);
       setManualLink(uploadedUrl);
       showToast?.("Foto dokumentasi berhasil diunggah!", "success");
     } catch (err: any) {
       console.error("Upload error:", err);
-      showToast?.(err.message || "Gagal mengunggah foto ke server", "error");
+      const msg = err.response?.data?.error || err.response?.data?.message || err.message || "Gagal mengunggah foto ke server";
+      showToast?.(msg, "error");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
