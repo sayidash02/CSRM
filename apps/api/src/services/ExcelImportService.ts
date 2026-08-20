@@ -16,6 +16,22 @@ import {
 import { mergeImportedRows } from './excel/ImportDuplicateGuard';
 import { getWorkbookSheetContract } from './excel/WorkbookContract';
 import { parseCellDate, parseCellNumber } from './excel/ExcelValueParser';
+import {
+  allocateImportRegistration,
+  detectSheetHeader,
+  extractAttachmentValue,
+  findColIndex,
+  isRowIdentical,
+  isRowNonEmpty,
+  rowColumnMap,
+  rowValue,
+  shouldReadDataRow,
+  trunc,
+  truncStr,
+  validationDate,
+  validationYear,
+  validateWorkbook
+} from './excel/ExcelWorkbookValidator';
 
 // Preserve the existing service-level exports for callers and tests.
 export { parseCellDate, parseCellNumber };
@@ -66,144 +82,8 @@ export interface ImportPreviewResult {
     pics: string[];
     categories: string[];
   };
-}
-
-function trunc(val: string | null | undefined, max: number): string | null {
-  if (!val) return null;
-  const s = String(val).trim();
-  return s.length > max ? s.slice(0, max) : s;
-}
-
-function truncStr(val: string | null | undefined, max: number, defaultVal: string = ''): string {
-  if (!val) return defaultVal;
-  const s = String(val).trim();
-  if (!s) return defaultVal;
-  return s.length > max ? s.slice(0, max) : s;
-}
-
-
-function findColIndex(colMap: Map<string, number>, keywords: string[]): number {
-  for (const kw of keywords) {
-    for (const [headerText, colNum] of colMap.entries()) {
-      if (headerText === kw) {
-        return colNum;
-      }
-    }
-  }
-  for (const kw of keywords) {
-    for (const [headerText, colNum] of colMap.entries()) {
-      if (headerText.includes(kw)) {
-        return colNum;
-      }
-    }
-  }
-  return -1;
-}
-
-function isRowNonEmpty(row: ExcelJS.Row): boolean {
-  if (!row || !row.values) return false;
-  const values = Array.isArray(row.values) ? row.values : Object.values(row.values);
-  return values.some((val) => {
-    if (val === null || val === undefined) return false;
-    const str = extractCellString(val).trim();
-    return str.length > 0;
-  });
-}
-
-function isRowIdentical(row1: ExcelJS.Row, row2: ExcelJS.Row): boolean {
-  if (!row1 || !row2 || !row1.values || !row2.values) return false;
-  const v1 = Array.isArray(row1.values) ? row1.values : Object.values(row1.values);
-  const v2 = Array.isArray(row2.values) ? row2.values : Object.values(row2.values);
-  
-  const maxLen = Math.max(v1.length, v2.length);
-  for (let i = 1; i < maxLen; i++) {
-    const s1 = extractCellString(v1[i]).toLowerCase();
-    const s2 = extractCellString(v2[i]).toLowerCase();
-    if (s1 !== s2) return false;
-  }
-  return true;
-}
-
-function detectSheetHeader(worksheet: ExcelJS.Worksheet): { sheetType: keyof ImportPreviewSummary; headerRowIndex: number } | null {
-  const sheetNameLower = worksheet.name.toLowerCase().trim();
-
-  // Ignore sheets that are typically raw dumps, pivot tables, templates, master data, or references
-  if (
-    ['raw', 'master', 'reference', 'sheet1', 'sheet2', 'sheet3', 'data'].includes(sheetNameLower) ||
-    sheetNameLower.startsWith('raw') ||
-    sheetNameLower.includes('master') ||
-    sheetNameLower.includes('jangan dihapus') ||
-    sheetNameLower.includes('reference') ||
-    sheetNameLower.includes('template') ||
-    sheetNameLower.includes('panduan')
-  ) {
-    return null;
-  }
-
-  let bestMatch: { sheetType: keyof ImportPreviewSummary; headerRowIndex: number, colCount: number } | null = null;
-
-  const maxCheckRow = Math.min(10, worksheet.rowCount);
-  for (let r = 1; r <= maxCheckRow; r++) {
-    const row = worksheet.getRow(r);
-    if (!row || !row.values) continue;
-
-    const cellTexts: string[] = [];
-    row.eachCell({ includeEmpty: false }, (cell) => {
-      const str = extractCellString(cell.value).toLowerCase();
-      // Ignore long texts which are likely data paragraphs, not headers
-      if (str && str.length <= 100) cellTexts.push(str);
-    });
-
-    if (cellTexts.length === 0) continue;
-
-    const hasTanggal = cellTexts.some(t => t.includes('tanggal') || t.includes('date'));
-    const hasKegiatan = cellTexts.some(t => t.includes('kegiatan'));
-    const hasStakeholder = cellTexts.some(t => t === 'stakeholder' || t === 'nama stakeholder' || t.includes('pihak'));
-    const hasIssue = cellTexts.some(t => t === 'issue' || t === 'isu' || t.includes('concern') || t.includes('masalah'));
-    const hasTop = cellTexts.some(t => t.includes('top'));
-    const hasNoReg = cellTexts.some(t => t.includes('no registrasi') || t.includes('registrasi'));
-    const hasInstansi = cellTexts.some(t => t.includes('instansi'));
-    const hasProgram = cellTexts.some(t => t.includes('program'));
-    const hasGrievance = cellTexts.some(t => t.includes('grievance') || t.includes('keluhan') || t.includes('investigation') || t.includes('resolution') || t.includes('significance'));
-    const hasNo = cellTexts.some(t => t === 'no' || t === 'no.' || t === 'no ' || t === 'nomor');
-    const hasDocs = cellTexts.some(t => t.includes('dokumen') || t.includes('docs') || t.includes('document'));
-
-    let matchedType: keyof ImportPreviewSummary | null = null;
-
-    if (hasTanggal && hasKegiatan) {
-      matchedType = 'dailyActivities';
-    } else if (hasStakeholder && (hasTanggal || hasIssue || hasDocs || hasNo || cellTexts.some(t => t.includes('venue')))) {
-      matchedType = 'stakeholders';
-    } else if (hasIssue && (hasTop || hasNo || hasDocs || cellTexts.some(t => t.includes('tindak') || t.includes('follow')))) {
-      matchedType = 'topIssues';
-    } else if (hasNoReg || hasInstansi) {
-      matchedType = 'proposals';
-    } else if ((hasProgram && hasNo) || (sheetNameLower.includes('csr') && (hasProgram || hasKegiatan || hasNo))) {
-      matchedType = 'csr';
-    } else if (hasGrievance && (hasNo || hasTanggal || hasIssue)) {
-      matchedType = 'grievance';
-    }
-
-    if (matchedType) {
-      if (!bestMatch || cellTexts.length >= bestMatch.colCount) {
-        bestMatch = { sheetType: matchedType, headerRowIndex: r, colCount: cellTexts.length };
-      }
-    }
-  }
-
-  if (bestMatch) {
-    return { sheetType: bestMatch.sheetType, headerRowIndex: bestMatch.headerRowIndex };
-  }
-
-  // Fallback sheet name matching if keywords weren't explicitly found in rows 1..10
-  if (sheetNameLower.includes('daily')) return { sheetType: 'dailyActivities', headerRowIndex: 1 };
-  if (sheetNameLower.includes('stakeholder')) return { sheetType: 'stakeholders', headerRowIndex: 1 };
-  if (sheetNameLower.includes('issue') || sheetNameLower.includes('top')) return { sheetType: 'topIssues', headerRowIndex: 1 };
-  if (sheetNameLower.includes('proposal')) return { sheetType: 'proposals', headerRowIndex: 1 };
-  if (sheetNameLower.includes('csr')) return { sheetType: 'csr', headerRowIndex: 1 };
-  if (sheetNameLower.includes('grievance')) return { sheetType: 'grievance', headerRowIndex: 1 };
-
-  return null;
+  conflicts: ImportConflict[];
+  canImport: boolean;
 }
 
 export class ExcelImportService {
