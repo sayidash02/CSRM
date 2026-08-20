@@ -19,7 +19,8 @@ moderate, and 15 high advisories.
 - Removed `react-router`; repository source has no import or route usage for
   it, so it was an unused direct runtime dependency.
 - Kept React and React DOM at `18.3.1`, and pinned `@types/react` to
-  `18.3.12` and `@types/react-dom` to `18.3.1`.
+  `18.3.3` and `@types/react-dom` to `18.3.1`. This React 18 patch level
+  remains compatible with the existing Recharts and input-otp declarations.
 - Pinned `@prisma/client` and `prisma` to `5.22.0`. Removed
   `@prisma/config@7` and the unused `prisma.config.ts`; Prisma 5 CLI validates
   the schema without that config and the project does not use Prisma 6/7
