@@ -1,6 +1,10 @@
 {
   "name": "crms-root",
   "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=22.6.0"
+  },
   "scripts": {
     "dev:api": "pnpm --dir apps/api dev",
     "dev:web": "pnpm --dir apps/web dev",
