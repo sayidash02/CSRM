@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, Trash2, Check, X, Plus } from "lucide-react";
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
-const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
+const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 px-3 py-2 text-ink outline-none focus:border-forest focus:bg-white transition-all";
 
 interface PicItem {
   id: string;
@@ -83,25 +83,49 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[70] p-4" onClick={onClose}>
-      <div className="bg-card rounded-2xl border border-border shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">Atur PIC</h2>
-          <button onClick={onClose} className="p-1 rounded hover:bg-muted text-muted-foreground"><X size={15} /></button>
+    <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center z-[70] p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl border border-line shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col text-ink" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line bg-paper/30 shrink-0">
+          <h2 className="text-[15px] font-semibold text-ink">Kelola Master PIC Lapangan</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-paper-2 text-slate hover:text-ink transition-colors"><X size={16} /></button>
         </div>
-        <div className="overflow-y-auto flex-1 p-6 space-y-3">
-          {loading ? <p className="text-sm text-muted-foreground text-center py-4">Memuat data...</p> : (
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-border">
+        <div className="overflow-y-auto flex-1 p-6 space-y-4">
+          {/* Add Form */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd();
+              }}
+              placeholder="Nama PIC baru..."
+              className={inputCls}
+            />
+            <button
+              onClick={handleAdd}
+              disabled={!newName.trim() || isSubmitting}
+              className="px-4 py-2 text-xs font-medium text-white bg-forest hover:bg-forest-2 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+            >
+              <Plus size={13} />
+              Tambah
+            </button>
+          </div>
+
+          {loading ? (
+            <p className="text-xs text-slate font-mono text-center py-4">Memuat daftar PIC...</p>
+          ) : (
+            <table className="w-full text-[13px]">
+              <tbody className="divide-y divide-line/60">
                 {pics.map((p) => (
-                  <tr key={p.id} className="group">
-                    <td className="py-2">
+                  <tr key={p.id} className="group hover:bg-paper/30 transition-colors">
+                    <td className="py-2.5">
                       {editingId === p.id ? (
                         <input
                           type="text"
                           value={editName}
-                          onChange={e => setEditName(e.target.value)}
-                          onKeyDown={e => {
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => {
                             if (e.key === 'Enter') handleUpdate(p.id);
                             else if (e.key === 'Escape') setEditingId(null);
                           }}
@@ -109,17 +133,17 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           autoFocus
                         />
                       ) : (
-                        <span className="text-foreground">{p.name}</span>
+                        <span className="text-ink font-medium">{p.name}</span>
                       )}
                     </td>
-                    <td className="py-2 text-right w-20">
+                    <td className="py-2.5 text-right w-24">
                       {editingId === p.id ? (
                         <div className="flex justify-end gap-1">
                           <button
                             disabled={isSubmitting}
                             onClick={() => handleUpdate(p.id)}
                             title="Simpan Perubahan"
-                            className={`p-1 text-green-600 hover:bg-green-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className="p-1.5 text-forest hover:bg-forest/10 rounded-md transition-colors"
                           >
                             <Check size={14} />
                           </button>
@@ -127,18 +151,18 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                             disabled={isSubmitting}
                             onClick={() => setEditingId(null)}
                             title="Batal"
-                            className={`p-1 text-muted-foreground hover:bg-muted rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className="p-1.5 text-slate hover:bg-paper-2 rounded-md transition-colors"
                           >
                             <X size={14} />
                           </button>
                         </div>
                       ) : (
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
                             disabled={isSubmitting}
                             onClick={() => { setEditingId(p.id); setEditName(p.name); }}
                             title="Edit PIC"
-                            className={`p-1 text-blue-600 hover:bg-blue-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className="p-1.5 text-slate-2 hover:text-ochre hover:bg-ochre/10 rounded-md transition-colors"
                           >
                             <Edit2 size={13} />
                           </button>
@@ -146,7 +170,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                             disabled={isSubmitting}
                             onClick={() => setPicToDelete(p)}
                             title="Hapus PIC"
-                            className={`p-1 text-red-500 hover:bg-red-50 rounded active:scale-90 transition-transform ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className="p-1.5 text-slate-2 hover:text-clay hover:bg-clay/10 rounded-md transition-colors"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -155,29 +179,13 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                     </td>
                   </tr>
                 ))}
-                {pics.length === 0 && <tr><td colSpan={2} className="text-center py-4 text-muted-foreground text-xs">Belum ada PIC.</td></tr>}
+                {pics.length === 0 && <tr><td colSpan={2} className="text-center py-4 text-slate text-xs">Belum ada PIC terdaftar.</td></tr>}
               </tbody>
             </table>
           )}
         </div>
-        <div className="px-6 py-4 border-t border-border flex gap-2 items-center bg-muted/20 shrink-0 rounded-b-2xl">
-          <input
-            disabled={isSubmitting}
-            type="text"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="Nama PIC baru..."
-            className={`${inputCls} flex-1 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-          />
-          <button
-            disabled={isSubmitting}
-            onClick={handleAdd}
-            className={`px-3 py-2 bg-primary text-white text-sm rounded-md hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-1 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <Plus size={14} />
-            {isSubmitting ? "Memproses..." : "Tambah"}
-          </button>
+        <div className="px-6 py-3.5 border-t border-line flex justify-end bg-paper/30 rounded-b-2xl shrink-0">
+          <button onClick={onClose} className="px-4 py-2 text-xs font-medium text-slate border border-line rounded-lg hover:bg-paper-2 hover:text-ink transition-colors">Tutup</button>
         </div>
       </div>
       {picToDelete && (

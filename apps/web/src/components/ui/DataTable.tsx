@@ -36,7 +36,7 @@ export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: 
 
   const selectFilter = (key: string, value: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setActiveFilters(prev => ({ ...prev, [key]: value }));
+    setActiveFilters((prev) => ({ ...prev, [key]: value }));
     setOpenFilter(null);
   };
 
@@ -49,7 +49,7 @@ export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: 
     let sortableItems = [...data];
 
     if (Object.keys(activeFilters).length > 0) {
-      sortableItems = sortableItems.filter(item => {
+      sortableItems = sortableItems.filter((item) => {
         for (const [key, filterValue] of Object.entries(activeFilters)) {
           if (filterValue === 'All' || filterValue === 'all') continue;
           const itemValue = getNestedValue(item, key);
@@ -67,12 +67,12 @@ export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: 
         const bValue = getNestedValue(b, sortConfig.key);
 
         if (aValue === bValue) return 0;
-        
+
         if (aValue == null && bValue != null) return sortConfig.direction === 'asc' ? 1 : -1;
         if (aValue != null && bValue == null) return sortConfig.direction === 'asc' ? -1 : 1;
 
         if (typeof aValue === 'string' && typeof bValue === 'string') {
-          return sortConfig.direction === 'asc' 
+          return sortConfig.direction === 'asc'
             ? aValue.localeCompare(bValue, undefined, { numeric: true })
             : bValue.localeCompare(aValue, undefined, { numeric: true });
         }
@@ -108,23 +108,32 @@ export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: 
   };
 
   return (
-    <div className="bg-card rounded-xl border border-border overflow-hidden flex flex-col h-full">
+    <div className="bg-white rounded-xl border border-line overflow-hidden flex flex-col h-full shadow-2xs">
       <div className="overflow-auto flex-1">
-        <table className="w-full text-sm text-left">
-          <thead className="text-xs text-muted-foreground bg-muted/90 backdrop-blur z-10 sticky top-0">
+        <table className="w-full text-left text-[13px]">
+          <thead className="sticky top-0 z-10 border-b border-line bg-paper/80 backdrop-blur">
             <tr>
               {columns.map((col, idx) => (
                 <th
                   key={idx}
-                  className={`px-4 py-3 font-medium ${col.sortable ? 'cursor-pointer hover:bg-muted/80' : ''} ${col.className || ''} relative`}
-                  onClick={() => col.sortable && col.accessor ? requestSort(col.accessor) : undefined}
+                  className={`px-4 py-3 font-mono text-[10px] font-medium uppercase tracking-wider text-slate-2 ${
+                    col.sortable ? 'cursor-pointer hover:bg-paper/90 transition-colors' : ''
+                  } ${col.className || ''} relative`}
+                  onClick={() => (col.sortable && col.accessor ? requestSort(col.accessor) : undefined)}
                 >
                   <div className="flex items-center gap-1 justify-between">
-                    <div className="flex items-center gap-1">
-                      {col.header}
-                      {col.sortable && col.accessor && (sortConfig?.key === col.accessor || serverSortConfig?.key === col.accessor) && (
-                        (serverSortConfig?.key === col.accessor ? serverSortConfig.direction : sortConfig?.direction) === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                      )}
+                    <div className="flex items-center gap-1.5">
+                      <span>{col.header}</span>
+                      {col.sortable &&
+                        col.accessor &&
+                        (sortConfig?.key === col.accessor || serverSortConfig?.key === col.accessor) &&
+                        ((serverSortConfig?.key === col.accessor
+                          ? serverSortConfig.direction
+                          : sortConfig?.direction) === 'asc' ? (
+                          <ArrowUp className="h-3 w-3 text-forest" />
+                        ) : (
+                          <ArrowDown className="h-3 w-3 text-forest" />
+                        ))}
                     </div>
                     {col.filterOptions && col.accessor && (
                       <div className="relative">
@@ -133,17 +142,29 @@ export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: 
                           onClick={(e) => toggleFilter(col.accessor!, e)}
                           aria-label={`Filter ${col.header}`}
                           aria-expanded={openFilter === col.accessor}
-                          className={`p-1 rounded hover:bg-muted ${activeFilters[col.accessor] && activeFilters[col.accessor] !== 'All' ? 'text-primary font-bold' : 'text-muted-foreground'}`}
+                          className={`p-1 rounded hover:bg-paper-2 ${
+                            activeFilters[col.accessor] && activeFilters[col.accessor] !== 'All'
+                              ? 'text-forest font-bold'
+                              : 'text-slate-2'
+                          }`}
                         >
                           <Filter className="h-3 w-3" />
                         </button>
                         {openFilter === col.accessor && (
-                          <div className="absolute top-full right-0 mt-1 w-40 bg-card border border-border rounded-md shadow-lg z-50 overflow-hidden" onClick={e => e.stopPropagation()}>
-                            <div className="max-h-60 overflow-y-auto py-1">
+                          <div
+                            className="absolute top-full right-0 mt-1 w-44 bg-white border border-line rounded-lg shadow-xl z-50 overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="max-h-60 overflow-y-auto py-1 text-[12px]">
                               {col.filterOptions.map((opt) => (
                                 <div
                                   key={opt.value}
-                                  className={`px-3 py-1.5 text-sm cursor-pointer hover:bg-muted ${activeFilters[col.accessor!] === opt.value || (!activeFilters[col.accessor!] && opt.value === 'All') ? 'bg-muted/50 font-medium text-primary' : 'text-foreground'}`}
+                                  className={`px-3 py-1.5 cursor-pointer hover:bg-paper/60 ${
+                                    activeFilters[col.accessor!] === opt.value ||
+                                    (!activeFilters[col.accessor!] && opt.value === 'All')
+                                      ? 'bg-forest/10 font-semibold text-forest'
+                                      : 'text-ink'
+                                  }`}
                                   onClick={(e) => selectFilter(col.accessor!, opt.value, e)}
                                 >
                                   {opt.label}
@@ -159,21 +180,21 @@ export function DataTable<T>({ data, columns, onSortChange, serverSortConfig }: 
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-line/60">
             {sortedData.length > 0 ? (
               sortedData.map((item, idx) => (
-                <tr key={(item as any).id ?? idx} className="hover:bg-muted/50 transition-colors">
+                <tr key={(item as any).id ?? idx} className="hover:bg-paper/40 transition-colors last:border-0">
                   {columns.map((col, colIdx) => (
-                    <td key={colIdx} className={`px-4 py-3 align-top ${col.className || ''}`}>
-                      {col.render ? col.render(item, idx) : (col.accessor ? getNestedValue(item, col.accessor) : null)}
+                    <td key={colIdx} className={`px-4 py-3 align-middle text-ink ${col.className || ''}`}>
+                      {col.render ? col.render(item, idx) : col.accessor ? getNestedValue(item, col.accessor) : null}
                     </td>
                   ))}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-muted-foreground">
-                  No data available
+                <td colSpan={columns.length} className="px-4 py-12 text-center text-[13px] text-slate">
+                  Tidak ada data yang tersedia
                 </td>
               </tr>
             )}

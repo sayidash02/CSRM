@@ -83,10 +83,10 @@ function TopBar({
   }, []);
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
+    <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-line shrink-0 gap-3 flex-wrap">
       <div className="shrink-0">
-        <h1 className="text-base font-semibold text-foreground">{title}</h1>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5 font-mono">{subtitle}</p>}
+        <h1 className="text-[15px] font-semibold text-ink tracking-tight">{title}</h1>
+        {subtitle && <p className="text-[11px] text-slate font-mono mt-0.5">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         {children}
@@ -96,7 +96,7 @@ function TopBar({
               <select 
                 value={catFilter} 
                 onChange={(e) => onCatFilterChange?.(e.target.value)}
-                className="px-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring"
+                className="px-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest"
               >
                 <option value="All">Semua Kategori</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -106,7 +106,7 @@ function TopBar({
               <select 
                 value={subCatFilter} 
                 onChange={(e) => onSubCatFilterChange?.(e.target.value)}
-                className="px-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring max-w-[150px] truncate"
+                className="px-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest max-w-[150px] truncate"
               >
                 <option value="All">Semua Sub Kategori</option>
                 {subCategories
@@ -115,9 +115,9 @@ function TopBar({
               </select>
             )}
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari…"
-                className="pl-8 pr-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring w-44 placeholder:text-muted-foreground" />
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-2" />
+              <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari kegiatan…"
+                className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
             </div>
           </>
         )}
@@ -125,10 +125,10 @@ function TopBar({
         {/* Dedicated Direct MOM Button */}
         <button
           onClick={onExportMomWorkbook}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-md transition-colors shadow-xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest hover:bg-forest-2 text-white font-medium rounded-lg transition-colors shadow-2xs"
           title="Unduh All-in-One Workbook (Rekap + Notulensi MOM tiap kegiatan)"
         >
-          <FileSpreadsheet size={14} />
+          <FileSpreadsheet size={13} />
           <span>Download MOM (Excel)</span>
         </button>
 
@@ -136,7 +136,7 @@ function TopBar({
         <div className="relative" ref={menuRef}>
           <button 
             onClick={() => setShowExportMenu(!showExportMenu)} 
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"
           >
             <Download size={13} />
             Export
@@ -144,67 +144,75 @@ function TopBar({
           </button>
 
           {showExportMenu && (
-            <div className="absolute right-0 mt-1 w-64 bg-white border border-border rounded-lg shadow-lg z-50 py-1.5 text-xs animate-in fade-in-50 zoom-in-95">
+            <div className="absolute right-0 mt-1 w-64 bg-white border border-line rounded-xl shadow-xl z-50 py-1.5 text-[12px] animate-in fade-in-50 zoom-in-95">
               <button
                 onClick={() => { setShowExportMenu(false); onExportRekap?.(); }}
-                className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors"
+                className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors"
               >
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Download size={13} className="text-blue-600" /> Export Rekap Master (Excel)
+                <span className="font-semibold text-ink flex items-center gap-1.5">
+                  <Download size={13} className="text-forest" /> Export Rekap Master (Excel)
                 </span>
-                <span className="text-[11px] text-muted-foreground mt-0.5">Tabel rekapitulasi semua kegiatan</span>
+                <span className="text-[11px] text-slate mt-0.5">Tabel rekapitulasi semua kegiatan</span>
               </button>
 
               <button
                 onClick={() => { setShowExportMenu(false); onExportMomWorkbook?.(); }}
-                className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors border-t border-border/50"
+                className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
               >
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <FileSpreadsheet size={13} className="text-emerald-600" /> Export All-in-One (Rekap + MOMs)
+                <span className="font-semibold text-ink flex items-center gap-1.5">
+                  <FileSpreadsheet size={13} className="text-forest" /> Export All-in-One (Rekap + MOMs)
                 </span>
-                <span className="text-[11px] text-muted-foreground mt-0.5">1 File Excel: Master sheet + Tab notulensi tiap kegiatan</span>
+                <span className="text-[11px] text-slate mt-0.5">1 File Excel: Master sheet + Tab notulensi tiap kegiatan</span>
               </button>
 
               {onExportMomDocx && (
                 <button
                   onClick={() => { setShowExportMenu(false); onExportMomDocx(); }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors border-t border-border/50"
+                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
                 >
-                  <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    <FileText size={13} className="text-blue-600" /> Export MOM Gabungan (Word)
+                  <span className="font-semibold text-ink flex items-center gap-1.5">
+                    <FileText size={13} className="text-slate" /> Export MOM Gabungan (Word)
                   </span>
-                  <span className="text-[11px] text-muted-foreground mt-0.5">Dokumen DOCX dengan layout MOM yang sama</span>
+                  <span className="text-[11px] text-slate mt-0.5">Dokumen DOCX dengan layout MOM yang sama</span>
                 </button>
               )}
 
               {onExportMomPdf && (
                 <button
                   onClick={() => { setShowExportMenu(false); onExportMomPdf(); }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors border-t border-border/50"
+                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
                 >
-                  <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    <FileText size={13} className="text-red-600" /> Export MOM Gabungan (PDF)
+                  <span className="font-semibold text-ink flex items-center gap-1.5">
+                    <FileText size={13} className="text-clay" /> Export MOM Gabungan (PDF)
                   </span>
-                  <span className="text-[11px] text-muted-foreground mt-0.5">Dokumen PDF siap dibagikan atau diarsipkan</span>
+                  <span className="text-[11px] text-slate mt-0.5">Dokumen PDF siap dibagikan atau diarsipkan</span>
                 </button>
               )}
 
               {onExportFullWorkbook && (
                 <button
                   onClick={() => { setShowExportMenu(false); onExportFullWorkbook?.(); }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-muted flex flex-col transition-colors border-t border-border/50"
+                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
                 >
-                  <span className="font-semibold text-foreground flex items-center gap-1.5">
-                    <Download size={13} className="text-indigo-600" /> Export CRMS Full Workbook
+                  <span className="font-semibold text-ink flex items-center gap-1.5">
+                    <Download size={13} className="text-forest" /> Export CRMS Full Workbook
                   </span>
-                  <span className="text-[11px] text-muted-foreground mt-0.5">Semua 7 modul operasional perusahaan</span>
+                  <span className="text-[11px] text-slate mt-0.5">Semua 7 modul operasional perusahaan</span>
                 </button>
               )}
             </div>
           )}
         </div>
 
-        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        {!showDeleted && onAdd && (
+          <button
+            onClick={onAdd}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium"
+          >
+            <Plus size={13} />
+            {addLabel ?? "Tambah"}
+          </button>
+        )}
       </div>
     </div>
   );

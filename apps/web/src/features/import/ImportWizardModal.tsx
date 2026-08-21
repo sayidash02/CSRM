@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { apiClient } from '../../lib/apiClient';
-import { Modal } from '../../components/ui/Modal';
 import {
   UploadCloud,
-  CheckCircle2,
   FileSpreadsheet,
   AlertTriangle,
+  CheckCircle2,
   Loader2,
 } from 'lucide-react';
+import { Modal } from '../../components/ui/Modal';
+import { apiClient } from '../../lib/apiClient';
 
 interface ImportSummary {
   dailyActivities: number;
@@ -19,7 +19,7 @@ interface ImportSummary {
   lrp: number;
 }
 
-interface ImportConflict {
+interface ConflictItem {
   module: string;
   row: number;
   code: string;
@@ -27,61 +27,46 @@ interface ImportConflict {
   blocking: boolean;
 }
 
-interface ImportPreviewData {
-  fileId: string;
+interface PreviewData {
   summary: ImportSummary;
+  conflicts: ConflictItem[];
+  canImport: boolean;
   newMasterData: {
     pics: string[];
     categories: string[];
   };
-  conflicts: ImportConflict[];
-  canImport: boolean;
+  fileToken: string;
 }
 
 interface ImportWizardModalProps {
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess: () => void;
 }
 
-type Step = 'upload' | 'processing' | 'preview' | 'success';
+type WizardStep = 'upload' | 'processing' | 'preview' | 'success';
 
 export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps) {
-  const [step, setStep] = useState<Step>('upload');
+  const [step, setStep] = useState<WizardStep>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [previewData, setPreviewData] = useState<ImportPreviewData | null>(null);
-  const [importedCount, setImportedCount] = useState<number>(0);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [importedCount, setImportedCount] = useState<number>(0);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
-      setErrorMsg(null);
+      setErrorMessage(null);
     }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    setIsDragOver(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (/\.(xlsx|xls)$/i.test(file.name)) {
-        setSelectedFile(file);
-        setErrorMsg(null);
-      } else {
-        setErrorMsg('File harus berformat .xlsx atau .xls');
-      }
+      setSelectedFile(e.dataTransfer.files[0]);
+      setErrorMessage(null);
     }
   };
 
@@ -89,86 +74,133 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
     if (!selectedFile) return;
 
     setStep('processing');
-    setErrorMsg(null);
+    setErrorMessage(null);
 
     const formData = new FormData();
     formData.append('file', selectedFile);
 
     try {
-      const response = await apiClient.post('/import/preview', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const response = await apiClient.post<{ data: PreviewData }>('/import/preview', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      if (response.data && response.data.data) {
-        setPreviewData(response.data.data);
-        setStep('preview');
-      } else {
-        throw new Error('Respon tidak valid dari server');
-      }
+      setPreviewData(response.data.data);
+      setStep('preview');
     } catch (err: any) {
-      console.error('Error analyzing Excel file:', err);
-      const msg = err.response?.data?.error || err.message || 'Gagal menganalisis file Excel';
-      setErrorMsg(msg);
+      console.error(err);
+      setErrorMessage(
+        err.response?.data?.error || 'Gagal memproses file Excel. Pastikan format template sesuai.'
+      );
       setStep('upload');
     }
   };
 
   const handleConfirmImport = async () => {
-    if (!previewData) return;
+    if (!previewData?.fileToken) return;
 
     setIsConfirming(true);
-    setErrorMsg(null);
+    setErrorMessage(null);
 
     try {
-      const response = await apiClient.post('/import/confirm', {
-        fileId: previewData.fileId,
+      const response = await apiClient.post<{ data: { totalImported: number } }>('/import/commit', {
+        fileToken: previewData.fileToken,
       });
 
-      if (response.data && response.data.success) {
-        setImportedCount(response.data.count || 0);
-        setStep('success');
-      } else {
-        throw new Error(response.data?.error || 'Gagal mengimpor data');
-      }
+      setImportedCount(response.data.data.totalImported);
+      setStep('success');
     } catch (err: any) {
-      console.error('Error confirming import:', err);
-      const msg = err.response?.data?.error || err.message || 'Gagal mengimpor data';
-      setErrorMsg(msg);
+      console.error(err);
+      setErrorMessage(err.response?.data?.error || 'Gagal melakukan impor data.');
     } finally {
       setIsConfirming(false);
     }
   };
 
   const handleFinish = () => {
-    if (onSuccess) {
-      onSuccess();
-    }
+    onSuccess();
     onClose();
   };
 
   return (
-    <Modal title="Import Master Excel" onClose={onClose} size="lg">
-      <div className="p-6 space-y-6">
-        {errorMsg && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-700 text-sm">
-            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-            <div className="flex-1">{errorMsg}</div>
+    <Modal title="Impor Master Spreadsheet (Excel)" onClose={onClose} size="lg">
+      <div className="space-y-6">
+        {/* Step Indicator */}
+        <div className="flex items-center justify-between border-b border-line pb-4">
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-mono ${
+                step === 'upload' ? 'bg-forest text-white' : 'bg-forest/20 text-forest'
+              }`}
+            >
+              1
+            </span>
+            <span className={`text-[12px] font-medium ${step === 'upload' ? 'text-ink font-semibold' : 'text-slate'}`}>
+              Pilih File
+            </span>
+          </div>
+
+          <div className="w-8 h-px bg-line" />
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-mono ${
+                step === 'processing' || step === 'preview'
+                  ? 'bg-forest text-white'
+                  : 'bg-paper-2 text-slate-2'
+              }`}
+            >
+              2
+            </span>
+            <span
+              className={`text-[12px] font-medium ${
+                step === 'preview' ? 'text-ink font-semibold' : 'text-slate'
+              }`}
+            >
+              Validasi & Preview
+            </span>
+          </div>
+
+          <div className="w-8 h-px bg-line" />
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-mono ${
+                step === 'success' ? 'bg-forest text-white' : 'bg-paper-2 text-slate-2'
+              }`}
+            >
+              3
+            </span>
+            <span className={`text-[12px] font-medium ${step === 'success' ? 'text-ink font-semibold' : 'text-slate'}`}>
+              Selesai
+            </span>
+          </div>
+        </div>
+
+        {/* Error Alert */}
+        {errorMessage && (
+          <div className="p-4 bg-clay/10 border border-clay/20 rounded-xl flex items-start gap-3 text-clay text-xs">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <strong className="font-semibold block">Terjadi Kesalahan</strong>
+              <p>{errorMessage}</p>
+            </div>
           </div>
         )}
 
         {/* STEP 1: UPLOAD */}
         {step === 'upload' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all cursor-pointer ${
-                isDragging
-                  ? 'border-blue-500 bg-blue-50/50'
-                  : 'border-border hover:border-blue-400 bg-muted/20'
+                isDragOver
+                  ? 'border-forest bg-forest/5'
+                  : 'border-line hover:border-forest/60 bg-paper/40'
               }`}
             >
               <input
@@ -179,49 +211,49 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                 id="excel-file-input"
               />
               <label htmlFor="excel-file-input" className="cursor-pointer space-y-3 block">
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-sm">
-                  <UploadCloud className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-xl bg-forest/10 text-forest flex items-center justify-center mx-auto shadow-2xs">
+                  <UploadCloud className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Klik untuk memilih file atau drag & drop ke sini
+                  <p className="text-[13px] font-semibold text-ink">
+                    Klik untuk memilih file atau seret file ke sini
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Format file yang didukung: <strong>.xlsx / .xls</strong> (Maksimal 100MB)
+                  <p className="text-[11px] text-slate mt-1">
+                    Format file yang didukung: <strong className="font-mono text-ink">.xlsx / .xls</strong> (Maksimal 100MB)
                   </p>
                 </div>
               </label>
             </div>
 
             {selectedFile && (
-              <div className="flex items-center justify-between p-3.5 bg-card border border-border rounded-xl">
+              <div className="flex items-center justify-between p-3.5 bg-white border border-line rounded-xl shadow-2xs">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                  <div className="p-2 rounded-lg bg-forest/10 text-forest">
                     <FileSpreadsheet className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-medium text-foreground font-mono truncate max-w-md">
+                    <p className="text-[13px] font-medium text-ink font-mono truncate max-w-md">
                       {selectedFile.name}
                     </p>
-                    <p className="text-xs text-muted-foreground font-mono">
+                    <p className="text-[11px] text-slate font-mono">
                       {(selectedFile.size / 1024).toFixed(1)} KB
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedFile(null)}
-                  className="text-xs text-red-500 hover:text-red-700 font-medium"
+                  className="text-xs text-clay hover:opacity-80 font-medium"
                 >
                   Hapus
                 </button>
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors"
+                className="px-4 py-2 text-xs font-medium text-slate border border-line rounded-lg hover:bg-paper-2 hover:text-ink transition-colors"
               >
                 Batal
               </button>
@@ -229,10 +261,10 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                 type="button"
                 onClick={handleAnalyze}
                 disabled={!selectedFile}
-                className={`px-5 py-2 text-sm font-medium text-white rounded-xl transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 text-xs font-medium text-white rounded-lg transition-all flex items-center gap-1.5 ${
                   selectedFile
-                    ? 'bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20'
-                    : 'bg-gray-300 cursor-not-allowed text-gray-500'
+                    ? 'bg-forest hover:bg-forest-2 shadow-2xs'
+                    : 'bg-paper-2 text-slate-2 cursor-not-allowed border border-line'
                 }`}
               >
                 <FileSpreadsheet className="w-4 h-4" />
@@ -245,12 +277,12 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
         {/* STEP 2: PROCESSING */}
         {step === 'processing' && (
           <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-            <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
+            <Loader2 className="w-10 h-10 text-forest animate-spin" />
             <div>
-              <h3 className="text-base font-semibold text-foreground">
+              <h3 className="text-[15px] font-semibold text-ink">
                 Menganalisis file Excel...
               </h3>
-              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+              <p className="text-xs text-slate mt-1 max-w-sm">
                 Membaca sheet, mendeteksi struktur kolom, dan mengecek validitas data. Mohon tunggu sebentar.
               </p>
             </div>
@@ -261,62 +293,62 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
         {step === 'preview' && previewData && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-foreground mb-3">Ringkasan Data yang Ditemukan</h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-3.5 bg-blue-50/50 border border-blue-100 rounded-xl">
-                  <span className="text-xs font-medium text-blue-600 block">Daily Activities</span>
-                  <span className="text-xl font-bold font-mono text-blue-900 mt-1 block">
-                    {previewData.summary.dailyActivities} <span className="text-xs font-normal text-blue-700">baris</span>
+              <h3 className="text-[13px] font-semibold text-ink mb-3">Ringkasan Data yang Ditemukan</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                <div className="p-3 bg-forest/5 border border-forest/20 rounded-xl">
+                  <span className="text-[11px] font-medium text-forest block">Daily Activities</span>
+                  <span className="text-lg font-bold font-mono text-ink mt-0.5 block">
+                    {previewData.summary.dailyActivities} <span className="text-xs font-normal text-slate">baris</span>
                   </span>
                 </div>
-                <div className="p-3.5 bg-violet-50/50 border border-violet-100 rounded-xl">
-                  <span className="text-xs font-medium text-violet-600 block">Stakeholders</span>
-                  <span className="text-xl font-bold font-mono text-violet-900 mt-1 block">
-                    {previewData.summary.stakeholders} <span className="text-xs font-normal text-violet-700">baris</span>
+                <div className="p-3 bg-paper/60 border border-line rounded-xl">
+                  <span className="text-[11px] font-medium text-slate block">Stakeholders</span>
+                  <span className="text-lg font-bold font-mono text-ink mt-0.5 block">
+                    {previewData.summary.stakeholders} <span className="text-xs font-normal text-slate">baris</span>
                   </span>
                 </div>
-                <div className="p-3.5 bg-amber-50/50 border border-amber-100 rounded-xl">
-                  <span className="text-xs font-medium text-amber-600 block">Top Issues</span>
-                  <span className="text-xl font-bold font-mono text-amber-900 mt-1 block">
-                    {previewData.summary.topIssues} <span className="text-xs font-normal text-amber-700">baris</span>
+                <div className="p-3 bg-ochre/10 border border-ochre/20 rounded-xl">
+                  <span className="text-[11px] font-medium text-ochre block">Top Issues</span>
+                  <span className="text-lg font-bold font-mono text-ink mt-0.5 block">
+                    {previewData.summary.topIssues} <span className="text-xs font-normal text-slate">baris</span>
                   </span>
                 </div>
-                <div className="p-3.5 bg-teal-50/50 border border-teal-100 rounded-xl">
-                  <span className="text-xs font-medium text-teal-600 block">Proposals</span>
-                  <span className="text-xl font-bold font-mono text-teal-900 mt-1 block">
-                    {previewData.summary.proposals} <span className="text-xs font-normal text-teal-700">baris</span>
+                <div className="p-3 bg-paper/60 border border-line rounded-xl">
+                  <span className="text-[11px] font-medium text-slate block">Proposals</span>
+                  <span className="text-lg font-bold font-mono text-ink mt-0.5 block">
+                    {previewData.summary.proposals} <span className="text-xs font-normal text-slate">baris</span>
                   </span>
                 </div>
-                <div className="p-3.5 bg-emerald-50/50 border border-emerald-100 rounded-xl">
-                  <span className="text-xs font-medium text-emerald-600 block">CSR Projects</span>
-                  <span className="text-xl font-bold font-mono text-emerald-900 mt-1 block">
-                    {previewData.summary.csr} <span className="text-xs font-normal text-emerald-700">baris</span>
+                <div className="p-3 bg-forest/5 border border-forest/20 rounded-xl">
+                  <span className="text-[11px] font-medium text-forest block">CSR Projects</span>
+                  <span className="text-lg font-bold font-mono text-ink mt-0.5 block">
+                    {previewData.summary.csr} <span className="text-xs font-normal text-slate">baris</span>
                   </span>
                 </div>
-                <div className="p-3.5 bg-red-50/50 border border-red-100 rounded-xl">
-                  <span className="text-xs font-medium text-red-600 block">Grievance</span>
-                  <span className="text-xl font-bold font-mono text-red-900 mt-1 block">
-                    {previewData.summary.grievance} <span className="text-xs font-normal text-red-700">baris</span>
+                <div className="p-3 bg-clay/10 border border-clay/20 rounded-xl">
+                  <span className="text-[11px] font-medium text-clay block">Grievance</span>
+                  <span className="text-lg font-bold font-mono text-ink mt-0.5 block">
+                    {previewData.summary.grievance} <span className="text-xs font-normal text-slate">baris</span>
                   </span>
                 </div>
-                <div className="p-3.5 bg-slate-50/50 border border-slate-100 rounded-xl">
-                  <span className="text-xs font-medium text-slate-600 block">LRP</span>
-                  <span className="text-xl font-bold font-mono text-slate-900 mt-1 block">
-                    {previewData.summary.lrp} <span className="text-xs font-normal text-slate-700">baris</span>
+                <div className="p-3 bg-paper/60 border border-line rounded-xl">
+                  <span className="text-[11px] font-medium text-slate block">LRP</span>
+                  <span className="text-lg font-bold font-mono text-ink mt-0.5 block">
+                    {previewData.summary.lrp} <span className="text-xs font-normal text-slate">baris</span>
                   </span>
                 </div>
               </div>
             </div>
 
             {previewData.conflicts?.length > 0 && (
-              <div className={`p-4 border rounded-2xl space-y-2 ${previewData.canImport ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
-                <div className="flex items-center gap-2 font-semibold text-xs">
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
+              <div className={`p-4 border rounded-xl space-y-2 ${previewData.canImport ? 'bg-ochre/10 border-ochre/25' : 'bg-clay/10 border-clay/25'}`}>
+                <div className="flex items-center gap-2 font-semibold text-xs text-ink">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-ochre" />
                   {previewData.canImport ? 'Catatan preview' : 'Import diblokir sampai konflik diperbaiki'}
                 </div>
                 <div className="max-h-40 overflow-auto space-y-1 text-xs">
                   {previewData.conflicts.map((conflict, index) => (
-                    <div key={`${conflict.module}-${conflict.row}-${index}`} className={conflict.blocking ? 'text-red-700' : 'text-amber-800'}>
+                    <div key={`${conflict.module}-${conflict.row}-${index}`} className={conflict.blocking ? 'text-clay' : 'text-ochre'}>
                       <strong>{conflict.module} baris {conflict.row} · {conflict.code}:</strong> {conflict.message}
                     </div>
                   ))}
@@ -326,25 +358,25 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
 
             {/* Warning if new master data will be created */}
             {(previewData.newMasterData.pics.length > 0 || previewData.newMasterData.categories.length > 0) && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3">
-                <div className="flex items-center gap-2 text-amber-800 font-semibold text-xs">
-                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <div className="p-4 bg-ochre/10 border border-ochre/25 rounded-xl space-y-3">
+                <div className="flex items-center gap-2 text-ochre font-semibold text-xs">
+                  <AlertTriangle className="w-4 h-4 text-ochre shrink-0" />
                   Master Data Belum Terdaftar
                 </div>
-                <p className="text-xs text-amber-700 leading-relaxed">
+                <p className="text-xs text-slate leading-relaxed">
                   Excel ini berisi entri yang belum ada di Master Reference. Tambahkan master data terlebih dahulu; import tidak akan mengisi default atau membuat referensi diam-diam.
                 </p>
 
                 {previewData.newMasterData.pics.length > 0 && (
                   <div>
-                    <span className="text-[11px] font-semibold text-amber-900 block mb-1">
+                    <span className="text-[11px] font-semibold text-ink block mb-1">
                       PIC Baru ({previewData.newMasterData.pics.length}):
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {previewData.newMasterData.pics.map((pic, i) => (
                         <span
                           key={i}
-                          className="px-2 py-0.5 bg-amber-100/80 text-amber-800 border border-amber-200 rounded-md text-[11px] font-mono"
+                          className="px-2 py-0.5 bg-white text-ink border border-line rounded-md text-[11px] font-mono"
                         >
                           {pic}
                         </span>
@@ -355,14 +387,14 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
 
                 {previewData.newMasterData.categories.length > 0 && (
                   <div>
-                    <span className="text-[11px] font-semibold text-amber-900 block mb-1">
+                    <span className="text-[11px] font-semibold text-ink block mb-1">
                       Kategori / Sub-Kategori Baru ({previewData.newMasterData.categories.length}):
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {previewData.newMasterData.categories.map((cat, i) => (
                         <span
                           key={i}
-                          className="px-2 py-0.5 bg-amber-100/80 text-amber-800 border border-amber-200 rounded-md text-[11px] font-mono"
+                          className="px-2 py-0.5 bg-white text-ink border border-line rounded-md text-[11px] font-mono"
                         >
                           {cat}
                         </span>
@@ -373,12 +405,12 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
               </div>
             )}
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-border">
+            <div className="flex justify-end gap-2.5 pt-3 border-t border-line">
               <button
                 type="button"
                 onClick={() => setStep('upload')}
                 disabled={isConfirming}
-                className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-xl hover:bg-muted transition-colors disabled:opacity-50"
+                className="px-4 py-2 text-xs font-medium text-slate border border-line rounded-lg hover:bg-paper-2 hover:text-ink transition-colors disabled:opacity-50"
               >
                 Kembali
               </button>
@@ -386,7 +418,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                 type="button"
                 onClick={handleConfirmImport}
                 disabled={isConfirming || !previewData.canImport}
-                className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all flex items-center gap-2 shadow-md shadow-blue-500/20 disabled:opacity-50"
+                className="px-4 py-2 text-xs font-medium text-white bg-forest hover:bg-forest-2 rounded-lg transition-all flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
               >
                 {isConfirming ? (
                   <>
@@ -406,20 +438,20 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
 
         {/* STEP 4: SUCCESS */}
         {step === 'success' && (
-          <div className="py-8 flex flex-col items-center justify-center text-center space-y-5">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-              <CheckCircle2 className="w-10 h-10" />
+          <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-forest/15 flex items-center justify-center text-forest">
+              <CheckCircle2 className="w-8 h-8" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-foreground">Impor Data Berhasil!</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                Total <strong className="text-emerald-700 font-mono">{importedCount}</strong> baris data telah berhasil diimpor ke database.
+              <h3 className="text-base font-bold text-ink">Impor Data Berhasil!</h3>
+              <p className="text-xs text-slate max-w-sm">
+                Total <strong className="text-forest font-mono">{importedCount}</strong> baris data telah berhasil diimpor ke database.
               </p>
             </div>
             <button
               type="button"
               onClick={handleFinish}
-              className="px-6 py-2.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-md shadow-emerald-600/20"
+              className="px-5 py-2 text-xs font-medium text-white bg-forest hover:bg-forest-2 rounded-lg transition-all shadow-2xs"
             >
               Selesai
             </button>

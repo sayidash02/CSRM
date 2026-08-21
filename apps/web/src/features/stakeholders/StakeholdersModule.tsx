@@ -15,7 +15,7 @@ export interface Stakeholder {
   concern_issue: string | null;
 }
 
-const inputCls = "w-full text-sm rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all";
+const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 px-3 py-2 text-ink outline-none focus:border-forest focus:bg-white transition-all";
 
 const formatDate = (d?: string | Date | null) => {
   if (!d) return "";
@@ -43,27 +43,27 @@ const formatInputDate = (d?: string | Date | null) => {
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
+      <label className="text-xs font-medium text-slate block mb-1.5">{label}{required && <span className="text-clay ml-0.5">*</span>}</label>
       {children}
-      {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
+      {hint && <p className="text-[11px] text-slate-2 mt-1">{hint}</p>}
     </div>
   );
 }
 
 function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel: () => void; onConfirm: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={onCancel}>
-      <div className="bg-card rounded-xl border border-border shadow-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center z-[60] p-4" onClick={onCancel}>
+      <div className="bg-white rounded-2xl border border-line shadow-2xl w-full max-w-sm p-6 text-ink" onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0"><Trash2 size={15} className="text-red-500" /></div>
+          <div className="w-10 h-10 rounded-xl bg-clay/10 flex items-center justify-center shrink-0"><Trash2 size={16} className="text-clay" /></div>
           <div>
-            <div className="text-sm font-semibold text-foreground">Hapus data?</div>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">"<span className="font-medium text-foreground">{label}</span>" akan dihapus (soft delete) dan tidak muncul di daftar.</p>
+            <div className="text-[15px] font-semibold text-ink">Hapus data?</div>
+            <p className="text-xs text-slate mt-1 leading-relaxed">"<span className="font-medium text-ink">{label}</span>" akan dihapus (soft delete) dan tidak muncul di daftar modul aktif.</p>
           </div>
         </div>
         <div className="flex gap-2 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1.5"><Trash2 size={12} />Hapus</button>
+          <button onClick={onCancel} className="px-4 py-2 text-xs font-medium border border-line rounded-lg hover:bg-paper-2 transition-colors">Batal</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-xs font-medium bg-clay text-white rounded-lg hover:opacity-90 transition-colors flex items-center gap-1.5"><Trash2 size={12} />Hapus</button>
         </div>
       </div>
     </div>
@@ -76,22 +76,26 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 bg-card border-b border-border shrink-0 gap-3 flex-wrap shadow-xs">
+    <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-line shrink-0 gap-3 flex-wrap shadow-2xs">
       <div className="shrink-0">
-        <h1 className="text-base font-semibold text-foreground">{title}</h1>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5 font-mono">{subtitle}</p>}
+        <h1 className="text-[15px] font-semibold text-ink tracking-tight">{title}</h1>
+        {subtitle && <p className="text-[11px] text-slate font-mono mt-0.5">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         {children}
         {showSearch && (
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari…"
-              className="pl-8 pr-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring w-44 placeholder:text-muted-foreground" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-2" />
+            <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari pemangku kepentingan…"
+              className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        {!showDeleted && onAdd && (
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
+            <Plus size={13} />{addLabel ?? "Tambah"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -317,11 +321,11 @@ export default function StakeholdersModule({
       } 
     },
     { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
-    { header: "", render: (s) => showDeleted ? (
+    { header: "Aksi", render: (s) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(s)} 
-          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
         >
           <RotateCcw size={12} />
           Restore
@@ -329,15 +333,15 @@ export default function StakeholdersModule({
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(s.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={12} /></button>
-        <button onClick={() => setEditing(s)} className="p-1 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600"><Edit2 size={12} /></button>
-        <button onClick={() => setToDelete(s)} className="p-1 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 size={12} /></button>
+        <button onClick={() => { setSelectedHistoryId(s.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
+        <button onClick={() => setEditing(s)} title="Edit Data" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(s)} title="Hapus Data" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
       </div>
     )},
   ], [showDeleted, handleRestore]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden bg-paper">
       <TopBar 
         title="Stakeholder Engagement" 
         subtitle="Rekaman interaksi & pertemuan pemangku kepentingan" 
@@ -350,26 +354,26 @@ export default function StakeholdersModule({
         showDeleted={showDeleted}
       >
         <div className="flex items-center gap-2 mr-2">
-          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <span className="text-[12px] font-medium text-slate">Data Terhapus:</span>
           <input 
             type="checkbox" 
             checked={showDeleted} 
             onChange={(e) => setShowDeleted(e.target.checked)} 
-            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+            className="w-4 h-4 rounded border-line text-forest focus:ring-forest cursor-pointer"
           />
         </div>
       </TopBar>
 
-      <div className="flex-1 overflow-auto p-6 flex flex-col">
+      <div className="flex-1 overflow-auto p-4 sm:p-5 flex flex-col">
         {loading ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
+          <div className="py-12 text-center text-xs text-slate">Memuat data...</div>
         ) : (
           <div className="flex-1 min-h-0">
             <DataTable columns={columns} data={filtered} />
           </div>
         )}
         {!loading && (
-          <div className="mt-2 text-xs text-muted-foreground font-mono">
+          <div className="mt-2 text-xs text-slate font-mono">
             Menampilkan {filtered.length} dari {items.length} data engagement
           </div>
         )}

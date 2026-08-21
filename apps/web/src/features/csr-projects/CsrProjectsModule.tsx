@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
@@ -29,32 +29,32 @@ const formatIDR = (n: number | null) => {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 };
 
-const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
+const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 px-3 py-2 text-ink outline-none focus:border-forest focus:bg-white transition-all";
 
 function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground block mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
+      <label className="text-xs font-medium text-slate block mb-1.5">{label}{required && <span className="text-clay ml-0.5">*</span>}</label>
       {children}
-      {hint && <p className="text-[11px] text-muted-foreground mt-1">{hint}</p>}
+      {hint && <p className="text-[11px] text-slate-2 mt-1">{hint}</p>}
     </div>
   );
 }
 
 function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel: () => void; onConfirm: () => void }) {
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4" onClick={onCancel}>
-      <div className="bg-card rounded-xl border border-border shadow-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center z-[60] p-4" onClick={onCancel}>
+      <div className="bg-white rounded-2xl border border-line shadow-2xl w-full max-w-sm p-6 text-ink" onClick={e => e.stopPropagation()}>
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0"><Trash2 size={15} className="text-red-500" /></div>
+          <div className="w-10 h-10 rounded-xl bg-clay/10 flex items-center justify-center shrink-0"><Trash2 size={16} className="text-clay" /></div>
           <div>
-            <div className="text-sm font-semibold text-foreground">Hapus data?</div>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">"<span className="font-medium text-foreground">{label}</span>" akan dihapus (soft delete) dan tidak muncul di daftar.</p>
+            <div className="text-[15px] font-semibold text-ink">Hapus data?</div>
+            <p className="text-xs text-slate mt-1 leading-relaxed">"<span className="font-medium text-ink">{label}</span>" akan dihapus (soft delete) dan tidak muncul di daftar modul aktif.</p>
           </div>
         </div>
         <div className="flex gap-2 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors">Batal</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center gap-1.5"><Trash2 size={12} />Hapus</button>
+          <button onClick={onCancel} className="px-4 py-2 text-xs font-medium border border-line rounded-lg hover:bg-paper-2 transition-colors">Batal</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-xs font-medium bg-clay text-white rounded-lg hover:opacity-90 transition-colors flex items-center gap-1.5"><Trash2 size={12} />Hapus</button>
         </div>
       </div>
     </div>
@@ -63,10 +63,12 @@ function DeleteConfirm({ label, onCancel, onConfirm }: { label: string; onCancel
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    "On Going":"bg-blue-100 text-blue-700", Planning:"bg-slate-100 text-slate-600", Completed:"bg-emerald-100 text-emerald-700",
-    Cancelled:"bg-red-100 text-red-600"
+    "On Going": "bg-forest/10 text-forest border border-forest/20",
+    Planning: "bg-ochre/10 text-ochre border border-ochre/20",
+    Completed: "bg-forest/20 text-forest font-semibold border border-forest/30",
+    Cancelled: "bg-clay/10 text-clay border border-clay/20",
   };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[status] ?? "bg-slate-100 text-slate-600"}`}>{status}</span>;
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium font-mono ${map[status] ?? "bg-paper-2 text-slate border border-line"}`}>{status}</span>;
 }
 
 function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, onExport, children, showDeleted }: {
@@ -75,22 +77,26 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   onExport?: () => void; children?: React.ReactNode; showDeleted?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-border shrink-0 gap-3 flex-wrap">
+    <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-line shrink-0 gap-3 flex-wrap shadow-2xs">
       <div className="shrink-0">
-        <h1 className="text-base font-semibold text-foreground">{title}</h1>
-        {subtitle && <p className="text-xs text-muted-foreground mt-0.5 font-mono">{subtitle}</p>}
+        <h1 className="text-[15px] font-semibold text-ink tracking-tight">{title}</h1>
+        {subtitle && <p className="text-[11px] text-slate font-mono mt-0.5">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         {children}
         {showSearch && (
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari…"
-              className="pl-8 pr-3 py-1.5 text-sm bg-muted rounded-md border border-border focus:outline-none focus:ring-2 focus:ring-ring w-44 placeholder:text-muted-foreground" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-2" />
+            <input value={searchValue} onChange={e => onSearch?.(e.target.value)} placeholder="Cari program CSR…"
+              className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"><Download size={13} />Export</button>
-        {!showDeleted && onAdd && <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-blue-700 transition-colors"><Plus size={13} />{addLabel ?? "Tambah"}</button>}
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        {!showDeleted && onAdd && (
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
+            <Plus size={13} />{addLabel ?? "Tambah"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -112,20 +118,19 @@ const emptyCsrDraft = {
 
 function CsrForm({
   initial,
-  defaultValues,
-  onDraftChange,
   onClose,
   onSave,
-  showToast
+  showToast,
+  defaultValues,
+  onDraftChange
 }: {
   initial?: CsrProject;
-  defaultValues?: typeof emptyCsrDraft;
-  onDraftChange?: (v: typeof emptyCsrDraft) => void;
   onClose: () => void;
   onSave: (d: Omit<CsrProject, "id">) => void;
-  showToast?: (msg: string, type?: "success" | "error" | "info") => void;
+  showToast?: (msg: string, type?: "success"|"error"|"info") => void;
+  defaultValues?: typeof emptyCsrDraft;
+  onDraftChange?: (v: typeof emptyCsrDraft) => void;
 }) {
-
   const [f, setF] = useState(
     initial
       ? {
@@ -139,27 +144,35 @@ function CsrForm({
           status: initial.status ?? "Planning",
           budget: initial.budget ? String(initial.budget) : "",
           implementation_period: initial.implementation_period ?? "",
-          grievance_id: initial.grievance_id != null ? String(initial.grievance_id) : ""
+          grievance_id: initial.grievance_id ? String(initial.grievance_id) : ""
         }
       : { ...emptyCsrDraft, ...defaultValues }
   );
 
+  const [grievances, setGrievances] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiClient.get('/grievance').then(res => {
+      setGrievances(res.data.data || []);
+    }).catch(() => undefined);
+  }, []);
+
   const set = (k: string, v: string) => {
     const next = { ...f, [k]: v };
     setF(next);
-    if (!initial) onDraftChange?.(next);
+    if (!initial && onDraftChange) onDraftChange(next);
   };
 
   const handleClear = () => {
     setF({ ...emptyCsrDraft });
-    onDraftChange?.({ ...emptyCsrDraft });
+    if (onDraftChange) onDraftChange({ ...emptyCsrDraft });
   };
 
   const handleSave = () => {
     const missing: string[] = (
       [
-        [!f.program, "Nama Program"],
-        [!f.project_year, "Tahun"],
+        [!f.program, "Program"],
+        [!f.status, "Status"],
       ] as [boolean, string][]
     ).filter(([cond]) => cond).map(([, label]) => label);
 
@@ -169,52 +182,87 @@ function CsrForm({
       }
       return;
     }
+
     onSave({
-      ...f,
-      project_year: Number(f.project_year),
-      budget: f.budget ? Number(f.budget) : null,
+      project_year: parseInt(f.project_year) || new Date().getFullYear(),
+      program: f.program,
       activity: f.activity || null,
       type_of_activity: f.type_of_activity || null,
       location: f.location || null,
       target_beneficiaries: f.target_beneficiaries || null,
       objective: f.objective || null,
+      status: f.status,
+      budget: f.budget ? parseFloat(f.budget) : null,
       implementation_period: f.implementation_period || null,
+      grievance_id: f.grievance_id ? f.grievance_id : null
     });
-    if (!initial) onDraftChange?.({ ...emptyCsrDraft });
+    if (!initial && onDraftChange) onDraftChange({ ...emptyCsrDraft });
     onClose();
   };
 
   return (
-    <Modal title={initial ? "Edit CSR Project" : "Tambah CSR Project"} onClose={onClose}>
-      <div className="px-6 py-4 space-y-4">
-        <div className="grid grid-cols-3 gap-4">
-          <Field label="Tahun" required><input type="number" value={f.project_year} onChange={e => set("project_year", e.target.value)} className={`${inputCls} font-mono`} /></Field>
-          <div className="col-span-2"><Field label="Program" required><input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama program CSR" className={inputCls} /></Field></div>
+    <Modal title={initial ? "Edit CSR Project" : "Tambah Program CSR"} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Tahun" required>
+            <input type="number" value={f.project_year} onChange={e => set("project_year", e.target.value)} className={`${inputCls} font-mono`} />
+          </Field>
+          <Field label="Status" required>
+            <select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}>
+              <option value="Planning">Planning</option>
+              <option value="On Going">On Going</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </Field>
         </div>
-        <Field label="Kegiatan"><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Deskripsi aktivitas program" className={inputCls} /></Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Bentuk Kegiatan"><input type="text" value={f.type_of_activity} onChange={e => set("type_of_activity", e.target.value)} placeholder="Infrastruktur, Pendidikan, Ekonomi…" className={inputCls} /></Field>
-          <Field label="Lokasi"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Nama desa / kecamatan" className={inputCls} /></Field>
-          <Field label="Target/Sasaran"><input type="text" value={f.target_beneficiaries} onChange={e => set("target_beneficiaries", e.target.value)} placeholder="cth: 500 KK" className={inputCls} /></Field>
-          <Field label="Periode Pelaksanaan"><input type="text" value={f.implementation_period} onChange={e => set("implementation_period", e.target.value)} placeholder="Jan – Des 2026" className={inputCls} /></Field>
+        <Field label="Program" required>
+          <input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama program CSR" className={inputCls} />
+        </Field>
+        <Field label="Kegiatan">
+          <input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Rincian kegiatan" className={inputCls} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Bentuk Kegiatan">
+            <input type="text" value={f.type_of_activity} onChange={e => set("type_of_activity", e.target.value)} placeholder="Misal: Pelatihan / Bantuan" className={inputCls} />
+          </Field>
+          <Field label="Lokasi">
+            <input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Desa / Kecamatan" className={inputCls} />
+          </Field>
         </div>
-        <Field label="Tujuan"><textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} /></Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Planning</option><option>On Going</option><option>Completed</option><option>Cancelled</option></select></Field>
-          <Field label="Realisasi"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
+        <Field label="Target/Sasaran">
+          <input type="text" value={f.target_beneficiaries} onChange={e => set("target_beneficiaries", e.target.value)} placeholder="Kelompok masyarakat sasaran" className={inputCls} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Budget / Anggaran">
+            <CurrencyInput value={f.budget} onChange={v => set("budget", v)} placeholder="Rp 0" className={inputCls} />
+          </Field>
+          <Field label="Periode Pelaksanaan">
+            <input type="text" value={f.implementation_period} onChange={e => set("implementation_period", e.target.value)} placeholder="Misal: Q1 2026 / Jan-Mar" className={inputCls} />
+          </Field>
         </div>
+        <Field label="Tujuan">
+          <textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} />
+        </Field>
+        <Field label="Terkait Pengaduan (Opsional)">
+          <select value={f.grievance_id} onChange={e => set("grievance_id", e.target.value)} className={inputCls}>
+            <option value="">— Tidak ada —</option>
+            {grievances.map(g => (
+              <option key={g.id} value={g.id}>{g.register_no} — {g.complaint_issue}</option>
+            ))}
+          </select>
+        </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
     </Modal>
   );
 }
 
-
 export default function CsrProjectsModule({ activeYear, onExport, showToast }: { activeYear: string; onExport: (l: string, data: any[]) => void; showToast: (msg: string, type?: "success"|"error"|"info") => void }) {
   const [items, setItems] = useState<CsrProject[]>([]);
-  const [addDraft, setAddDraft] = useState({ ...emptyCsrDraft });
   const [showDeleted, setShowDeleted] = useState(false);
-  
+  const [addDraft, setAddDraft] = useState({ ...emptyCsrDraft });
+
   useEffect(() => {
     fetchData();
   }, [activeYear, showDeleted]);
@@ -224,51 +272,49 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       const yearParam = activeYear ? `year=${activeYear}` : '';
       const isDeletedParam = `is_deleted=${showDeleted}`;
       const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
-      const res = await apiClient.get(`/csr-projects${queryParams ? `?${queryParams}` : ''}`);
-      setItems(res.data.data);
+      const res = await apiClient.get(`/csr-projects?${queryParams}`);
+      setItems(res.data.data || []);
     } catch (e: any) {
-      console.error(e);
-      if (showToast) showToast(e.response?.data?.error || "Gagal memuat data", "error");
+      if (showToast) showToast(e.response?.data?.error || "Gagal mengambil data", "error");
     }
   };
 
   const handleAdd = async (d: Omit<CsrProject, "id">) => {
     try {
-      await apiClient.post('/csr-projects', d);
+      const year = parseInt(activeYear) || new Date().getFullYear();
+      await apiClient.post('/csr-projects', { ...d, project_year: d.project_year || year });
+      if (showToast) showToast(`Program '${d.program}' berhasil ditambahkan`, "success");
       fetchData();
-      showToast(`Program '${d.program}' berhasil ditambahkan`, "success");
     } catch (e: any) {
-      console.error(e);
-      showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
+      if (showToast) showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
   const handleEdit = async (id: string | number, d: Omit<CsrProject, "id">) => {
     try {
-      await apiClient.put(`/csr-projects/${id}`, d);
+      const year = parseInt(activeYear) || new Date().getFullYear();
+      await apiClient.put(`/csr-projects/${id}`, { ...d, project_year: d.project_year || year });
+      if (showToast) showToast(`Program '${d.program}' berhasil diperbarui`, "success");
       fetchData();
-      showToast(`Program '${d.program}' berhasil diperbarui`, "success");
     } catch (e: any) {
-      console.error(e);
-      showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
+      if (showToast) showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
-  const handleDelete = async (id: string | number, name?: string) => {
+  const handleDelete = async (id: string | number, title?: string) => {
     try {
       await apiClient.delete(`/csr-projects/${id}`);
+      if (showToast) showToast(`Program '${title || ''}' berhasil dihapus`, "success");
       fetchData();
-      showToast(`Program '${name || toDelete?.program || ''}' berhasil dihapus`, "success");
     } catch (e: any) {
-      console.error(e);
-      showToast(e.response?.data?.error || "Gagal menghapus data", "error");
+      if (showToast) showToast(e.response?.data?.error || "Gagal menghapus data", "error");
     }
   };
 
   const handleRestore = async (id: string | number) => {
     try {
       await apiClient.patch(`/csr-projects/${id}/restore`);
-      if (showToast) showToast("Data berhasil dipulihkan", "success");
+      if (showToast) showToast("Program berhasil dipulihkan", "success");
       fetchData();
     } catch (e: any) {
       if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
@@ -282,18 +328,17 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
   const [toRestore, setToRestore] = useState<CsrProject | null>(null);
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
-  
+
   const displayed = filtered;
 
   const columns: ColumnDef<CsrProject>[] = useMemo(() => [
-    { header: "No", render: (_, i) => <div className="text-xs text-muted-foreground">{i + 1}</div> },
-    { header: "Tahun", accessor: "project_year", sortable: true, render: (p) => <div className="text-sm text-foreground">{p.project_year}</div> },
-    { header: "Program", accessor: "program", sortable: true, render: (p) => <div className="text-sm font-semibold text-foreground whitespace-normal">{p.program}</div> },
-    { header: "Kegiatan", accessor: "activity", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.activity || "—"}</div> },
-    { header: "Bentuk Kegiatan", accessor: "type_of_activity", sortable: true, render: (p) => <div className="text-xs text-foreground">{p.type_of_activity || "—"}</div> },
-    { header: "Lokasi", accessor: "location", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.location || "—"}</div> },
-    { header: "Target/Sasaran", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-foreground whitespace-normal">{p.target_beneficiaries || "—"}</div> },
-    { header: "Tujuan", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-muted-foreground italic leading-relaxed max-w-[200px] whitespace-normal">{p.objective || "—"}</div> },
+    { header: "Tahun", accessor: "project_year", sortable: true, render: (p) => <div className="text-xs font-mono text-slate">{p.project_year}</div> },
+    { header: "Program", accessor: "program", sortable: true, render: (p) => <div className="text-[13px] font-semibold text-ink whitespace-normal">{p.program}</div> },
+    { header: "Kegiatan", accessor: "activity", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.activity || "—"}</div> },
+    { header: "Bentuk Kegiatan", accessor: "type_of_activity", sortable: true, render: (p) => <div className="text-xs text-slate">{p.type_of_activity || "—"}</div> },
+    { header: "Lokasi", accessor: "location", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.location || "—"}</div> },
+    { header: "Target/Sasaran", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.target_beneficiaries || "—"}</div> },
+    { header: "Tujuan", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-slate italic leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-2">{p.objective || "—"}</div></div> },
     { 
       header: "Status", 
       accessor: "status", 
@@ -307,13 +352,13 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       ],
       render: (p) => <StatusBadge status={p.status} /> 
     },
-    { header: "Realisasi", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
-    { header: "Periode Pelaksanaan", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-foreground whitespace-nowrap">{p.implementation_period || "—"}</div> },
-    { header: "", render: (p) => showDeleted ? (
+    { header: "Realisasi", accessor: "budget", sortable: true, render: (p) => <div className="text-[13px] font-semibold font-mono text-ink whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
+    { header: "Periode", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-slate whitespace-nowrap">{p.implementation_period || "—"}</div> },
+    { header: "Aksi", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(p)} 
-          className="px-2.5 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded border border-emerald-200 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
         >
           <RotateCcw size={12} />
           Restore
@@ -321,9 +366,9 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded hover:bg-gray-100 text-muted-foreground hover:text-gray-800 transition-colors"><History size={13} /></button>
-        <button onClick={() => setEditing(p)} className="p-1.5 rounded hover:bg-blue-50 text-muted-foreground hover:text-blue-600 transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => setToDelete(p)} className="p-1.5 rounded hover:bg-red-50 text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
+        <button onClick={() => setEditing(p)} title="Edit Program" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(p)} title="Hapus Program" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
       </div>
     )}
   ], [showDeleted]);
@@ -345,20 +390,20 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden bg-paper">
       <TopBar title="CSR Project" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
         <div className="flex items-center gap-2 mr-2">
-          <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
+          <span className="text-[12px] font-medium text-slate">Data Terhapus:</span>
           <input 
             type="checkbox" 
             checked={showDeleted} 
             onChange={(e) => setShowDeleted(e.target.checked)} 
-            className="w-4 h-4 rounded border-border text-blue-600 focus:ring-ring"
+            className="w-4 h-4 rounded border-line text-forest focus:ring-forest cursor-pointer"
           />
         </div>
       </TopBar>
-      <div className="flex-1 overflow-auto p-6 flex flex-col">
-        <div className="mb-4 text-xs text-muted-foreground font-mono shrink-0">{displayed.length} program · Total budget: <span className="text-foreground font-semibold">{formatIDR(displayed.reduce((s, c) => s + Number(c.budget || 0), 0))}</span></div>
+      <div className="flex-1 overflow-auto p-4 sm:p-5 flex flex-col">
+        <div className="mb-3 text-xs text-slate font-mono shrink-0">{displayed.length} program · Total budget: <span className="text-ink font-semibold">{formatIDR(displayed.reduce((s, c) => s + Number(c.budget || 0), 0))}</span></div>
         <div className="flex-1 min-h-0">
           <DataTable columns={columns} data={displayed} />
         </div>
@@ -371,5 +416,3 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     </div>
   );
 }
-
-

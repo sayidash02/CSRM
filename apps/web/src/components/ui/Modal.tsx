@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { X, Check, Edit2 } from 'lucide-react';
+import { X } from 'lucide-react';
 
 export function Modal({
   title,
@@ -24,7 +24,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center z-50 p-4"
       onMouseDown={() => { mouseDownOnBackdrop.current = true; }}
       onMouseUp={() => {
         if (mouseDownOnBackdrop.current) onClose();
@@ -35,20 +35,22 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`bg-card rounded-2xl border border-border shadow-2xl w-full ${size === "lg" ? "max-w-3xl" : "max-w-2xl"} max-h-[92vh] flex flex-col`}
+        className={`bg-white rounded-2xl border border-line shadow-2xl w-full ${
+          size === "lg" ? "max-w-3xl" : "max-w-2xl"
+        } max-h-[92vh] flex flex-col overflow-hidden text-ink`}
         onMouseDown={(e) => { e.stopPropagation(); mouseDownOnBackdrop.current = false; }}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-sm font-semibold">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line bg-paper/30 shrink-0">
+          <h2 className="text-[15px] font-semibold text-ink tracking-tight">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Tutup modal"
-            className="p-1 rounded hover:bg-muted text-muted-foreground"
+            className="p-1.5 rounded-lg hover:bg-paper-2 text-slate hover:text-ink transition-colors"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
-        <div className="overflow-y-auto flex-1">{children}</div>
+        <div className="overflow-y-auto flex-1 p-6">{children}</div>
       </div>
     </div>
   );
@@ -72,18 +74,20 @@ export function ModalFooter({
   saveType?: "button" | "submit";
 }) {
   return (
-    <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
+    <div className="px-6 py-4 border-t border-line flex gap-2.5 justify-end bg-paper/40 shrink-0">
       {onClear && (
         <button
           onClick={onClear}
-          className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors mr-auto"
+          type="button"
+          className="px-4 py-2 text-[13px] text-slate font-medium border border-line rounded-lg hover:bg-paper-2 hover:text-ink transition-colors mr-auto"
         >
           Bersihkan
         </button>
       )}
       <button
         onClick={onClose}
-        className="px-4 py-2 text-sm text-muted-foreground border border-border rounded-md hover:bg-muted transition-colors"
+        type="button"
+        className="px-4 py-2 text-[13px] text-slate font-medium border border-line rounded-lg hover:bg-paper-2 hover:text-ink transition-colors"
       >
         Batal
       </button>
@@ -91,15 +95,14 @@ export function ModalFooter({
         type={saveType}
         onClick={onSave}
         disabled={disableSave}
-        className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${
+        className={`px-4 py-2 text-[13px] font-medium rounded-lg transition-colors flex items-center gap-1.5 text-white shadow-2xs ${
           disableSave
-            ? "bg-gray-300 cursor-not-allowed text-gray-500"
+            ? "bg-slate-2 opacity-50 cursor-not-allowed"
             : isEdit
-            ? "bg-amber-500 hover:bg-amber-600"
-            : "bg-primary hover:bg-blue-700"
+            ? "bg-ochre hover:opacity-90"
+            : "bg-forest hover:bg-forest-2"
         }`}
       >
-        {isEdit ? <Edit2 size={13} /> : <Check size={13} />}
         {saveLabel}
       </button>
     </div>

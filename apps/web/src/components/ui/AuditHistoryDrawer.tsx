@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { translateField, translateValue } from '../../utils/fieldDictionary';
 import { apiClient } from '../../lib/apiClient';
+import { X, History } from 'lucide-react';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -28,31 +29,43 @@ export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, ent
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="w-96 h-full bg-white shadow-xl relative z-10 flex flex-col">
-        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-          <h2 className="text-lg font-bold text-gray-800">Riwayat Perubahan</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-black font-semibold text-sm">Tutup</button>
+      <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs" onClick={onClose}></div>
+      <div className="w-96 h-full bg-white shadow-2xl relative z-10 flex flex-col border-l border-line text-ink">
+        <div className="p-4 border-b border-line flex justify-between items-center bg-paper/40">
+          <div className="flex items-center gap-2">
+            <History size={16} className="text-forest" />
+            <h2 className="text-[14px] font-bold text-ink">Riwayat Perubahan</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg hover:bg-paper-2 text-slate hover:text-ink transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {loading ? (
-            <p className="text-sm text-gray-500">Memuat riwayat...</p>
+            <p className="text-xs text-slate font-mono">Memuat riwayat perubahan...</p>
           ) : logs.length === 0 ? (
-            <p className="text-sm text-gray-500">Belum ada riwayat perubahan.</p>
+            <p className="text-xs text-slate">Belum ada catatan riwayat perubahan pada data ini.</p>
           ) : (
             logs.map((log: any) => (
-              <div key={log.id} className="border p-3 rounded shadow-sm text-sm bg-white">
-                <div className="font-semibold text-gray-800">
-                  {log.action === 'UPDATE' ? 'Diedit' : log.action === 'DELETE' ? 'Dihapus' : 'Dibuat'}
-                </div>
-                <div className="text-xs text-gray-400 mb-2">
-                  {new Date(log.created_at).toLocaleString('id-ID')}
+              <div key={log.id} className="border border-line p-3.5 rounded-xl shadow-2xs text-[12px] bg-white space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-semibold ${
+                    log.action === 'UPDATE' ? 'bg-ochre/15 text-ochre' : log.action === 'DELETE' ? 'bg-clay/15 text-clay' : 'bg-forest/15 text-forest'
+                  }`}>
+                    {log.action === 'UPDATE' ? 'Diedit' : log.action === 'DELETE' ? 'Dihapus' : 'Dibuat'}
+                  </span>
+                  <span className="text-[11px] text-slate-2 font-mono">
+                    {new Date(log.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </span>
                 </div>
                 {log.changes && Object.entries(log.changes).map(([field, vals]: any) => (
-                  <div key={field} className="mt-1 bg-gray-50 p-2 rounded text-xs">
-                    <span className="font-medium text-gray-700">{translateField(field)}</span>: 
-                    <span className="text-red-500 line-through mx-1">{translateValue(field, vals.old, references)}</span> ➔ 
-                    <span className="text-green-600 font-semibold mx-1">{translateValue(field, vals.new, references)}</span>
+                  <div key={field} className="mt-1.5 bg-paper/60 border border-line/60 p-2 rounded-lg text-[11px]">
+                    <span className="font-semibold text-ink">{translateField(field)}</span>: 
+                    <span className="text-clay line-through mx-1">{translateValue(field, vals.old, references)}</span> ➔ 
+                    <span className="text-forest font-semibold mx-1">{translateValue(field, vals.new, references)}</span>
                   </div>
                 ))}
               </div>
@@ -63,4 +76,3 @@ export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, ent
     </div>
   );
 };
-
