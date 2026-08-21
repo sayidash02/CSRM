@@ -692,7 +692,7 @@ export class DailyActivityMomExportService {
       { header: 'Hasil Pertemuan', key: 'hasil', width: 40 },
       { header: 'Kesimpulan', key: 'kesimpulan', width: 35 },
       { header: 'Next Plan', key: 'next_plan', width: 35 },
-      { header: 'Supporting Documents / Photos', key: 'photos', width: 30 }
+      { header: 'Supporting Documents / Photos', key: 'photos', width: 36 }
     ];
     rekapSheet.columns = columns;
 
@@ -731,7 +731,7 @@ export class DailyActivityMomExportService {
           : '-'
       });
       const photos = getActivityPhotos(act);
-      row.height = photos.length > 0 ? Math.max(180, photos.length * 180) : 24;
+      row.height = photos.length > 0 ? Math.max(130, photos.length * 125) : 24;
       row.eachCell((cell, colNum) => {
         cell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } };
         cell.border = THIN_BORDER;
@@ -746,10 +746,11 @@ export class DailyActivityMomExportService {
       });
       if (photos.length > 0) {
         photos.forEach((photo, photoIndex) => {
+          const rowFraction = photoIndex / photos.length;
           addExcelPhoto(rekapSheet, workbook, photo, {
-            col: 16.1,
-            row: row.number - 1 + photoIndex * 12
-          }, 300, 230);
+            col: 16.08,
+            row: row.number - 1 + rowFraction + 0.02
+          }, 240, 115);
         });
       }
     });
