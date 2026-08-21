@@ -577,6 +577,34 @@ export const uploadPhoto = (req: Request, res: Response, next: NextFunction) => 
         select: { sort_order: true }
       });
       const digest = createHash('sha256').update(buffer).digest('hex');
+
+      const existingPhoto = await prisma.daily_activity_photos.findFirst({
+        where: { activity_id: activityId, sha256: digest }
+      });
+
+      if (existingPhoto) {
+        if (!existingPhoto.is_deleted) {
+          res.status(409).json({ error: 'Foto yang sama sudah terpasang pada kegiatan ini' });
+          return;
+        }
+
+        // Photo was previously soft-deleted, restore and update its attributes
+        const restoredPhoto = await prisma.daily_activity_photos.update({
+          where: { id: existingPhoto.id },
+          data: {
+            is_deleted: false,
+            photo_data: buffer,
+            mime_type: req.file.mimetype,
+            original_name: req.file.originalname.slice(0, 255),
+            size_bytes: buffer.length,
+            sort_order: (lastPhoto?.sort_order ?? -1) + 1
+          },
+          select: { id: true, activity_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
+        });
+        res.status(201).json({ data: { ...restoredPhoto, url: `/api/daily-activities/${activityId}/photos/${restoredPhoto.id}` } });
+        return;
+      }
+
       const photo = await prisma.daily_activity_photos.create({
         data: {
           activity_id: activityId,
@@ -592,6 +620,30 @@ export const uploadPhoto = (req: Request, res: Response, next: NextFunction) => 
       res.status(201).json({ data: { ...photo, url: `/api/daily-activities/${activityId}/photos/${photo.id}` } });
     } catch (error: any) {
       if (error?.code === 'P2002') {
+        try {
+          const activityId = parseId(req.body?.activity_id);
+          const digest = createHash('sha256').update(req.file.buffer).digest('hex');
+          const softDeleted = await prisma.daily_activity_photos.findFirst({
+            where: { activity_id: activityId, sha256: digest, is_deleted: true }
+          });
+          if (softDeleted) {
+            const restoredPhoto = await prisma.daily_activity_photos.update({
+              where: { id: softDeleted.id },
+              data: {
+                is_deleted: false,
+                photo_data: req.file.buffer,
+                mime_type: req.file.mimetype,
+                original_name: req.file.originalname.slice(0, 255),
+                size_bytes: req.file.buffer.length
+              },
+              select: { id: true, activity_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
+            });
+            res.status(201).json({ data: { ...restoredPhoto, url: `/api/daily-activities/${activityId}/photos/${restoredPhoto.id}` } });
+            return;
+          }
+        } catch {
+          // ignore and fall through
+        }
         res.status(409).json({ error: 'Foto yang sama sudah terpasang pada kegiatan ini' });
         return;
       }

@@ -335,3 +335,54 @@ describe('MOM Excel Export Endpoints', () => {
     expect(res.body.code).toBe('BAD_REQUEST');
   });
 });
+
+describe('Daily Activity Photo Management', () => {
+  const sampleJpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xff, 0xd9]);
+
+  it('should upload, delete, and re-upload the same photo without 409 conflict', async () => {
+    // 1. Create an activity
+    const actRes = await request(app).post('/api/daily-activities').send({
+      activity_date: '2026-07-28',
+      activity: 'Kegiatan Foto Test',
+      pic_id: picId.toString(),
+      category_id: catId.toString(),
+      sub_category_id: subCatId.toString()
+    });
+    expect(actRes.status).toBe(201);
+    const actId = actRes.body.data.id;
+
+    // 2. Upload photo
+    const uploadRes1 = await request(app)
+      .post('/api/daily-activities/upload-photo')
+      .field('activity_id', actId.toString())
+      .attach('file', sampleJpeg, { filename: 'test-photo.jpg', contentType: 'image/jpeg' });
+    expect(uploadRes1.status).toBe(201);
+    const photoId = uploadRes1.body.data.id;
+
+    // 3. Trying to upload the same active photo should return 409
+    const dupRes = await request(app)
+      .post('/api/daily-activities/upload-photo')
+      .field('activity_id', actId.toString())
+      .attach('file', sampleJpeg, { filename: 'test-photo.jpg', contentType: 'image/jpeg' });
+    expect(dupRes.status).toBe(409);
+    expect(dupRes.body.error).toContain('Foto yang sama sudah terpasang');
+
+    // 4. Delete the photo (soft delete)
+    const delRes = await request(app).delete(`/api/daily-activities/${actId}/photos/${photoId}`);
+    expect(delRes.status).toBe(204);
+
+    // 5. Re-upload the same deleted photo - should succeed and restore the photo
+    const uploadRes2 = await request(app)
+      .post('/api/daily-activities/upload-photo')
+      .field('activity_id', actId.toString())
+      .attach('file', sampleJpeg, { filename: 'test-photo.jpg', contentType: 'image/jpeg' });
+    expect(uploadRes2.status).toBe(201);
+    expect(uploadRes2.body.data.original_name).toBe('test-photo.jpg');
+
+    // 6. Verify photo is accessible
+    const getPhotoRes = await request(app).get(`/api/daily-activities/${actId}/photos/${uploadRes2.body.data.id}`);
+    expect(getPhotoRes.status).toBe(200);
+    expect(getPhotoRes.headers['content-type']).toBe('image/jpeg');
+  });
+});
+
