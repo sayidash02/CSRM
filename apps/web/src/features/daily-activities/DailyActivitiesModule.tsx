@@ -503,6 +503,9 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         limit={limit}
         onPageChange={setPage}
         onLimitChange={(lim) => { setLimit(lim); setPage(1); }}
+        sortBy={sortBy}
+        sortDir={sortDir}
+        onSortChange={(key, dir) => { setSortBy(key); setSortDir(dir); setPage(1); }}
       />
       {showForm && (
         <DailyActivityForm

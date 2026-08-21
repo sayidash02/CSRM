@@ -643,10 +643,15 @@ export class DailyActivityMomExportService {
         { activity: { contains: q } },
         { location: { contains: q } },
         { institution_group: { contains: q } },
+        { address: { contains: q } },
+        { focus: { contains: q } },
         { keterangan: { contains: q } },
         { hasil: { contains: q } },
         { kesimpulan: { contains: q } },
-        { next_plan: { contains: q } }
+        { next_plan: { contains: q } },
+        { daily_activity_pics: { some: { pic: { name: { contains: q } } } } },
+        { category: { name: { contains: q } } },
+        { sub_category: { name: { contains: q } } }
       ];
     }
 

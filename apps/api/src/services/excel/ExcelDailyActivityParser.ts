@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
 import { extractCellString } from './ExcelCellUtils';
+import { normalizeCategoryName, normalizePicName, normalizeSubCategoryName } from './ExcelWorkbookValidator';
 import type { ExcelImportErrorRow, ExcelImportResult, ParsedDailyActivityRow } from '../ExcelImportService';
 
 export async function parseDailyActivitiesWorkbook(buffer: Buffer): Promise<ExcelImportResult> {
@@ -59,9 +60,9 @@ export async function parseDailyActivitiesWorkbook(buffer: Buffer): Promise<Exce
 
     const description_result = [keterangan, hasil].filter(Boolean).join(' - ');
 
-    const catName = rawCat.toLowerCase();
-    const subCatName = rawSubCat.toLowerCase();
-    const rawPicNames = rawPic.split(/[,&]|\bdan\b/i).map(n => n.trim()).filter(Boolean);
+    const catName = normalizeCategoryName(rawCat).toLowerCase();
+    const subCatName = normalizeSubCategoryName(rawSubCat, rawCat).toLowerCase();
+    const rawPicNames = rawPic.split(/[,&]|\bdan\b/i).map(n => normalizePicName(n.trim())).filter(Boolean);
     const picNames = rawPicNames.map(n => n.toLowerCase());
 
     const categoryMatch = categories.find(c => c.name.toLowerCase().trim() === catName);

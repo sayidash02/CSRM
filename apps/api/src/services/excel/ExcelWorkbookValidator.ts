@@ -289,9 +289,7 @@ export function normalizeGrievanceStatus(val: string | null | undefined): string
 }
 
 export function normalizePicName(val: string): string {
-  const trimmed = val.trim();
-  if (trimmed.toLowerCase() === 'ziya') return 'Ziya Ramadhani';
-  return trimmed;
+  return val.trim();
 }
 
 export function allocateImportRegistration(prefix: 'PROP' | 'GRV', year: number, used: Set<string>): string {

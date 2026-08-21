@@ -17,6 +17,9 @@ interface DailyActivityTableProps {
   limit: number;
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  onSortChange?: (key: string, direction: 'asc' | 'desc') => void;
 }
 
 const formatDate = (d?: string | Date | null) => {
@@ -28,7 +31,7 @@ const formatDate = (d?: string | Date | null) => {
 
 export function DailyActivityTable({
   items, meta, showDeleted, onEdit, onDelete, onRestore, onHistory, onDownloadSingleMom,
-  page, limit, onPageChange, onLimitChange
+  page, limit, onPageChange, onLimitChange, sortBy, sortDir, onSortChange
 }: DailyActivityTableProps) {
   const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{(meta.page - 1) * meta.limit + i + 1}</span> },
@@ -45,7 +48,7 @@ export function DailyActivityTable({
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
     { header: "PIC (JSP)", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.pics && a.pics.length > 0 ? a.pics.map((p: any) => p.name).join(', ') : '-'}</span> },
     { header: "Category", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
-    { header: "Sub Category", accessor: "sub_category_name", sortable: true },
+    { header: "Sub Category", accessor: "sub_category.name", sortable: true, render: (a) => <span className="text-xs text-foreground whitespace-nowrap">{a.sub_category?.name || a.sub_category_name || '-'}</span> },
     { header: "Keterangan", accessor: "keterangan", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[180px] line-clamp-3" title={a.keterangan || ''}>{a.keterangan || (!a.hasil ? a.description_result : null) || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Hasil", accessor: "hasil", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[180px] line-clamp-3" title={a.hasil || ''}>{a.hasil || <span className="text-muted-foreground/50">—</span>}</div> },
     { header: "Kesimpulan", accessor: "kesimpulan", sortable: true, render: (a) => <div className="text-xs text-foreground whitespace-normal leading-relaxed max-w-[160px] line-clamp-3" title={a.kesimpulan || ''}>{a.kesimpulan || <span className="text-muted-foreground/50">—</span>}</div> },
@@ -119,6 +122,8 @@ export function DailyActivityTable({
       <DataTable
         columns={columns}
         data={items}
+        onSortChange={onSortChange}
+        serverSortConfig={sortBy ? { key: sortBy, direction: sortDir || 'desc' } : null}
       />
       <Pagination
         page={page}

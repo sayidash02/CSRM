@@ -109,7 +109,7 @@ export function DailyActivityForm({
   return (
     <Modal title={initial ? "Edit Kegiatan & Daily Notes" : "Tambah Kegiatan Baru"} onClose={onClose}>
       <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[75vh] overflow-y-auto">
-        <Field label="Tanggal Kegiatan" required><input type="date" value={String(f.activity_date).split('T')[0]} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
+        <Field label="Tanggal Kegiatan" required><input type="date" value={f.activity_date ? String(f.activity_date).split('T')[0] : ""} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
         <div className="col-span-2"><Field label="Daily Title / Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Judul / Deskripsi kegiatan" className={inputCls} /></Field></div>
 
         <Field label="Lokasi (Desa / Wilayah)"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Contoh: Cilamaya Girang" className={inputCls} /></Field>

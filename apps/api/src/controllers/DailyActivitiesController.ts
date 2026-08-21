@@ -131,7 +131,7 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
 });
 
 export const getDailyActivities = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { year, is_deleted, page, limit, search, cat, sub_cat, start, end, no_paginate, sort_by, sort_dir } = req.query;
+  const { year, is_deleted, page, limit, search, cat, sub_cat, pic, start, end, no_paginate, sort_by, sort_dir } = req.query;
   const isDeletedFilter = is_deleted === 'true';
   const where: any = { is_deleted: isDeletedFilter, is_archived: false };
   
@@ -154,6 +154,9 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
   if (sub_cat && sub_cat !== 'All') {
     where.sub_category_id = BigInt(sub_cat as string);
   }
+  if (pic && pic !== 'All') {
+    where.daily_activity_pics = { some: { pic_id: BigInt(pic as string) } };
+  }
   if (search) {
     const q = search as string;
     where.OR = [
@@ -165,7 +168,10 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
       { keterangan: { contains: q } },
       { hasil: { contains: q } },
       { kesimpulan: { contains: q } },
-      { next_plan: { contains: q } }
+      { next_plan: { contains: q } },
+      { daily_activity_pics: { some: { pic: { name: { contains: q } } } } },
+      { category: { name: { contains: q } } },
+      { sub_category: { name: { contains: q } } }
     ];
   }
 
