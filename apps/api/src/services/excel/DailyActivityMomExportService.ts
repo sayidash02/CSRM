@@ -98,7 +98,7 @@ const applyMergedRowStyles = (
   }
 };
 
-type ActivityPhoto = {
+export type ActivityPhoto = {
   photo_data: Buffer | Uint8Array;
   mime_type: string;
   original_name: string;
@@ -106,7 +106,7 @@ type ActivityPhoto = {
   is_deleted?: boolean;
 };
 
-const getActivityPhotos = (activity: any): ActivityPhoto[] =>
+export const getActivityPhotos = (activity: any): ActivityPhoto[] =>
   (Array.isArray(activity?.photos) ? activity.photos : [])
     .filter((photo: ActivityPhoto) => photo && photo.is_deleted !== true && photo.photo_data)
     .sort((a: ActivityPhoto, b: ActivityPhoto) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
@@ -121,7 +121,7 @@ const excelImageExtension = (photo: ActivityPhoto): 'jpeg' | 'png' | null => {
 
 const photoBuffer = (photo: ActivityPhoto): Buffer => Buffer.from(photo.photo_data);
 
-const addExcelPhoto = (
+export const addExcelPhoto = (
   worksheet: ExcelJS.Worksheet,
   workbook: ExcelJS.Workbook,
   photo: ActivityPhoto,

@@ -7,6 +7,7 @@ import {
   WorkbookModule,
   WorkbookSheetContract,
 } from './WorkbookContract';
+import { addExcelPhoto, getActivityPhotos, getIndonesianDay } from './DailyActivityMomExportService';
 
 export interface DailyActivityExportRow {
   activity_date?: Date | string | null;
@@ -20,10 +21,12 @@ export interface DailyActivityExportRow {
   cost?: number | string | null;
   keterangan?: string | null;
   hasil?: string | null;
+  kesimpulan?: string | null;
+  next_plan?: string | null;
   description_result?: string | null;
   /** Legacy workbook input only; never emitted as a hyperlink. */
   document_link?: string | null;
-  photos?: Array<{ id: bigint; original_name?: string | null }>;
+  photos?: Array<{ id?: bigint | string | number; photo_data?: any; mime_type?: string; original_name?: string | null; sort_order?: number; is_deleted?: boolean }>;
   daily_activity_pics?: Array<{ pic?: { name?: string | null } | null }>;
 }
 
@@ -191,7 +194,7 @@ export class WorkbookExportService {
       clearDataRows(worksheet, contract);
     }
 
-    this.writeDailyActivities(sheets.get('dailyActivities')!.worksheet, sheets.get('dailyActivities')!.contract, data.dailyActivities);
+    this.writeDailyActivities(sheets.get('dailyActivities')!.worksheet, sheets.get('dailyActivities')!.contract, data.dailyActivities, workbook);
     this.writeStakeholders(sheets.get('stakeholders')!.worksheet, sheets.get('stakeholders')!.contract, data.stakeholders);
     this.writeTopIssues(sheets.get('topIssues')!.worksheet, sheets.get('topIssues')!.contract, data.topIssues);
     this.writeProposals(sheets.get('proposals')!.worksheet, sheets.get('proposals')!.contract, data.proposals);
@@ -210,8 +213,13 @@ export class WorkbookExportService {
           daily_activity_pics: { include: { pic: true } },
           category: true,
           sub_category: true,
-          photos: { where: { is_deleted: false }, select: { id: true, original_name: true } }
+          photos: {
+            where: { is_deleted: false },
+            select: { id: true, photo_data: true, mime_type: true, original_name: true, sort_order: true },
+            orderBy: { sort_order: 'asc' }
+          }
         },
+        orderBy: { activity_date: 'asc' }
       }),
       prisma.stakeholder_engagement.findMany({ where: dateWhere('date', year) }),
       prisma.top_issues.findMany({ where: numericYearWhere('year', year) }),
@@ -264,24 +272,119 @@ export class WorkbookExportService {
     return result;
   }
 
-  private writeDailyActivities(worksheet: ExcelJS.Worksheet, contract: WorkbookSheetContract, rows: readonly DailyActivityExportRow[]): void {
-    const styleSource = worksheet.getRow(contract.dataStartRow);
-    rows.forEach((row, index) => writeRow(worksheet, contract.dataStartRow + index, [
-      index + 1,
-      dateValue(row.activity_date),
-      text(row.activity),
-      text(row.institution_group),
-      text(row.address),
-      text(row.category?.name),
-      text(row.sub_category?.name),
-      text(row.focus),
-      text(row.location),
-      numberValue(row.cost),
-      text(row.keterangan ?? row.description_result),
-      text(row.hasil),
-      row.photos?.length ? `${row.photos.length} foto dokumentasi` : '',
-      row.daily_activity_pics?.map((item) => text(item.pic?.name)).filter(Boolean).join(', ') ?? '',
-    ], styleSource));
+  private writeDailyActivities(
+    worksheet: ExcelJS.Worksheet,
+    contract: WorkbookSheetContract,
+    rows: readonly DailyActivityExportRow[],
+    workbook: ExcelJS.Workbook
+  ): void {
+    const headers = [
+      'No',
+      'Hari',
+      'Tanggal',
+      'Daily Title / Kegiatan',
+      'Category',
+      'Sub Category',
+      'Fokus',
+      'Lokasi (Wilayah)',
+      'Venue (Tempat)',
+      'Biaya',
+      'PIC (Internal JSP)',
+      'Attendees / Instansi Eksternal',
+      'Keterangan Pertemuan',
+      'Hasil Pertemuan',
+      'Kesimpulan',
+      'Next Plan',
+      'Supporting Documents / Photos'
+    ];
+
+    const headerRowNumber = contract.headerRows[contract.headerRows.length - 1] ?? 1;
+    const headerRow = worksheet.getRow(headerRowNumber);
+    headerRow.height = 28;
+    headers.forEach((headerText, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = headerText;
+      cell.font = { name: 'Times New Roman', size: 10.5, bold: true, color: { argb: 'FF1E3A8A' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+    });
+
+    const columnWidths = [6, 12, 16, 38, 22, 22, 22, 20, 25, 18, 25, 30, 35, 40, 35, 35, 36];
+    columnWidths.forEach((width, i) => {
+      worksheet.getColumn(i + 1).width = width;
+    });
+
+    rows.forEach((row, index) => {
+      const rowNumber = contract.dataStartRow + index;
+      const targetRow = worksheet.getRow(rowNumber);
+      const picNames = row.daily_activity_pics?.map((item) => text(item.pic?.name)).filter(Boolean).join(', ') ?? '';
+      const photos = getActivityPhotos(row);
+
+      const values: (string | number | Date | null)[] = [
+        index + 1,
+        getIndonesianDay(row.activity_date),
+        dateValue(row.activity_date),
+        text(row.activity),
+        text(row.category?.name),
+        text(row.sub_category?.name),
+        text(row.focus),
+        text(row.location),
+        text(row.address),
+        numberValue(row.cost),
+        picNames,
+        text(row.institution_group),
+        text(row.keterangan ?? row.description_result),
+        text(row.hasil),
+        text(row.kesimpulan),
+        text(row.next_plan),
+        photos.length > 0 ? `${photos.length} foto dokumentasi` : ''
+      ];
+
+      values.forEach((val, colIdx) => {
+        const cell = targetRow.getCell(colIdx + 1);
+        cell.value = val ?? null;
+        cell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+        };
+        cell.alignment = {
+          vertical: 'top',
+          horizontal: colIdx === 0 ? 'center' : (colIdx === 9 ? 'right' : 'left'),
+          wrapText: true
+        };
+        if (colIdx === 2 && val instanceof Date) {
+          cell.numFmt = 'yyyy-mm-dd';
+        }
+        if (colIdx === 9 && typeof val === 'number') {
+          cell.numFmt = '#,##0';
+        }
+        if (colIdx === 16 && photos.length > 0) {
+          cell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' } };
+        }
+      });
+
+      targetRow.height = photos.length > 0 ? Math.max(130, photos.length * 125) : 24;
+
+      if (photos.length > 0) {
+        photos.forEach((photo, photoIndex) => {
+          const rowFraction = photoIndex / photos.length;
+          addExcelPhoto(worksheet, workbook, photo, {
+            col: 16.08,
+            row: rowNumber - 1 + rowFraction + 0.02
+          }, 240, 115);
+        });
+      }
+    });
+
     setAutoFilter(worksheet, contract, rows.length);
   }
 

@@ -91,9 +91,13 @@ describe('WorkbookExportService', () => {
 
     const daily = workbook.getWorksheet('Daily Activities 2026')!;
     expect(daily.getCell('A2').value).toBe(1);
-    expect(daily.getCell('K2').value).toBe('Keterangan terpisah');
-    expect(daily.getCell('L2').value).toBe('Hasil terpisah');
-    expect(daily.getCell('M2').value).toBe('');
+    expect(daily.getCell('B2').value).toBe('Selasa');
+    expect(daily.getCell('D2').value).toBe('Kegiatan baru');
+    expect(daily.getCell('K2').value).toBe('PIC Satu');
+    expect(daily.getCell('L2').value).toBe('Institusi');
+    expect(daily.getCell('M2').value).toBe('Keterangan terpisah');
+    expect(daily.getCell('N2').value).toBe('Hasil terpisah');
+    expect(daily.getCell('Q2').value).toBe('');
 
     expect(workbook.getWorksheet('Stakeholder Engagement 2026')!.getCell('A5').value).toBe(1);
     expect(workbook.getWorksheet('Top Issue')!.getCell('C4').value).toBe('Issue');
