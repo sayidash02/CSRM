@@ -1,42 +1,77 @@
 import { useMemo, useState } from "react";
 import {
-  Calendar, Users, AlertTriangle, FileText, Leaf, MessageSquareWarning,
-  TrendingUp, TrendingDown, ChevronRight, BarChart2, Check, ArrowUpRight,
-  UploadCloud, AlertCircle
+  Calendar,
+  Users,
+  AlertTriangle,
+  FileText,
+  Leaf,
+  MessageSquareWarning,
+  TreePine,
+  ChevronRight,
+  BarChart2,
+  Check,
+  ArrowUpRight,
+  ArrowDownRight,
+  UploadCloud,
+  AlertCircle,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-  PieChart, Pie, Legend
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  PieChart,
+  Pie,
+  Legend,
 } from "recharts";
 import { ImportWizardModal } from "../import/ImportWizardModal";
-import {
-  TooltipProvider,
-  Tooltip as UITooltip,
-  TooltipTrigger,
-  TooltipContent
-} from "../../app/components/ui/tooltip";
-
 
 export interface DashboardStats {
   totals: {
-    daily: number; stakeholder: number; issues: number; proposals: number;
-    csr: number; grievance: number; lrp: number;
+    daily: number;
+    stakeholder: number;
+    issues: number;
+    proposals: number;
+    csr: number;
+    grievance: number;
+    lrp: number;
   };
   trends: {
-    dailyThisMonth: number; dailyLastMonth: number; dailyTrend: number;
-    weeklyThisWeek: number; weeklyLastWeek: number; weeklyTrend: number;
+    dailyThisMonth: number;
+    dailyLastMonth: number;
+    dailyTrend: number;
+    weeklyThisWeek: number;
+    weeklyLastWeek: number;
+    weeklyTrend: number;
   };
   actionable: {
-    csrOnGoing: number; grievanceHighOpen: number; untouchedGrievances: number;
+    csrOnGoing: number;
+    grievanceHighOpen: number;
+    untouchedGrievances: number;
   };
   charts: {
     dailyByCategory: Array<{ name: string; value: number }>;
     proposalsStatus: Array<{ name: string; value: number; color: string }>;
   };
   recent: {
-    activities: Array<{ id: string; activity: string; activity_date: string; pic?: { name: string } | null; sub_category?: { name: string } | null; }>;
-    highPriorityGrievances: Array<{ id: string; regNo: string; name: string; description: string; significance: string; }>;
-    onGoingCsr: Array<{ id: string; program: string; budget: number; }>;
+    activities: Array<{
+      id: string;
+      activity: string;
+      activity_date: string;
+      pic?: { name: string } | null;
+      sub_category?: { name: string } | null;
+    }>;
+    highPriorityGrievances: Array<{
+      id: string;
+      regNo: string;
+      name: string;
+      description: string;
+      significance: string;
+    }>;
+    onGoingCsr: Array<{ id: string; program: string; budget: number }>;
   };
 }
 
@@ -45,17 +80,28 @@ interface DashboardModuleProps {
   onNav: (module: any) => void;
 }
 
-const CHART_COLORS = ["#1D4ED8", "#0EA5E9", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444", "#64748B", "#EC4899", "#14B8A6"];
+const PALETTE = ["#2F6B4F", "#3D8A66", "#C47F2A", "#B4552F", "#6F6A5C", "#14201B", "#8A8577"];
 
-const formatIDR = (n: number) => new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+const formatIDR = (n: number) =>
+  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+
 const formatDate = (d: string) => {
   if (!d) return "-";
   return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 };
 
 function SignificanceBadge({ level }: { level: string }) {
-  const map: Record<string, string> = { Low: "bg-slate-100 text-slate-500", Medium: "bg-amber-100 text-amber-700", High: "bg-orange-100 text-orange-700", Critical: "bg-red-100 text-red-700" };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono ${map[level] ?? "bg-slate-100 text-slate-600"}`}>{level}</span>;
+  const map: Record<string, string> = {
+    Low: "bg-forest/10 text-forest",
+    Medium: "bg-ochre/15 text-ochre",
+    High: "bg-clay/15 text-clay",
+    Critical: "bg-clay/25 text-clay font-bold",
+  };
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium font-mono ${map[level] ?? "bg-slate/15 text-slate"}`}>
+      {level}
+    </span>
+  );
 }
 
 export default function DashboardModule({ stats, onNav }: DashboardModuleProps) {
@@ -66,214 +112,361 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
 
   if (!stats) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-background p-6">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <div className="w-8 h-8 rounded-full border-blue-100 border-t-blue-500 animate-spin" style={{ borderWidth: 3, borderStyle: "solid" }} />
-          <p className="text-sm font-medium">Memuat data dashboard...</p>
+      <div className="flex-1 flex items-center justify-center p-12">
+        <div className="flex flex-col items-center gap-3 text-slate">
+          <div className="w-8 h-8 rounded-full border-2 border-forest/30 border-t-forest animate-spin" />
+          <p className="text-[13px] font-medium">Memuat data dashboard...</p>
         </div>
       </div>
     );
   }
 
-  const statCards: Array<{ label: string; value: number; sub: string; trend?: number; icon: React.ReactNode; color: string; bg: string; module: string; badge?: string }> = [
+  const kpis = [
     {
-      label: "Daily Activities", value: stats.totals.daily,
-      sub: "aktivitas tercatat",
-      trend: stats.trends.weeklyTrend, icon: <Calendar size={16} />, color: "text-blue-600", bg: "bg-blue-50", module: "daily",
+      id: "daily",
+      label: "Aktivitas Lapangan",
+      value: stats.totals.daily,
+      unit: "kegiatan",
+      delta: stats.trends.weeklyTrend,
+      color: "var(--color-forest)",
+      module: "daily",
+      icon: <Calendar size={16} />,
     },
-    { label: "Stakeholder Meetings", value: stats.totals.stakeholder, sub: "pertemuan stakeholder", icon: <Users size={16} />, color: "text-violet-600", bg: "bg-violet-50", module: "stakeholder" },
-    { label: "Active Issues", value: stats.totals.issues, sub: "isu dipantau", icon: <AlertTriangle size={16} />, color: "text-amber-600", bg: "bg-amber-50", module: "topissues" },
     {
-      label: "Proposal", value: stats.totals.proposals, sub: "proposal masuk",
-      icon: <FileText size={16} />, color: "text-teal-600", bg: "bg-teal-50", module: "proposals",
+      id: "stakeholder",
+      label: "Engagement Pemangku Kepentingan",
+      value: stats.totals.stakeholder,
+      unit: "sesi",
+      delta: stats.trends.dailyTrend,
+      color: "var(--color-ochre)",
+      module: "stakeholder",
+      icon: <Users size={16} />,
     },
-    { label: "CSR Project", value: stats.totals.csr, sub: `${stats.actionable.csrOnGoing} sedang berjalan`, icon: <Leaf size={16} />, color: "text-emerald-600", bg: "bg-emerald-50", module: "csr" },
-    { label: "Grievance", value: stats.totals.grievance, sub: `${stats.actionable.grievanceHighOpen} prioritas tinggi`, icon: <MessageSquareWarning size={16} />, color: "text-red-600", bg: "bg-red-50", module: "grievance" },
+    {
+      id: "grievance",
+      label: "Keluhan Terbuka",
+      value: stats.totals.grievance,
+      unit: "kasus",
+      delta: stats.actionable.grievanceHighOpen > 0 ? stats.actionable.grievanceHighOpen : 0,
+      isIssue: true,
+      color: "var(--color-clay)",
+      module: "grievance",
+      icon: <MessageSquareWarning size={16} />,
+    },
+    {
+      id: "csr",
+      label: "Program CSR Aktif",
+      value: stats.totals.csr,
+      unit: `${stats.actionable.csrOnGoing} berjalan`,
+      delta: 0,
+      color: "var(--color-forest-2)",
+      module: "csr",
+      icon: <Leaf size={16} />,
+    },
+  ];
+
+  const secondaryKpis = [
+    { label: "Isu Dipantau", value: stats.totals.issues, module: "topissues", icon: <AlertTriangle size={15} /> },
+    { label: "Proposal Masuk", value: stats.totals.proposals, module: "proposals", icon: <FileText size={15} /> },
+    { label: "LRP Program", value: stats.totals.lrp, module: "lrp", icon: <TreePine size={15} /> },
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background p-6 space-y-5">
-      {/* Header Area */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      {/* Header Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Dashboard Overview</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Ringkasan statistik dan aktivitas terkini CRMS</p>
+          <h2 className="text-[17px] font-semibold tracking-tight text-ink">Ringkasan Operasional</h2>
+          <p className="text-[12px] text-slate mt-0.5">Statistik dan aktivitas terkini program CSR & Community Relations</p>
         </div>
-        <div className="flex items-center gap-4">
-          <button onClick={() => setShowImportWizard(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150">
-            <UploadCloud size={15} /> Import Master Excel
-          </button>
-        </div>
+        <button
+          onClick={() => setShowImportWizard(true)}
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-forest hover:bg-forest-2 text-white rounded-lg text-[13px] font-medium shadow-xs transition-colors"
+        >
+          <UploadCloud size={15} /> Import Master Excel
+        </button>
       </div>
 
-      {/* Alert Banner */}
+      {/* Alert Banner for Urgent Action Items */}
       {stats.actionable.untouchedGrievances > 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm text-red-700 font-medium">
-            <AlertCircle size={16} className="text-red-500 shrink-0" />
-            <span>Terdapat <strong>{stats.actionable.untouchedGrievances}</strong> grievance prioritas tinggi yang belum ditindaklanjuti sama sekali.</span>
+        <div className="bg-clay/10 border border-clay/20 rounded-xl p-3.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 text-[13px] text-clay font-medium">
+            <AlertCircle size={17} className="shrink-0" />
+            <span>
+              Terdapat <strong>{stats.actionable.untouchedGrievances}</strong> keluhan (grievance) prioritas tinggi yang perlu segera ditindaklanjuti.
+            </span>
           </div>
+          <button
+            onClick={() => onNav("grievance")}
+            className="text-[12px] font-semibold text-clay hover:underline whitespace-nowrap"
+          >
+            Buka Modul Grievance →
+          </button>
         </div>
       )}
 
-      {/* 6 Stat Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        {statCards.map((s) => (
-          <button key={s.label} onClick={() => onNav(s.module)} className="relative bg-card rounded-xl p-4 border border-border text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
-            {s.badge && (
-              <span className="absolute top-4 right-4 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">
-                {s.badge}
-              </span>
-            )}
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center ${s.color}`}>
-                {s.icon}
+      {/* Primary KPI Metric Cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map((k) => {
+          const up = k.delta >= 0;
+          const good = k.isIssue ? !up : up;
+
+          return (
+            <button
+              key={k.id}
+              onClick={() => onNav(k.module)}
+              className="group rounded-xl border border-line bg-white p-4 text-left transition-all duration-200 hover:shadow-[0_1px_0_rgba(20,32,27,0.04),0_8px_24px_-12px_rgba(20,32,27,0.15)] hover:-translate-y-0.5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-[12px] leading-snug text-slate font-medium">{k.label}</span>
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: k.color }} />
               </div>
-              <div className="flex items-center gap-1">
-                {s.trend !== undefined && (
-                  <TooltipProvider>
-                    <UITooltip>
-                      <TooltipTrigger asChild>
-                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[11px] font-medium font-mono cursor-help ${s.trend >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>
-                          {s.trend >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                          {s.trend >= 0 ? `+${s.trend}%` : `${s.trend}%`}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">Dibandingkan dengan minggu lalu</p>
-                      </TooltipContent>
-                    </UITooltip>
-                  </TooltipProvider>
+              <div className="mt-3 flex items-end justify-between gap-2">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="font-mono text-3xl font-semibold tabular-nums tracking-tight text-ink">{k.value}</span>
+                  <span className="text-[11px] text-slate-2">{k.unit}</span>
+                </div>
+                {k.delta !== 0 && (
+                  <span
+                    className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-mono text-[11px] tabular-nums ${
+                      good ? "bg-forest/10 text-forest" : "bg-clay/10 text-clay"
+                    }`}
+                  >
+                    {up ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                    {Math.abs(k.delta).toFixed(1)}%
+                  </span>
                 )}
-                <ArrowUpRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Secondary KPI Bar */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {secondaryKpis.map((item) => (
+          <button
+            key={item.label}
+            onClick={() => onNav(item.module)}
+            className="flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-line hover:bg-paper/40 transition-colors text-left"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-forest">{item.icon}</span>
+              <span className="text-[13px] font-medium text-ink">{item.label}</span>
             </div>
-            <div className="text-2xl font-semibold text-foreground font-mono">{s.value}</div>
-            <div className="text-xs font-medium text-foreground mt-0.5">{s.label}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{s.sub}</div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[15px] font-semibold text-ink">{item.value}</span>
+              <ChevronRight size={14} className="text-slate-2" />
+            </div>
           </button>
         ))}
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-3 bg-card rounded-xl border border-border">
-          <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart2 size={14} className="text-muted-foreground" />
-              <h2 className="text-sm font-semibold">Aktivitas per Sub Category</h2>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        {/* Left: Bar chart by Sub Category */}
+        <section className="rounded-xl border border-line bg-white p-5 xl:col-span-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold tracking-tight text-ink">Aktivitas per Sub-Kategori</h3>
+              <p className="text-[12px] text-slate">Distribusi jenis kegiatan operasional</p>
             </div>
-            <button onClick={() => onNav("daily")} className="text-xs text-blue-600 hover:underline flex items-center gap-1">Lihat semua <ChevronRight size={12} /></button>
+            <button
+              onClick={() => onNav("daily")}
+              className="inline-flex items-center gap-1 text-[12px] font-medium text-forest hover:text-forest-2"
+            >
+              Lihat Detail <ChevronRight size={13} />
+            </button>
           </div>
-          <div className="p-4" style={{ height: 220 }}>
+
+          <div className="h-56">
             {catData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={catData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 9, fontFamily: "DM Mono, monospace" }} interval={0} />
-                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                <BarChart data={catData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} interval={0} />
+                  <YAxis tick={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 8,
+                      border: "1px solid var(--color-line)",
+                      backgroundColor: "#ffffff",
+                    }}
+                  />
                   <Bar dataKey="value" name="Jumlah" radius={[4, 4, 0, 0]}>
-                    {catData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    {catData.map((_, i) => (
+                      <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Belum ada data aktivitas</div>
+              <div className="h-full flex items-center justify-center text-[12px] text-slate">
+                Belum ada data aktivitas tercatat
+              </div>
             )}
           </div>
-        </div>
+        </section>
 
-        <div className="col-span-2 bg-card rounded-xl border border-border flex flex-col">
-          <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Status Proposal</h2>
-            <button onClick={() => onNav("proposals")} className="text-xs text-blue-600 hover:underline flex items-center gap-1">Detail <ChevronRight size={12} /></button>
+        {/* Right: Pie Chart Proposals Status */}
+        <section className="rounded-xl border border-line bg-white p-5 xl:col-span-2 flex flex-col">
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <h3 className="text-[14px] font-semibold tracking-tight text-ink">Status Proposal</h3>
+              <p className="text-[12px] text-slate">Komposisi evaluasi proposal masuk</p>
+            </div>
+            <button
+              onClick={() => onNav("proposals")}
+              className="inline-flex items-center gap-1 text-[12px] font-medium text-forest hover:text-forest-2"
+            >
+              Detail <ChevronRight size={13} />
+            </button>
           </div>
-          <div className="p-4 flex-1" style={{ height: 220 }}>
+
+          <div className="h-56 flex-1">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="45%" innerRadius={36} outerRadius={55} dataKey="value" paddingAngle={2}>
-                    {pieData.map((d, i) => <Cell key={i} fill={d.color || CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  <Pie data={pieData} cx="50%" cy="45%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={3}>
+                    {pieData.map((d, i) => (
+                      <Cell key={i} fill={d.color || PALETTE[i % PALETTE.length]} />
+                    ))}
                   </Pie>
                   <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                  <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                  <Tooltip
+                    contentStyle={{
+                      fontSize: 11,
+                      borderRadius: 8,
+                      border: "1px solid var(--color-line)",
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-muted-foreground">Belum ada data proposal</div>
+              <div className="h-full flex items-center justify-center text-[12px] text-slate">
+                Belum ada data proposal
+              </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* Recent Activities & Actionable Items */}
-      <div className="grid grid-cols-5 gap-4">
-        {/* Kegiatan Terbaru */}
-        <div className="col-span-3 bg-card rounded-xl border border-border">
-          <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Kegiatan Terbaru</h2>
-            <button onClick={() => onNav("daily")} className="text-xs text-blue-600 hover:underline flex items-center gap-1">Lihat semua <ChevronRight size={12} /></button>
+      {/* Recent Activities & Actionable Section */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        {/* Left: Kegiatan Terbaru Table */}
+        <section className="rounded-xl border border-line bg-white xl:col-span-3">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-line">
+            <h3 className="text-[14px] font-semibold tracking-tight text-ink">Aktivitas Terbaru</h3>
+            <button
+              onClick={() => onNav("daily")}
+              className="inline-flex items-center gap-1 text-[12px] font-medium text-forest hover:text-forest-2"
+            >
+              Lihat semua <ChevronRight size={13} />
+            </button>
           </div>
-          <div className="divide-y divide-border">
+
+          <div className="divide-y divide-line/60">
             {stats.recent.activities.length > 0 ? (
               stats.recent.activities.slice(0, 5).map((a) => (
-                <div key={a.id} className="px-5 py-3 flex items-start gap-3 hover:bg-muted/50 transition-colors">
-                  <div className="w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center shrink-0 mt-0.5"><Calendar size={13} className="text-blue-600" /></div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">{a.activity}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5 font-mono">{formatDate(a.activity_date)} · {a.pic?.name || "Belum ada PIC"}</div>
+                <div key={a.id} className="px-5 py-3 flex items-start gap-3 hover:bg-paper/40 transition-colors">
+                  <div className="w-7 h-7 rounded-lg bg-forest/10 text-forest flex items-center justify-center shrink-0 mt-0.5">
+                    <Calendar size={13} />
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-100 text-slate-500 rounded shrink-0">{a.sub_category?.name || "Lainnya"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium text-ink truncate">{a.activity}</div>
+                    <div className="text-[11px] text-slate mt-0.5 font-mono">
+                      {formatDate(a.activity_date)} · {a.pic?.name || "Tanpa PIC"}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 bg-paper-2 text-slate rounded-full shrink-0">
+                    {a.sub_category?.name || "Umum"}
+                  </span>
                 </div>
               ))
             ) : (
-              <div className="p-6 text-center text-xs text-muted-foreground">Belum ada kegiatan terbaru</div>
+              <div className="p-8 text-center text-[13px] text-slate">Belum ada kegiatan terbaru</div>
             )}
           </div>
-        </div>
+        </section>
 
-        {/* Right side: Grievance Prioritas & CSR Budget */}
-        <div className="col-span-2 space-y-3">
-          {/* Grievance Prioritas */}
+        {/* Right: High-Priority Grievance & Ongoing CSR */}
+        <div className="xl:col-span-2 space-y-4">
+          {/* Grievance Card */}
           {stats.recent.highPriorityGrievances.length > 0 ? (
             stats.recent.highPriorityGrievances.slice(0, 2).map((g) => (
-              <div key={g.id} className="bg-red-50 border border-red-100 rounded-xl p-4">
+              <div key={g.id} className="bg-clay/5 border border-clay/20 rounded-xl p-4">
                 <div className="flex items-start gap-2.5">
-                  <MessageSquareWarning size={15} className="text-red-500 shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5"><span className="text-xs font-mono text-red-600 font-semibold">{g.regNo}</span><SignificanceBadge level={g.significance} /></div>
-                    <div className="text-sm font-semibold text-red-700 truncate">{g.name}</div>
-                    <div className="text-xs text-red-500 mt-0.5 line-clamp-2 leading-relaxed">{g.description}</div>
-                    <button onClick={() => onNav("grievance")} className="mt-2 text-xs text-red-600 font-medium hover:underline flex items-center gap-1">Tinjau <ChevronRight size={11} /></button>
+                  <MessageSquareWarning size={16} className="text-clay shrink-0 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[11px] font-mono text-clay font-semibold">{g.regNo}</span>
+                      <SignificanceBadge level={g.significance} />
+                    </div>
+                    <div className="text-[13px] font-semibold text-ink truncate">{g.name}</div>
+                    <div className="text-[12px] text-slate mt-0.5 line-clamp-2 leading-relaxed">{g.description}</div>
+                    <button
+                      onClick={() => onNav("grievance")}
+                      className="mt-2 text-[11px] text-clay font-semibold hover:underline inline-flex items-center gap-1"
+                    >
+                      Tinjau Keluhan <ChevronRight size={11} />
+                    </button>
                   </div>
                 </div>
               </div>
             ))
           ) : (
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 flex items-center gap-3">
-              <Check size={16} className="text-emerald-500 shrink-0" />
-              <div><div className="text-sm font-semibold text-emerald-700">Tidak ada grievance prioritas tinggi</div><div className="text-xs text-emerald-600 mt-0.5">Semua isu aktif berstatus rendah.</div></div>
+            <div className="bg-forest/5 border border-forest/20 rounded-xl p-4 flex items-center gap-3">
+              <div className="grid h-7 w-7 place-items-center rounded-full bg-forest/15 text-forest shrink-0">
+                <Check size={15} />
+              </div>
+              <div>
+                <div className="text-[13px] font-semibold text-ink">Tidak ada grievance mendesak</div>
+                <div className="text-[11px] text-slate mt-0.5">Semua keluhan saat ini dalam penanganan wajar.</div>
+              </div>
             </div>
           )}
 
-          {/* CSR Budget (On Going) */}
-          <div className="bg-card border border-border rounded-xl p-4 space-y-2.5">
-            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide font-mono">CSR Budget (On Going)</div>
+          {/* CSR Budget Card */}
+          <section className="bg-white border border-line rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-semibold text-slate uppercase tracking-wider font-mono">
+                CSR Budget (On Going)
+              </div>
+              <button
+                onClick={() => onNav("csr")}
+                className="text-[11px] text-forest font-medium hover:underline"
+              >
+                Lihat Proyek →
+              </button>
+            </div>
             {stats.recent.onGoingCsr.length > 0 ? (
               stats.recent.onGoingCsr.map((c) => (
                 <div key={c.id}>
-                  <div className="flex justify-between text-xs mb-1"><span className="text-foreground truncate max-w-[140px]">{c.program}</span><span className="font-mono text-muted-foreground shrink-0 ml-2">{formatIDR(c.budget)}</span></div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min(100, (c.budget / 500000000) * 100)}%` }} /></div>
+                  <div className="flex justify-between text-[12px] mb-1">
+                    <span className="text-ink truncate max-w-[170px] font-medium">{c.program}</span>
+                    <span className="font-mono text-slate shrink-0 ml-2">{formatIDR(c.budget)}</span>
+                  </div>
+                  <div className="h-1.5 bg-paper-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-forest rounded-full"
+                      style={{ width: `${Math.min(100, (c.budget / 500000000) * 100)}%` }}
+                    />
+                  </div>
                 </div>
               ))
             ) : (
-              <div className="text-xs text-muted-foreground py-2">Tidak ada program CSR berjalan</div>
+              <div className="text-[12px] text-slate py-2">Tidak ada program CSR berjalan</div>
             )}
-          </div>
+          </section>
         </div>
       </div>
 
-      {showImportWizard && <ImportWizardModal onClose={() => setShowImportWizard(false)} onSuccess={() => window.location.reload()} />}
+      {showImportWizard && (
+        <ImportWizardModal
+          onClose={() => setShowImportWizard(false)}
+          onSuccess={() => window.location.reload()}
+        />
+      )}
     </div>
   );
 }
