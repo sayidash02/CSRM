@@ -1,4 +1,5 @@
 import { FormEvent, ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { TreePine, Lock, User, AlertCircle } from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
 
 export type AuthUser = { username: string; role: 'USER' | 'ADMIN' };
@@ -17,9 +18,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    apiClient.get<{ data: { authenticated: true; user: AuthUser } }>('/auth/session')
+    apiClient
+      .get<{ data: { authenticated: true; user: AuthUser } }>('/auth/session')
       .then((response) => {
         setUser(response.data.data.user);
         setStatus('authenticated');
@@ -39,56 +42,118 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+    setLoading(true);
     try {
-      const response = await apiClient.post<{ data: { authenticated: true; user: AuthUser } }>('/auth/login', { username, password });
+      const response = await apiClient.post<{ data: { authenticated: true; user: AuthUser } }>('/auth/login', {
+        username,
+        password,
+      });
       setPassword('');
       setUser(response.data.data.user);
       setStatus('authenticated');
     } catch (requestError: any) {
       const message = requestError?.response?.data?.error?.message;
       setError(message || 'Login gagal. Periksa credential yang diberikan IT.');
+    } finally {
+      setLoading(false);
     }
   };
 
   if (status === 'checking') {
-    return <div className="flex min-h-screen items-center justify-center bg-[#0F1729] text-sm text-slate-300">Memeriksa session…</div>;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-paper text-[13px] text-slate">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-7 h-7 rounded-full border-2 border-forest/30 border-t-forest animate-spin" />
+          <span>Memeriksa sesi login…</span>
+        </div>
+      </div>
+    );
   }
 
   if (status === 'unauthenticated') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0F1729] px-4 text-slate-100">
-        <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-xl">
-          <div className="mb-6">
-            <div className="text-xs font-mono uppercase tracking-[0.2em] text-blue-400">CRMS</div>
-            <h1 className="mt-2 text-xl font-semibold">Masuk ke CRMS</h1>
-            <p className="mt-2 text-sm text-slate-400">Masukkan username dan password CRMS yang diberikan IT atau administrator.</p>
-            <p className="mt-2 text-xs leading-5 text-slate-500">Tidak ada pendaftaran publik. Jika membutuhkan akun, hubungi IT atau ADMIN CRMS.</p>
+      <main className="flex min-h-screen items-center justify-center bg-paper px-4 py-8 text-ink">
+        <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 shadow-[0_4px_24px_rgba(20,32,27,0.06)]">
+          {/* Brand Header */}
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-forest text-white shadow-inner">
+              <TreePine size={24} />
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-slate-2">
+              Community Relations Management System
+            </div>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-ink">Masuk ke CRMS</h1>
+            <p className="mt-2 text-[13px] text-slate leading-relaxed">
+              Silakan masukkan username dan kata sandi akun operasional CRMS Anda.
+            </p>
           </div>
-          <label htmlFor="crms-auth-username" className="mb-2 block text-sm font-medium text-slate-200">Username</label>
-          <input
-            id="crms-auth-username"
-            type="text"
-            autoComplete="username"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
-            required
-          />
-          <label htmlFor="crms-auth-password" className="mb-2 mt-4 block text-sm font-medium text-slate-200">Password</label>
-          <input
-            id="crms-auth-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm outline-none ring-blue-500 focus:ring-2"
-            required
-          />
-          {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
-          <button type="submit" className="mt-5 w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500">
-            Masuk
-          </button>
-        </form>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="crms-auth-username" className="mb-1.5 block text-[13px] font-medium text-ink">
+                Username
+              </label>
+              <div className="relative">
+                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-2" />
+                <input
+                  id="crms-auth-username"
+                  type="text"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="Masukkan username"
+                  className="w-full rounded-lg border border-line bg-paper/50 py-2.5 pl-9 pr-3 text-[13px] text-ink outline-none transition-colors focus:border-forest focus:bg-white focus:ring-2 focus:ring-forest/15"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="crms-auth-password" className="mb-1.5 block text-[13px] font-medium text-ink">
+                Kata Sandi
+              </label>
+              <div className="relative">
+                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-2" />
+                <input
+                  id="crms-auth-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-lg border border-line bg-paper/50 py-2.5 pl-9 pr-3 text-[13px] text-ink outline-none transition-colors focus:border-forest focus:bg-white focus:ring-2 focus:ring-forest/15"
+                  required
+                />
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 rounded-lg bg-clay/10 border border-clay/20 p-3 text-[12px] text-clay">
+                <AlertCircle size={15} className="shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-forest py-2.5 text-[13px] font-medium text-white shadow-xs transition-colors hover:bg-forest-2 disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <span>Memproses...</span>
+                </>
+              ) : (
+                'Masuk'
+              )}
+            </button>
+
+            <p className="mt-4 text-center text-[11px] text-slate-2 leading-relaxed">
+              Tidak ada pendaftaran mandiri. Jika membutuhkan akses akun baru atau lupa kata sandi, hubungi Administrator Sistem.
+            </p>
+          </form>
+        </div>
       </main>
     );
   }
