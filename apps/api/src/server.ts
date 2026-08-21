@@ -1,7 +1,12 @@
+import 'dotenv/config';
 import app from './app';
+import { assertProductionConfig, getConfig } from './config';
+import { logger } from './lib/logger';
 
-const PORT = process.env.PORT || 3000;
+const config = getConfig();
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+assertProductionConfig();
+
+app.listen(config.port, () => {
+  logger.info('api_started', { port: config.port, environment: config.nodeEnv });
 });

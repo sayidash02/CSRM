@@ -19,10 +19,9 @@ project, dimuat otomatis di setiap sesi — tidak perlu ditempel ulang.
    API call asli — bukan menulis ulang komponennya. Screen baru ikuti
    pola komponen di `src/app/components/ui/` dan
    `guidelines/Guidelines.md`.
-1. Keputusan yang tidak dijawab di dokumen (kredensial SharePoint &
-   lokasi server — Bab 3.2, masih pending jawaban IT) TIDAK boleh
-   diasumsikan sendiri. Tandai jelas sebagai placeholder yang mudah
-   diganti nanti.
+1. Boundary aktif tidak memiliki integrasi SharePoint/Graph. SharePoint
+   adalah proses manual di luar CRMS; jangan menambahkan credential, URL,
+   upload, atau sinkronisasi SharePoint ke aplikasi.
 2. Kerjakan PER FASE sesuai Bab 17 di Arsitektur-Teknis-CRMS.md. Jangan
    mulai fase berikutnya tanpa konfirmasi eksplisit dari user.
 3. Terapkan penuh Bab 12 (Keamanan) di setiap kode yang relevan:
@@ -37,7 +36,7 @@ project, dimuat otomatis di setiap sesi — tidak perlu ditempel ulang.
    - Unit test untuk business logic murni.
    - Integration test WAJIB menggunakan test database terpisah (`.env.test`). Jangan pernah menjalankan tes integratif yang bersifat destruktif terhadap database lokal development/production. Gunakan skrip seperti `dotenv -e .env.test -- jest --runInBand`.
 6. Kalau butuh detail API library yang tidak yakin (Prisma/Knex,
-   exceljs, Microsoft Graph SDK, MSAL), cari dokumentasi terkini dulu —
+   ExcelJS, atau generator DOCX/PDF), cari dokumentasi terkini dulu —
    jangan menebak signature function dari ingatan.
 7. Di akhir tiap sesi kerja: berikan ringkasan apa yang selesai, test
    apa yang dijalankan & hasilnya, dan bagian UI mana (kalau ada) yang
@@ -53,16 +52,15 @@ benar-benar butuh, terutama:
   generic kalau bikin kode lebih susah dibaca.
 - Liskov Substitution: turunan Repository/Service konsisten kontraknya
   (mis. delete() = soft-delete di semua modul, tanpa kecuali).
-- Interface Segregation: pisah IFileUploader dari ISyncExporter untuk
-  SharePoint — jangan satu interface besar.
-- Dependency Inversion (paling penting di project ini):
-  DocumentUploadService dan SyncService bergantung ke ABSTRAKSI client
-  SharePoint, bukan langsung ke SDK Microsoft Graph — karena kredensial
-  masih pending IT (Bab 3.2), dan test wajib mem-mock Graph API.
+- Interface Segregation: pisahkan kontrak import, photo storage, dan export
+  bila memang dibutuhkan; jangan membuat satu interface besar.
+- Dependency Inversion (paling penting di project ini): service bisnis
+  bergantung pada Prisma/storage abstraction yang sederhana dan dapat diuji,
+  bukan pada filesystem client atau layanan eksternal yang sudah tidak aktif.
 
 ## Larangan
-- Jangan pernah menyentuh folder/file SharePoint production sebelum
-  fase testing selesai dikonfirmasi user.
+- Jangan menambahkan kembali integrasi SharePoint/Graph, URL SharePoint,
+  atau path filesystem client ke schema/API.
 - Jangan hardcode credential/secret di kode.
 - Jangan hard-delete data — semua modul pakai soft-delete (is_deleted).
 
@@ -75,5 +73,8 @@ benar-benar butuh, terutama:
 - **Verification Before Completion**: Jangan pernah mengklaim suatu task/fase "selesai" sebelum menjalankan perintah verifikasi riil (seperti `npm run build`, `tsc --noEmit`, atau test runner) dan mendapatkan **Exit code 0**. Buktikan dengan output aslinya.
 - **Code Review**: Selesaikan semua poin bermasalah (*Important issues*) dari Code Reviewer sebelum beralih ke fase/fitur selanjutnya.
 - **Prisma Singleton**: Dilarang menginisialisasi `new PrismaClient()` berulang kali di dalam controller atau service untuk mencegah *connection pool exhaustion*. Gunakan satu *instance singleton* terpusat (contoh: `src/lib/prisma.ts`) dan *import* ke modul yang membutuhkan.
-- **MSAL & Integration Tests**: Selalu *mock* servis eksternal (terutama `GraphSharePointClient`) secara global (via `jest.setup.ts`) di *environment* pengujian. Inisialisasi MSAL dengan kredensial *dummy* saat `app.ts` diimpor akan melempar `ClientAuthError` yang membuat seluruh *test suite* gagal (*crash*) meski hasil fungsionalnya *pass*.
+- **External services**: Tidak ada client Graph/MSAL pada boundary aktif.
+  Jika integrasi eksternal suatu hari diminta lagi, dokumentasikan keputusan
+  baru dan mock client tersebut secara global pada environment pengujian
+  sebelum mengaktifkannya.
 - **Test Timing & Database Timestamps**: Saat menulis *integration test* yang bergantung pada perbandingan waktu (seperti `updated_at > lastSyncDate`), selalu sisipkan *delay* (`setTimeout` minimal 1.5 detik) di antara operasi *insert/update* agar tidak terjadi tabrakan *timestamp* akibat kecepatan eksekusi Node.js versus presisi kolom waktu di database.

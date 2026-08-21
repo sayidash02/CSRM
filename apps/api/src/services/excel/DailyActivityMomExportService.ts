@@ -1,8 +1,6 @@
-import fs from 'fs';
-import path from 'path';
 import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
-import { getImageDimensions, parseLinkList, tryGetLocalImagePaths } from './MomAttachmentResolver';
+import { getImageDimensions } from './MomAttachmentResolver';
 
 const INDONESIAN_DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 const INDONESIAN_MONTHS = [
@@ -98,6 +96,49 @@ const applyMergedRowStyles = (
     const cell = worksheet.getRow(rowNumber).getCell(c);
     applyCellStyle(cell, options);
   }
+};
+
+type ActivityPhoto = {
+  photo_data: Buffer | Uint8Array;
+  mime_type: string;
+  original_name: string;
+  sort_order?: number;
+  is_deleted?: boolean;
+};
+
+const getActivityPhotos = (activity: any): ActivityPhoto[] =>
+  (Array.isArray(activity?.photos) ? activity.photos : [])
+    .filter((photo: ActivityPhoto) => photo && photo.is_deleted !== true && photo.photo_data)
+    .sort((a: ActivityPhoto, b: ActivityPhoto) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+const excelImageExtension = (photo: ActivityPhoto): 'jpeg' | 'png' | null => {
+  const mime = String(photo.mime_type || '').toLowerCase();
+  const name = String(photo.original_name || '').toLowerCase();
+  if (mime === 'image/png' || name.endsWith('.png')) return 'png';
+  if (mime === 'image/jpeg' || mime === 'image/jpg' || /\.(jpe?g)$/.test(name)) return 'jpeg';
+  return null;
+};
+
+const photoBuffer = (photo: ActivityPhoto): Buffer => Buffer.from(photo.photo_data);
+
+const addExcelPhoto = (
+  worksheet: ExcelJS.Worksheet,
+  workbook: ExcelJS.Workbook,
+  photo: ActivityPhoto,
+  topLeft: { col: number; row: number },
+  maxWidth: number,
+  maxHeight: number
+): { width: number; height: number } | null => {
+  const extension = excelImageExtension(photo);
+  if (!extension) return null;
+  const buffer = photoBuffer(photo);
+  const dimensions = getImageDimensions(buffer);
+  const scale = Math.min(maxWidth / dimensions.width, maxHeight / dimensions.height, 1);
+  const width = Math.max(120, Math.round(dimensions.width * scale));
+  const height = Math.max(100, Math.round(dimensions.height * scale));
+  const imageId = workbook.addImage({ buffer: buffer as any, extension });
+  worksheet.addImage(imageId, { tl: topLeft, ext: { width, height } });
+  return { width, height };
 };
 
 
@@ -353,10 +394,12 @@ export class DailyActivityMomExportService {
     worksheet.getRow(currentRow).height = 24;
     currentRow++;
 
-    // Photo Box Canvas Rows (Gallery Support)
-    const localImgPaths = tryGetLocalImagePaths(activity.document_link);
+    // Photo Box Canvas Rows. Photos are read from MySQL, never from a client
+    // supplied path or URL. Unsupported legacy formats are intentionally not
+    // silently treated as links; the upload boundary accepts JPEG/PNG only.
+    const photos = getActivityPhotos(activity);
 
-    if (localImgPaths.length === 0 || !workbook) {
+    if (photos.length === 0 || !workbook) {
       const photoCanvasRow = currentRow;
       worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
       applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
@@ -367,7 +410,7 @@ export class DailyActivityMomExportService {
       worksheet.getCell(`A${photoCanvasRow}`).value = '[ Area Dokumentasi Foto / Lampiran Kegiatan ]\n(Foto dokumentasi pertemuan / kegiatan lapangan dapat dilampirkan di sini)';
       worksheet.getRow(photoCanvasRow).height = 180;
       currentRow++;
-    } else if (localImgPaths.length === 1) {
+    } else if (photos.length === 1) {
       const photoCanvasRow = currentRow;
       worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
       applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
@@ -375,36 +418,25 @@ export class DailyActivityMomExportService {
         alignment: { vertical: 'middle', horizontal: 'center' }
       });
 
-      const localImgPath = localImgPaths[0];
-      const ext = path.extname(localImgPath).replace('.', '').toLowerCase();
-      const imgBuffer = fs.readFileSync(localImgPath);
-      const origDim = getImageDimensions(imgBuffer);
-
       const MAX_CONTAINER_WIDTH = 620;
       const MAX_CONTAINER_HEIGHT = 380;
-      const scaleW = MAX_CONTAINER_WIDTH / origDim.width;
-      const scaleH = MAX_CONTAINER_HEIGHT / origDim.height;
-      const scale = Math.min(scaleW, scaleH, 1);
-
-      const targetWidth = Math.max(160, Math.round(origDim.width * scale));
-      const targetHeight = Math.max(120, Math.round(origDim.height * scale));
-      const computedPhotoRowHeight = Math.max(140, Math.round(targetHeight * 0.75) + 20);
-
-      const imageId = workbook.addImage({
-        buffer: imgBuffer as any,
-        extension: (ext === 'jpg' ? 'jpeg' : (ext === 'webp' ? 'png' : ext)) as any
-      });
-
-      worksheet.addImage(imageId, {
-        tl: { col: 0.15, row: photoCanvasRow - 1 + 0.08 },
-        ext: { width: targetWidth, height: targetHeight }
-      });
+      const dimensions = addExcelPhoto(
+        worksheet,
+        workbook,
+        photos[0]!,
+        { col: 0.15, row: photoCanvasRow - 1 + 0.08 },
+        MAX_CONTAINER_WIDTH,
+        MAX_CONTAINER_HEIGHT
+      );
+      const computedPhotoRowHeight = dimensions
+        ? Math.max(140, Math.round(dimensions.height * 0.75) + 20)
+        : 180;
       worksheet.getCell(`A${photoCanvasRow}`).value = '';
       worksheet.getRow(photoCanvasRow).height = computedPhotoRowHeight;
       currentRow++;
     } else {
       // 2 or more photos: Render in pairs (2 photos per row grid)
-      for (let i = 0; i < localImgPaths.length; i += 2) {
+      for (let i = 0; i < photos.length; i += 2) {
         const photoCanvasRow = currentRow;
         worksheet.mergeCells(`A${photoCanvasRow}:D${photoCanvasRow}`);
         applyMergedRowStyles(worksheet, photoCanvasRow, 4, {
@@ -413,55 +445,35 @@ export class DailyActivityMomExportService {
         });
         worksheet.getCell(`A${photoCanvasRow}`).value = '';
 
-        const path1 = localImgPaths[i];
-        const path2 = localImgPaths[i + 1];
+        const photo1 = photos[i];
+        const photo2 = photos[i + 1];
 
         let maxTargetHeight = 120;
 
         // Image 1 (Left / Cols A-B)
-        if (path1) {
-          const ext1 = path.extname(path1).replace('.', '').toLowerCase();
-          const buf1 = fs.readFileSync(path1);
-          const dim1 = getImageDimensions(buf1);
-          const maxW1 = path2 ? 300 : 500;
-          const maxH1 = 230;
-          const s1 = Math.min(maxW1 / dim1.width, maxH1 / dim1.height, 1);
-          const w1 = Math.max(120, Math.round(dim1.width * s1));
-          const h1 = Math.max(100, Math.round(dim1.height * s1));
-          maxTargetHeight = Math.max(maxTargetHeight, h1);
-
-          const imgId1 = workbook.addImage({
-            buffer: buf1 as any,
-            extension: (ext1 === 'jpg' ? 'jpeg' : (ext1 === 'webp' ? 'png' : ext1)) as any
-          });
-
-          worksheet.addImage(imgId1, {
-            tl: { col: path2 ? 0.15 : 0.8, row: photoCanvasRow - 1 + 0.08 },
-            ext: { width: w1, height: h1 }
-          });
+        if (photo1) {
+          const dimensions1 = addExcelPhoto(
+            worksheet,
+            workbook,
+            photo1,
+            { col: photo2 ? 0.15 : 0.8, row: photoCanvasRow - 1 + 0.08 },
+            photo2 ? 300 : 500,
+            230
+          );
+          if (dimensions1) maxTargetHeight = Math.max(maxTargetHeight, dimensions1.height);
         }
 
         // Image 2 (Right / Cols C-D)
-        if (path2) {
-          const ext2 = path.extname(path2).replace('.', '').toLowerCase();
-          const buf2 = fs.readFileSync(path2);
-          const dim2 = getImageDimensions(buf2);
-          const maxW2 = 300;
-          const maxH2 = 230;
-          const s2 = Math.min(maxW2 / dim2.width, maxH2 / dim2.height, 1);
-          const w2 = Math.max(120, Math.round(dim2.width * s2));
-          const h2 = Math.max(100, Math.round(dim2.height * s2));
-          maxTargetHeight = Math.max(maxTargetHeight, h2);
-
-          const imgId2 = workbook.addImage({
-            buffer: buf2 as any,
-            extension: (ext2 === 'jpg' ? 'jpeg' : (ext2 === 'webp' ? 'png' : ext2)) as any
-          });
-
-          worksheet.addImage(imgId2, {
-            tl: { col: 2.15, row: photoCanvasRow - 1 + 0.08 },
-            ext: { width: w2, height: h2 }
-          });
+        if (photo2) {
+          const dimensions2 = addExcelPhoto(
+            worksheet,
+            workbook,
+            photo2,
+            { col: 2.15, row: photoCanvasRow - 1 + 0.08 },
+            300,
+            230
+          );
+          if (dimensions2) maxTargetHeight = Math.max(maxTargetHeight, dimensions2.height);
         }
 
         worksheet.getRow(photoCanvasRow).height = Math.max(130, Math.round(maxTargetHeight * 0.75) + 20);
@@ -469,30 +481,20 @@ export class DailyActivityMomExportService {
       }
     }
 
-    // Document Hyperlink Rows
-    const allLinks = parseLinkList(activity.document_link);
+    // Preserve the existing document row in the template, but it is now a
+    // photo summary rather than a legacy document-link field.
     worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
     applyMergedRowStyles(worksheet, currentRow, 4, {
       font: { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } },
       alignment: { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
     });
     const docCell = worksheet.getCell(`A${currentRow}`);
-    if (allLinks.length > 0) {
-      if (allLinks.length === 1) {
-        docCell.value = {
-          text: `🔗 Link Dokumen / File Lampiran: ${allLinks[0]}`,
-          hyperlink: allLinks[0]
-        };
-        docCell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' }, underline: true };
-        worksheet.getRow(currentRow).height = 26;
-      } else {
-        const textLines = allLinks.map((l, idx) => `🔗 Lampiran Foto/Dokumen ${idx + 1}: ${l}`).join('\n');
-        docCell.value = textLines;
-        docCell.font = { name: 'Times New Roman', size: 9.5, color: { argb: 'FF1D4ED8' } };
-        worksheet.getRow(currentRow).height = Math.max(30, allLinks.length * 18 + 8);
-      }
+    if (photos.length > 0) {
+      docCell.value = `Foto dokumentasi tersimpan di CRMS: ${photos.length} file`;
+      docCell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' } };
+      worksheet.getRow(currentRow).height = 26;
     } else {
-      docCell.value = '🔗 Link Dokumen / File Lampiran: -';
+      docCell.value = 'Foto dokumentasi: -';
       docCell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF64748B' } };
       worksheet.getRow(currentRow).height = 26;
     }
@@ -560,6 +562,7 @@ export class DailyActivityMomExportService {
       where: { id: BigInt(id) },
       include: {
         daily_activity_pics: { include: { pic: true } },
+        photos: { where: { is_deleted: false }, orderBy: { sort_order: 'asc' } },
         category: true,
         sub_category: true
       }
@@ -651,6 +654,7 @@ export class DailyActivityMomExportService {
       where,
       include: {
         daily_activity_pics: { include: { pic: true } },
+        photos: { where: { is_deleted: false }, orderBy: { sort_order: 'asc' } },
         category: true,
         sub_category: true
       },
@@ -683,7 +687,7 @@ export class DailyActivityMomExportService {
       { header: 'Hasil Pertemuan', key: 'hasil', width: 40 },
       { header: 'Kesimpulan', key: 'kesimpulan', width: 35 },
       { header: 'Next Plan', key: 'next_plan', width: 35 },
-      { header: 'Supporting Documents', key: 'document_link', width: 30 }
+      { header: 'Supporting Documents / Photos', key: 'photos', width: 30 }
     ];
     rekapSheet.columns = columns;
 
@@ -717,9 +721,12 @@ export class DailyActivityMomExportService {
         hasil: act.hasil || act.description_result || '-',
         kesimpulan: act.kesimpulan || '-',
         next_plan: act.next_plan || '-',
-        document_link: act.document_link || '-'
+        photos: getActivityPhotos(act).length > 0
+          ? `${getActivityPhotos(act).length} foto dokumentasi`
+          : '-'
       });
-      row.height = 24;
+      const photos = getActivityPhotos(act);
+      row.height = photos.length > 0 ? Math.max(180, photos.length * 180) : 24;
       row.eachCell((cell, colNum) => {
         cell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF1F2937' } };
         cell.border = THIN_BORDER;
@@ -728,11 +735,18 @@ export class DailyActivityMomExportService {
           horizontal: colNum === 1 ? 'center' : (colNum === 10 ? 'right' : 'left'),
           wrapText: true
         };
-        if (colNum === 17 && act.document_link) {
-          cell.value = { text: act.document_link, hyperlink: act.document_link };
-          cell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' }, underline: true };
+        if (colNum === 17 && photos.length > 0) {
+          cell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' } };
         }
       });
+      if (photos.length > 0) {
+        photos.forEach((photo, photoIndex) => {
+          addExcelPhoto(rekapSheet, workbook, photo, {
+            col: 16.1,
+            row: row.number - 1 + photoIndex * 12
+          }, 300, 230);
+        });
+      }
     });
 
     // Sheet 2..N: Individual MOM sheets

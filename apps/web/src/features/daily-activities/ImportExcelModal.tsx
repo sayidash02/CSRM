@@ -8,7 +8,8 @@ interface ParsedRow {
   activity_date: string;
   activity: string;
   category_name: string;
-  pic_name: string;
+  pic_names?: string[];
+  pic_name?: string;
   errors?: string[];
 }
 
@@ -132,7 +133,7 @@ export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; 
                       <td className="p-2 whitespace-nowrap font-mono">{String(r.activity_date || "").split('T')[0] || "-"}</td>
                       <td className="p-2 font-medium text-foreground">{r.activity || "-"}</td>
                       <td className="p-2">{r.category_name || "-"}</td>
-                      <td className="p-2">{r.pic_name || "-"}</td>
+                      <td className="p-2">{r.pic_names?.join(', ') || r.pic_name || "-"}</td>
                       <td className="p-2 text-red-600">{r.errors?.join(', ')}</td>
                     </tr>
                   ))}
@@ -142,7 +143,7 @@ export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; 
                       <td className="p-2 whitespace-nowrap font-mono">{String(r.activity_date || "").split('T')[0]}</td>
                       <td className="p-2 font-medium text-foreground">{r.activity}</td>
                       <td className="p-2">{r.category_name}</td>
-                      <td className="p-2">{r.pic_name}</td>
+                      <td className="p-2">{r.pic_names?.join(', ') || r.pic_name || "-"}</td>
                       <td className="p-2 text-muted-foreground">—</td>
                     </tr>
                   ))}

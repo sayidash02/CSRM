@@ -16,6 +16,15 @@ interface ImportSummary {
   proposals: number;
   csr: number;
   grievance: number;
+  lrp: number;
+}
+
+interface ImportConflict {
+  module: string;
+  row: number;
+  code: string;
+  message: string;
+  blocking: boolean;
 }
 
 interface ImportPreviewData {
@@ -25,6 +34,8 @@ interface ImportPreviewData {
     pics: string[];
     categories: string[];
   };
+  conflicts: ImportConflict[];
+  canImport: boolean;
 }
 
 interface ImportWizardModalProps {
@@ -65,11 +76,11 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      if (file.name.endsWith('.xlsx')) {
+      if (/\.(xlsx|xls)$/i.test(file.name)) {
         setSelectedFile(file);
         setErrorMsg(null);
       } else {
-        setErrorMsg('File harus berformat .xlsx');
+        setErrorMsg('File harus berformat .xlsx atau .xls');
       }
     }
   };
@@ -162,7 +173,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
             >
               <input
                 type="file"
-                accept=".xlsx"
+                accept=".xlsx,.xls"
                 onChange={handleFileChange}
                 className="hidden"
                 id="excel-file-input"
@@ -176,7 +187,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                     Klik untuk memilih file atau drag & drop ke sini
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Format file yang didukung: <strong>.xlsx</strong> (Maksimal 100MB)
+                    Format file yang didukung: <strong>.xlsx / .xls</strong> (Maksimal 100MB)
                   </p>
                 </div>
               </label>
@@ -288,18 +299,40 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                     {previewData.summary.grievance} <span className="text-xs font-normal text-red-700">baris</span>
                   </span>
                 </div>
+                <div className="p-3.5 bg-slate-50/50 border border-slate-100 rounded-xl">
+                  <span className="text-xs font-medium text-slate-600 block">LRP</span>
+                  <span className="text-xl font-bold font-mono text-slate-900 mt-1 block">
+                    {previewData.summary.lrp} <span className="text-xs font-normal text-slate-700">baris</span>
+                  </span>
+                </div>
               </div>
             </div>
+
+            {previewData.conflicts?.length > 0 && (
+              <div className={`p-4 border rounded-2xl space-y-2 ${previewData.canImport ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+                <div className="flex items-center gap-2 font-semibold text-xs">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  {previewData.canImport ? 'Catatan preview' : 'Import diblokir sampai konflik diperbaiki'}
+                </div>
+                <div className="max-h-40 overflow-auto space-y-1 text-xs">
+                  {previewData.conflicts.map((conflict, index) => (
+                    <div key={`${conflict.module}-${conflict.row}-${index}`} className={conflict.blocking ? 'text-red-700' : 'text-amber-800'}>
+                      <strong>{conflict.module} baris {conflict.row} · {conflict.code}:</strong> {conflict.message}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Warning if new master data will be created */}
             {(previewData.newMasterData.pics.length > 0 || previewData.newMasterData.categories.length > 0) && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl space-y-3">
                 <div className="flex items-center gap-2 text-amber-800 font-semibold text-xs">
                   <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                  Master Data Baru Otomatis Dibuat
+                  Master Data Belum Terdaftar
                 </div>
                 <p className="text-xs text-amber-700 leading-relaxed">
-                  Excel ini berisi entri baru yang belum ada di Master Reference. Item berikut akan didaftarkan secara otomatis:
+                  Excel ini berisi entri yang belum ada di Master Reference. Tambahkan master data terlebih dahulu; import tidak akan mengisi default atau membuat referensi diam-diam.
                 </p>
 
                 {previewData.newMasterData.pics.length > 0 && (
@@ -352,7 +385,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
               <button
                 type="button"
                 onClick={handleConfirmImport}
-                disabled={isConfirming}
+                disabled={isConfirming || !previewData.canImport}
                 className="px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all flex items-center gap-2 shadow-md shadow-blue-500/20 disabled:opacity-50"
               >
                 {isConfirming ? (

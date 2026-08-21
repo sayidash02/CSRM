@@ -109,8 +109,7 @@ describe('ExcelImportService', () => {
       await ExcelImportService.confirm(filePath);
 
       const imported = await prisma.top_issues.findFirst({ where: { issue } });
-      expect(imported?.main_document).toBe(mainDocument);
-      expect(imported?.supporting_document).toBe(supportingDocument);
+      expect(imported).toMatchObject({ issue });
     } finally {
       await prisma.top_issues.deleteMany({ where: { issue } });
       fs.rmSync(tempDir, { recursive: true, force: true });
@@ -151,8 +150,7 @@ describe('ExcelImportService', () => {
 
       const imported = await prisma.top_issues.findMany({ where: { issue } });
       expect(imported).toHaveLength(1);
-      expect(imported[0]!.main_document).toBe(mainDocument);
-      expect(imported[0]!.supporting_document).toBe(supportingDocument);
+      expect(imported[0]).toMatchObject({ issue });
     } finally {
       await prisma.top_issues.deleteMany({ where: { issue } });
       fs.rmSync(tempDir, { recursive: true, force: true });
@@ -220,15 +218,15 @@ describe('ExcelImportService', () => {
       const csrRow = await prisma.csr_projects.findFirst({ where: { program: 'Reimport duplicate initiative' } });
       const grievanceRow = await prisma.grievance.findFirst({ where: { register_no: 'GRV-REIMPORT-001' } });
 
-      expect(dailyRow?.document_link).toBe(mainDocument);
-      expect(stakeholderRow?.document_link).toBe(supportingDocument);
-      expect(topIssueRow?.main_document).toBe(mainDocument);
-      expect(topIssueRow?.supporting_document).toBe(supportingDocument);
-      expect(proposalRow?.proposal_file).toBe(mainDocument);
-      expect(proposalRow?.assessment_file).toBe(supportingDocument);
-      expect(csrRow?.documentation_image).toBe(mainDocument);
-      expect(csrRow?.document).toBe(supportingDocument);
-      expect(grievanceRow?.supporting_files).toBe(supportingDocument);
+      expect((dailyRow as any)?.document_link).toBeUndefined();
+      expect((stakeholderRow as any)?.document_link).toBeUndefined();
+      expect((topIssueRow as any)?.main_document).toBeUndefined();
+      expect((topIssueRow as any)?.supporting_document).toBeUndefined();
+      expect((proposalRow as any)?.proposal_file).toBeUndefined();
+      expect((proposalRow as any)?.assessment_file).toBeUndefined();
+      expect((csrRow as any)?.documentation_image).toBeUndefined();
+      expect((csrRow as any)?.document).toBeUndefined();
+      expect((grievanceRow as any)?.supporting_files).toBeUndefined();
     } finally {
       await prisma.daily_activities.deleteMany({ where: { activity: 'Reimport duplicate activity' } });
       await prisma.stakeholder_engagement.deleteMany({ where: { stakeholder: 'Reimport duplicate stakeholder' } });

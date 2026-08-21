@@ -3,7 +3,7 @@ import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 
 export const createStakeholder = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { stakeholder, date, venue, concern_issue, document_link } = req.body;
+  const { stakeholder, date, venue, concern_issue } = req.body;
 
   if (!stakeholder || (typeof stakeholder === 'string' && !stakeholder.trim())) {
     res.status(400).json({ error: 'Missing required field: stakeholder' });
@@ -17,8 +17,7 @@ export const createStakeholder = catchAsync(async (req: Request, res: Response):
       stakeholder: sName,
       date: date ? new Date(date) : null,
       venue,
-      concern_issue,
-      document_link
+      concern_issue
     }
   });
 
@@ -56,13 +55,12 @@ export const deleteStakeholder = catchAsync(async (req: Request, res: Response):
 
 export const updateStakeholder = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { stakeholder, date, venue, concern_issue, document_link } = req.body;
+  const { stakeholder, date, venue, concern_issue } = req.body;
 
   const dataToUpdate: any = {
     date: date ? new Date(date) : null,
     venue,
-    concern_issue,
-    document_link
+    concern_issue
   };
 
   if (stakeholder !== undefined) {

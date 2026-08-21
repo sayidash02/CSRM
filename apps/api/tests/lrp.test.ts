@@ -38,8 +38,8 @@ describe('LrpController', () => {
 
   describe('createLrp', () => {
     it('should create a new lrp (Pos)', async () => {
-      req.body = { program: 'Program 1', sharepoint_link: 'http://link.com', year: 2026 };
-      const mockResult = { id: 1n, program: 'Program 1', sharepoint_link: 'http://link.com', year: 2026 };
+      req.body = { program: 'Program 1', year: 2026 };
+      const mockResult = { id: 1n, program: 'Program 1', year: 2026 };
       (prisma.lrp.create as jest.Mock).mockResolvedValue(mockResult);
 
       await createLrp(req as Request, res as Response, nextMock);
@@ -49,16 +49,16 @@ describe('LrpController', () => {
     });
 
     it('should return 400 if missing required fields (Neg)', async () => {
-      req.body = { program: 'Program 1' }; // missing sharepoint_link
+      req.body = { program: 'Program 1' }; // missing year
       
       await createLrp(req as Request, res as Response, nextMock);
 
       expect(statusMock).toHaveBeenCalledWith(400);
-      expect(jsonMock).toHaveBeenCalledWith({ error: 'Missing required fields' });
+      expect(jsonMock).toHaveBeenCalledWith({ error: 'Field year wajib diisi dan harus berupa tahun valid (1900–2100)' });
     });
 
     it('should handle internal server error (Neg)', async () => {
-      req.body = { program: 'Program 1', sharepoint_link: 'http://link.com', year: 2026 };
+      req.body = { program: 'Program 1', year: 2026 };
       const dbErr = new Error('DB Error');
       (prisma.lrp.create as jest.Mock).mockRejectedValue(dbErr);
 
@@ -70,7 +70,7 @@ describe('LrpController', () => {
 
   describe('getLrps', () => {
     it('should return all active lrps', async () => {
-      const mockResult = [{ id: 1n, program: 'Program 1', sharepoint_link: 'http://link.com', is_deleted: false }];
+      const mockResult = [{ id: 1n, program: 'Program 1', year: 2026, is_deleted: false }];
       (prisma.lrp.findMany as jest.Mock).mockResolvedValue(mockResult);
 
       await getLrps(req as Request, res as Response, nextMock);
@@ -81,7 +81,7 @@ describe('LrpController', () => {
 
     it('GET /api/lrp?is_deleted=true (status 200)', async () => {
       req.query = { is_deleted: 'true' };
-      const mockResult = [{ id: 1n, program: 'Program 1', sharepoint_link: 'http://link.com', is_deleted: true }];
+      const mockResult = [{ id: 1n, program: 'Program 1', year: 2026, is_deleted: true }];
       (prisma.lrp.findMany as jest.Mock).mockResolvedValue(mockResult);
 
       await getLrps(req as Request, res as Response, nextMock);
@@ -97,8 +97,8 @@ describe('LrpController', () => {
   describe('updateLrp', () => {
     it('should update an existing lrp', async () => {
       req.params = { id: '1' };
-      req.body = { program: 'Program Updated', sharepoint_link: 'http://link-updated.com' };
-      const mockResult = { id: 1n, program: 'Program Updated', sharepoint_link: 'http://link-updated.com' };
+      req.body = { program: 'Program Updated', year: 2026 };
+      const mockResult = { id: 1n, program: 'Program Updated', year: 2026 };
       (prisma.lrp.update as jest.Mock).mockResolvedValue(mockResult);
 
       await updateLrp(req as Request, res as Response, nextMock);

@@ -3,7 +3,9 @@ import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 
 export const devReset = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  if (process.env.NODE_ENV === 'production') {
+  const resetEnabled = process.env.NODE_ENV === 'test'
+    || (process.env.NODE_ENV === 'development' && process.env.CRMS_ENABLE_DEV_RESET === 'true');
+  if (!resetEnabled) {
     res.status(404).json({ error: 'Not found' });
     return;
   }
@@ -17,7 +19,7 @@ export const devReset = catchAsync(async (req: Request, res: Response): Promise<
     await tx.csr_projects.deleteMany({});
     await tx.grievance.deleteMany({});
     await tx.lrp.deleteMany({});
-    await tx.sync_log.deleteMany({});
+    await tx.users.deleteMany({});
     await tx.pics.deleteMany({});
     await tx.sub_categories.deleteMany({});
     await tx.categories.deleteMany({});
@@ -51,4 +53,3 @@ export const devReset = catchAsync(async (req: Request, res: Response): Promise<
 
   res.status(200).json({ message: 'Database reset and seeded successfully' });
 });
-

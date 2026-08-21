@@ -4,30 +4,43 @@
   "description": "",
   "main": "index.js",
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "node --experimental-strip-types prisma/seed.ts"
   },
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "dotenv -e .env.test -- jest --runInBand",
-    "dev": "nodemon src/server.ts",
-    "seed": "ts-node src/seed.ts",
-    "template:sanitize": "ts-node --transpile-only scripts/create-sanitized-template.ts"
+    "typecheck": "tsc --noEmit",
+    "test": "dotenv -e .env.test -o -- jest --runInBand",
+    "test:unit": "dotenv -e .env.test -o -- jest --runInBand --config jest.unit.config.js",
+    "test:integration": "dotenv -e .env.test -o -- prisma migrate deploy && dotenv -e .env.test -o -- node --experimental-strip-types prisma/seed.ts && dotenv -e .env.test -o -- jest --runInBand --config jest.integration.config.js",
+    "dev": "tsx watch src/server.ts",
+    "seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:test-migration": "dotenv -e .env.test -o -- node --experimental-strip-types scripts/p0-migration-on-empty.ts",
+    "db:backup-restore-smoke": "dotenv -e .env.test -o -- node --experimental-strip-types scripts/p0-backup-restore-smoke.ts",
+    "db:snapshot": "dotenv -e .env -- node --experimental-strip-types ../../scripts/db/snapshot-ddl.ts",
+    "db:check-integrity": "dotenv -e .env -- node --experimental-strip-types ../../scripts/db/check-integrity.ts",
+    "db:backup": "dotenv -e .env -- node --experimental-strip-types ../../scripts/db/backup.ts",
+    "db:clone": "dotenv -e .env -- node --experimental-strip-types ../../scripts/db/clone-database.ts",
+    "db:restore-drill": "dotenv -e .env -- node --experimental-strip-types ../../scripts/db/restore-drill.ts",
+    "db:drop-disposable": "dotenv -e .env -- node --experimental-strip-types ../../scripts/db/drop-disposable-database.ts",
+    "account:setup-admin": "dotenv -e .env -- ts-node --transpile-only scripts/setup-admin.ts",
+    "account:recover-admin": "dotenv -e .env -- ts-node --transpile-only scripts/recover-admin.ts",
+    "template:sanitize": "ts-node --transpile-only scripts/create-sanitized-template.ts",
+    "test:mom-golden": "node -r ts-node/register/transpile-only scripts/mom-golden-visual.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@azure/msal-node": "^5.4.3",
-    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@prisma/client": "5.22.0",
     "cors": "^2.8.6",
+    "docx": "9.6.1",
     "dotenv": "^17.4.2",
     "exceljs": "4.4.0",
     "express": "^5.2.1",
-    "isomorphic-fetch": "^3.0.0",
-    "multer": "^2.2.0"
+    "multer": "^2.2.0",
+    "pdf-lib": "1.17.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -43,6 +56,7 @@
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   }
 }

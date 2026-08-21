@@ -66,10 +66,8 @@ describe('Audit Logs API & Interceptor', () => {
       }
     });
 
-    // 4. Wait brief moment for fire-and-forget audit log insert to complete
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    // 5. Fetch audit logs via endpoint
+    // The mutation and audit insert are one awaited transaction, so the row is
+    // visible immediately after update resolves.
     const res = await request(app).get(`/api/audit-logs/daily_activities/${testActivityId}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);

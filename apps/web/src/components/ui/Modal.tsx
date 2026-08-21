@@ -61,6 +61,7 @@ export function ModalFooter({
   saveLabel = "Simpan",
   isEdit,
   disableSave,
+  saveType = "button",
 }: {
   onClose: () => void;
   onSave: () => void;
@@ -68,6 +69,7 @@ export function ModalFooter({
   saveLabel?: string;
   isEdit?: boolean;
   disableSave?: boolean;
+  saveType?: "button" | "submit";
 }) {
   return (
     <div className="px-6 py-4 border-t border-border flex gap-2 justify-end bg-muted/20 rounded-b-2xl shrink-0">
@@ -86,6 +88,7 @@ export function ModalFooter({
         Batal
       </button>
       <button
+        type={saveType}
         onClick={onSave}
         disabled={disableSave}
         className={`px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-1.5 text-white ${

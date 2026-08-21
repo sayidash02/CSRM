@@ -23,9 +23,12 @@ export interface WorkbookDailyActivityRow {
   location: string | null;
   keterangan: string | null;
   hasil: string | null;
+  kesimpulan?: string | null;
+  next_plan?: string | null;
   description_result: string | null;
   cost: number | null;
-  document_link: string | null;
+  /** Legacy workbook compatibility column; never persisted as a URL. */
+  document_link?: string | null;
   pic_names: string[];
   category_name: string;
   sub_category_name: string;
@@ -36,7 +39,7 @@ export interface WorkbookStakeholderRow {
   date: Date | null;
   venue: string | null;
   concern_issue: string | null;
-  document_link: string | null;
+  document_link?: string | null;
 }
 
 export interface WorkbookTopIssueRow {
@@ -45,15 +48,14 @@ export interface WorkbookTopIssueRow {
   issue: string;
   description: string | null;
   follow_up: string | null;
-  main_document: string | null;
-  supporting_document: string | null;
+  main_document?: string | null;
+  supporting_document?: string | null;
   next_plan: string | null;
 }
 
 export interface WorkbookLrpRow {
   program: string;
   year: number;
-  sharepoint_link: string;
 }
 
 export interface WorkbookProposalRow {
@@ -63,8 +65,8 @@ export interface WorkbookProposalRow {
   institution: string;
   address: string | null;
   proposal_description: string | null;
-  proposal_file: string | null;
-  assessment_file: string | null;
+  proposal_file?: string | null;
+  assessment_file?: string | null;
   status: string;
 }
 
@@ -79,8 +81,8 @@ export interface WorkbookCsrRow {
   status: string;
   budget: number | null;
   implementation_period: string | null;
-  documentation_image: string | null;
-  document: string | null;
+  documentation_image?: string | null;
+  document?: string | null;
 }
 
 export interface WorkbookGrievanceRow {
@@ -99,7 +101,7 @@ export interface WorkbookGrievanceRow {
   feedback: string | null;
   status: string;
   remarks: string | null;
-  supporting_files: string | null;
+  supporting_files?: string | null;
 }
 
 export interface WorkbookCommitInput {
@@ -214,14 +216,14 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
         };
       });
 
-      await mergeImportedRows({
-        existing: existingDailyActivities,
+      await mergeImportedRows<any, any>({
+        existing: existingDailyActivities as any,
         incoming: dailyImportRows,
         getIncomingIdentity: row => row.identity,
         getExistingIdentities: row => [
-          makeDailyActivityIdentity(row, row.category_id, row.sub_category_id, row.daily_activity_pics.map(pic => pic.pic_id))
+          makeDailyActivityIdentity(row, row.category_id, row.sub_category_id, row.daily_activity_pics.map((pic: any) => pic.pic_id))
         ],
-        create: row => tx.daily_activities.create({
+        create: async row => await tx.daily_activities.create({
           data: {
             activity_date: row.item.activity_date,
             activity: row.item.activity,
@@ -231,26 +233,19 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
             location: row.item.location,
             keterangan: row.item.keterangan,
             hasil: row.item.hasil,
+            kesimpulan: row.item.kesimpulan || null,
+            next_plan: row.item.next_plan || null,
             description_result: row.item.description_result,
             category_id: row.categoryId,
             sub_category_id: row.subCategoryId,
             cost: row.item.cost,
-            document_link: row.item.document_link,
             daily_activity_pics: {
-              create: row.picIds.map(id => ({ pic_id: id }))
+              create: row.picIds.map((id: bigint) => ({ pic_id: id }))
             }
           },
           include: { daily_activity_pics: { select: { pic_id: true } } }
-        }),
-        mergeExisting: async (existing, row) => {
-          if (row.item.document_link && existing.document_link !== row.item.document_link) {
-            await tx.daily_activities.update({
-              where: { id: existing.id },
-              data: { document_link: row.item.document_link }
-            });
-            existing.document_link = row.item.document_link;
-          }
-        }
+        }) as any,
+        mergeExisting: async () => undefined
       });
 
       // 5. Insert Stakeholders Engagement
@@ -262,7 +257,6 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
         date: s.date,
         venue: s.venue,
         concern_issue: s.concern_issue,
-        document_link: s.document_link
       }));
 
       await mergeImportedRows({
@@ -271,46 +265,27 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
         getIncomingIdentity: row => makeStakeholderIdentity(row),
         getExistingIdentities: row => [makeStakeholderIdentity(row)],
         create: row => tx.stakeholder_engagement.create({ data: row }),
-        mergeExisting: async (existing, row) => {
-          if (row.document_link && existing.document_link !== row.document_link) {
-            await tx.stakeholder_engagement.update({
-              where: { id: existing.id },
-              data: { document_link: row.document_link }
-            });
-            existing.document_link = row.document_link;
-          }
-        }
+        mergeExisting: async () => undefined
       });
 
       // 6. Insert Top Issues
       const existingTopIssues = rawTopIssues.length > 0
         ? await tx.top_issues.findMany({ where: { is_deleted: false } })
         : [];
+      const topIssueImportRows = rawTopIssues.map((row) => {
+        // Legacy workbooks may still contain document columns. They are read
+        // for compatibility by the parser, but the active schema has no URL
+        // fields, so never pass them through to Prisma.
+        const { main_document: _mainDocument, supporting_document: _supportingDocument, ...topIssueData } = row;
+        return topIssueData;
+      });
       await mergeImportedRows({
         existing: existingTopIssues,
-        incoming: rawTopIssues,
+        incoming: topIssueImportRows,
         getIncomingIdentity: row => makeTopIssueIdentity(row.period, row.issue, row.year),
         getExistingIdentities: row => [makeTopIssueIdentity(row.period, row.issue, row.year)],
         create: row => tx.top_issues.create({ data: row }),
-        mergeExisting: async (existing, row) => {
-          const updateData: {
-            main_document?: string;
-            supporting_document?: string;
-          } = {};
-
-          if (!existing.main_document && row.main_document) {
-            updateData.main_document = row.main_document;
-            existing.main_document = row.main_document;
-          }
-          if (!existing.supporting_document && row.supporting_document) {
-            updateData.supporting_document = row.supporting_document;
-            existing.supporting_document = row.supporting_document;
-          }
-
-          if (Object.keys(updateData).length > 0) {
-            await tx.top_issues.update({ where: { id: existing.id }, data: updateData });
-          }
-        }
+        mergeExisting: async () => undefined
       });
 
       // 7. Insert Proposals
@@ -326,28 +301,10 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
           makeProposalFallbackIdentity(row)
         ],
         create: row => {
-          const { source_registration_no: _sourceRegistrationNo, ...proposalData } = row;
+          const { source_registration_no: _sourceRegistrationNo, proposal_file: _proposalFile, assessment_file: _assessmentFile, ...proposalData } = row;
           return tx.proposals.create({ data: proposalData });
         },
-        mergeExisting: async (existing, row) => {
-          const updateData: {
-            proposal_file?: string;
-            assessment_file?: string;
-          } = {};
-
-          if (!existing.is_deleted && !existing.proposal_file && row.proposal_file) {
-            updateData.proposal_file = row.proposal_file;
-            existing.proposal_file = row.proposal_file;
-          }
-          if (!existing.is_deleted && !existing.assessment_file && row.assessment_file) {
-            updateData.assessment_file = row.assessment_file;
-            existing.assessment_file = row.assessment_file;
-          }
-
-          if (Object.keys(updateData).length > 0) {
-            await tx.proposals.update({ where: { id: existing.id }, data: updateData });
-          }
-        }
+        mergeExisting: async () => undefined
       });
 
       // 8. Insert CSR
@@ -359,26 +316,11 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
         incoming: rawCsr,
         getIncomingIdentity: row => makeCsrProjectIdentity(row),
         getExistingIdentities: row => [makeCsrProjectIdentity(row)],
-        create: row => tx.csr_projects.create({ data: row }),
-        mergeExisting: async (existing, row) => {
-          const updateData: {
-            documentation_image?: string;
-            document?: string;
-          } = {};
-
-          if (!existing.documentation_image && row.documentation_image) {
-            updateData.documentation_image = row.documentation_image;
-            existing.documentation_image = row.documentation_image;
-          }
-          if (!existing.document && row.document) {
-            updateData.document = row.document;
-            existing.document = row.document;
-          }
-
-          if (Object.keys(updateData).length > 0) {
-            await tx.csr_projects.update({ where: { id: existing.id }, data: updateData });
-          }
-        }
+        create: row => {
+          const { documentation_image: _documentationImage, document: _document, ...csrData } = row;
+          return tx.csr_projects.create({ data: csrData });
+        },
+        mergeExisting: async () => undefined
       });
 
       // 9. Insert Grievance
@@ -394,23 +336,13 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
           makeGrievanceFallbackIdentity(row)
         ],
         create: row => {
-          const { source_register_no: _sourceRegisterNo, ...grievanceData } = row;
+          const { source_register_no: _sourceRegisterNo, supporting_files: _supportingFiles, ...grievanceData } = row;
           return tx.grievance.create({ data: grievanceData });
         },
-        mergeExisting: async (existing, row) => {
-          if (!existing.is_deleted && !existing.supporting_files && row.supporting_files) {
-            await tx.grievance.update({
-              where: { id: existing.id },
-              data: { supporting_files: row.supporting_files }
-            });
-            existing.supporting_files = row.supporting_files;
-          }
-        }
+        mergeExisting: async () => undefined
       });
 
-      // 10. Insert LRP records. Year and HTTPS link are part of the
-      // lossless workbook contract, so an import cannot silently fall back
-      // to a created_at year or a local path.
+      // 10. Insert LRP records using the only active fields: program and year.
       const existingLrps = rawLrps.length > 0
         ? await tx.lrp.findMany({ where: { is_deleted: false } })
         : [];

@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Toaster, toast } from "sonner";
 import {
   LayoutDashboard, Calendar, Users, AlertTriangle, FileText,
-  Leaf, MessageSquareWarning, TreePine, Download, Archive,
+  Leaf, MessageSquareWarning, TreePine, Download, Archive, UserCog,
 } from "lucide-react";
 import DailyActivitiesModule from "../features/daily-activities/DailyActivitiesModule";
 import StakeholdersModule from "../features/stakeholders/StakeholdersModule";
@@ -14,14 +14,16 @@ import GrievanceModule from "../features/grievance/GrievanceModule";
 import LrpModule from "../features/lrp/LrpModule";
 import DashboardModule, { DashboardStats } from "../features/dashboard/DashboardModule";
 import ArchiveSettings from "../features/archive/ArchiveSettings";
+import AdminUsersModule from "../features/admin/AdminUsersModule";
+import { AuthGate, useAuth } from "../components/AuthGate";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Module = "dashboard" | "daily" | "stakeholder" | "topissues" | "proposals" | "csr" | "grievance" | "lrp" | "archive";
+type Module = "dashboard" | "daily" | "stakeholder" | "topissues" | "proposals" | "csr" | "grievance" | "lrp" | "archive" | "admin-users";
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
+const NAV_ITEMS: Array<{ id: Module; label: string; icon: React.ReactNode; adminOnly?: boolean }> = [
   { id: "dashboard" as Module, label: "Dashboard", icon: <LayoutDashboard size={16} /> },
   { id: "daily" as Module, label: "Daily Activities", icon: <Calendar size={16} /> },
   { id: "stakeholder" as Module, label: "Stakeholder Engagement", icon: <Users size={16} /> },
@@ -31,10 +33,11 @@ const NAV_ITEMS = [
   { id: "grievance" as Module, label: "Grievance", icon: <MessageSquareWarning size={16} /> },
   { id: "lrp" as Module, label: "LRP", icon: <TreePine size={16} /> },
   { id: "archive" as Module, label: "Pengaturan Arsip", icon: <Archive size={16} /> },
+  { id: "admin-users" as Module, label: "Kelola Akun", icon: <UserCog size={16} />, adminOnly: true },
 ];
 
-function Sidebar({ active, onNav, counts, onExport }: {
-  active: Module; onNav: (m: Module) => void; counts: Record<string, number>; onExport: () => void;
+function Sidebar({ active, onNav, counts, onExport, items, username, role }: {
+  active: Module; onNav: (m: Module) => void; counts: Record<string, number>; onExport: () => void; items: typeof NAV_ITEMS; username: string; role: string;
 }) {
   return (
     <aside className="flex flex-col w-60 shrink-0 h-screen bg-[#0F1729] text-sidebar-foreground border-r border-sidebar-border">
@@ -49,7 +52,7 @@ function Sidebar({ active, onNav, counts, onExport }: {
       </div>
       <nav className="flex-1 overflow-y-auto py-3 px-2">
         <div className="mb-1 px-3 py-1.5"><span className="text-[#3B5070] text-[10px] font-mono uppercase tracking-widest">Modules</span></div>
-        {NAV_ITEMS.map(item => {
+        {items.map(item => {
           const isActive = active === item.id;
           return (
             <button key={item.id} onClick={() => onNav(item.id)}
@@ -71,7 +74,7 @@ function Sidebar({ active, onNav, counts, onExport }: {
         </button>
         <div className="mt-3 px-1 flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[10px] font-mono text-[#3D5070]">Ziya Ramadhani · CRS Dept</span>
+          <span className="truncate text-[10px] font-mono text-[#3D5070]">{username} · {role}</span>
         </div>
       </div>
     </aside>
@@ -80,8 +83,10 @@ function Sidebar({ active, onNav, counts, onExport }: {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 
-export default function App() {
+function CrmsWorkspace() {
+  const { logout, user } = useAuth();
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || user.role === 'ADMIN');
 
   const [activeYear, setActiveYear] = useState<string>(
     () => localStorage.getItem('crms_active_year') ?? String(new Date().getFullYear())
@@ -143,12 +148,12 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-      <Sidebar active={activeModule} onNav={setActiveModule} counts={counts} onExport={() => handleExport("Workbook CRMS")} />
+      <Sidebar active={activeModule} onNav={setActiveModule} counts={counts} onExport={() => handleExport("Workbook CRMS")} items={visibleNavItems} username={user.username} role={user.role} />
       <main className="flex-1 flex flex-col overflow-hidden">
         <header className="px-6 py-2 bg-card border-b border-border flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-foreground uppercase tracking-wider font-mono">
-              CRMS {NAV_ITEMS.find((n) => n.id === activeModule)?.label}
+              CRMS {visibleNavItems.find((n) => n.id === activeModule)?.label}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -171,6 +176,13 @@ export default function App() {
                 <option key={y} value={String(y)}>{y}</option>
               ))}
             </select>
+            <button
+              type="button"
+              onClick={() => void logout()}
+              className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted"
+            >
+              Keluar
+            </button>
           </div>
         </header>
 
@@ -183,8 +195,13 @@ export default function App() {
         {activeModule === "grievance" && <GrievanceModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
         {activeModule === "lrp" && <LrpModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />}
         {activeModule === "archive" && <ArchiveSettings />}
+        {activeModule === "admin-users" && user.role === 'ADMIN' && <AdminUsersModule currentUsername={user.username} />}
       </main>
       <Toaster richColors position="bottom-right" />
     </div>
   );
+}
+
+export default function App() {
+  return <AuthGate><CrmsWorkspace /></AuthGate>;
 }

@@ -8,7 +8,6 @@ beforeAll(async () => {
   // Clear related tables to ensure predictable counts
   await prisma.proposals.deleteMany();
   await prisma.grievance.deleteMany();
-  await prisma.sync_log.deleteMany();
 });
 
 afterAll(async () => {

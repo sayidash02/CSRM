@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
 import { extractCellString } from './ExcelCellUtils';
-import { detectSheetHeader, isRowNonEmpty, shouldReadDataRow, validateWorkbook } from './ExcelWorkbookValidator';
+import { detectSheetHeader, isRowNonEmpty, normalizeCategoryName, normalizePicName, shouldReadDataRow, validateWorkbook } from './ExcelWorkbookValidator';
 import type { ImportPreviewResult, ImportPreviewSummary } from '../ExcelImportService';
 
 export async function previewWorkbook(filePath: string): Promise<ImportPreviewResult> {
@@ -61,14 +61,17 @@ export async function previewWorkbook(filePath: string): Promise<ImportPreviewRe
               let picVal = extractCellString(row.getCell(picCol).value).trim();
               if (picVal.length > 255) picVal = '';
               if (picVal) {
-                const names = picVal.split(/[,&]|\bdan\b/i).map(n => n.trim()).filter(Boolean);
+                const names = picVal.split(/[,&]|\bdan\b/i).map(n => normalizePicName(n.trim())).filter(Boolean);
                 for (const n of names) excelPics.add(n);
               }
             }
             if (catCol !== -1) {
               let catVal = extractCellString(row.getCell(catCol).value).trim();
               if (catVal.length > 50) catVal = ''; // Filter out obviously invalid Categories
-              if (catVal) excelCategories.add(catVal);
+              if (catVal) {
+                const normCat = normalizeCategoryName(catVal);
+                if (normCat) excelCategories.add(normCat);
+              }
             }
           }
         }

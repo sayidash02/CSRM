@@ -1,5 +1,12 @@
 import request from 'supertest';
 import app from '../src/app';
+
+const binaryParser = (response: NodeJS.ReadableStream, callback: (error: Error | null, body?: Buffer) => void): void => {
+  const chunks: Buffer[] = [];
+  response.on('data', (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
+  response.on('end', () => callback(null, Buffer.concat(chunks)));
+  response.on('error', (error: Error) => callback(error));
+};
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -283,6 +290,20 @@ describe('MOM Excel Export Endpoints', () => {
     expect(Number(res.headers['content-length'])).toBeGreaterThan(1000);
   });
 
+  it('exports the same MOM contract as DOCX and PDF', async () => {
+    const docx = await request(app).get(`/api/daily-activities/${createdActivityId}/mom?format=docx`).buffer(true).parse(binaryParser as any);
+    expect(docx.status).toBe(200);
+    expect(docx.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    expect(docx.headers['content-disposition']).toContain('.docx');
+    expect(docx.body.subarray(0, 2).toString()).toBe('PK');
+
+    const pdf = await request(app).get(`/api/daily-activities/${createdActivityId}/mom?format=pdf`).buffer(true).parse(binaryParser as any);
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+    expect(pdf.headers['content-disposition']).toContain('.pdf');
+    expect(pdf.body.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
   it('GET /api/daily-activities/:id/mom - should return 404 if activity not found', async () => {
     const res = await request(app).get('/api/daily-activities/99999999/mom');
     expect(res.status).toBe(404);
@@ -294,5 +315,23 @@ describe('MOM Excel Export Endpoints', () => {
     expect(res.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     expect(res.headers['content-disposition']).toContain('attachment; filename="Daily_Activities_MOM_Workbook_');
     expect(Number(res.headers['content-length'])).toBeGreaterThan(2000);
+  });
+
+  it('exports the combined MOM contract as DOCX and PDF', async () => {
+    const docx = await request(app).get('/api/daily-activities/export/mom-workbook?format=docx').buffer(true).parse(binaryParser as any);
+    expect(docx.status).toBe(200);
+    expect(docx.headers['content-type']).toContain('application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    expect(docx.body.subarray(0, 2).toString()).toBe('PK');
+
+    const pdf = await request(app).get('/api/daily-activities/export/mom-workbook?format=pdf').buffer(true).parse(binaryParser as any);
+    expect(pdf.status).toBe(200);
+    expect(pdf.headers['content-type']).toContain('application/pdf');
+    expect(pdf.body.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('rejects unsupported MOM output formats', async () => {
+    const res = await request(app).get(`/api/daily-activities/${createdActivityId}/mom?format=html`);
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('BAD_REQUEST');
   });
 });

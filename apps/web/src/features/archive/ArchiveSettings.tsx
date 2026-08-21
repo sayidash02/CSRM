@@ -284,7 +284,7 @@ export default function ArchiveSettings() {
           <span>Informasi Keamanan &amp; Backup Arsip</span>
         </h4>
         <p className="text-muted-foreground leading-relaxed">
-          Download workbook melalui tombol Download Excel sebelum mengarsipkan bila membutuhkan backup SharePoint. Pengarsipan hanya mengubah status lokal dan bersifat reversible tanpa mengunggah file secara otomatis.
+          Download workbook melalui tombol Download Excel sebelum mengarsipkan bila membutuhkan salinan lokal. Pengarsipan hanya mengubah status lokal dan bersifat reversible.
         </p>
       </div>
 

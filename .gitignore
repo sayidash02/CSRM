@@ -1,5 +1,6 @@
 node_modules/
 **/node_modules/
+.pnpm-store/
 dist/
 **/dist/
 .env
@@ -7,6 +8,10 @@ dist/
 !.env.example
 .sharepoint_mock/
 **/.sharepoint_mock/
+backups/
+**/backups/
 .worktrees/
+node_modules-rebuild-backup/
+sample_executive_mom*.xlsx
 ~$*
 *.tmp

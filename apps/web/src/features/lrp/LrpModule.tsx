@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, AlertTriangle, RotateCcw, History } from "lucide-react";
-import { SharePointLinkInput } from '../../components/ui/FileInput';
+import { Edit2, Trash2, Search, Plus, Download, AlertTriangle, RotateCcw, History } from "lucide-react";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -11,8 +10,10 @@ import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 export interface LrpProgram {
   id: string | number;
   program: string;
-  sharepoint_link: string;
+  year: number;
 }
+
+type LrpFormData = Omit<LrpProgram, 'id' | 'year'>;
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
 
@@ -73,24 +74,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-const emptyLrpDraft = { program: "", sharepoint_link: "" };
-
-const parseSharepointUrls = (link?: string | null): string[] => {
-  if (!link) return [];
-  const trimmed = link.trim();
-  if (!trimmed || trimmed === "[]") return [];
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed.filter((u): u is string => typeof u === "string" && u.trim() !== "");
-      }
-    } catch {
-      // fallback
-    }
-  }
-  return [trimmed];
-};
+const emptyLrpDraft = { program: "" };
 
 function LrpForm({
   initial,
@@ -104,12 +88,12 @@ function LrpForm({
   defaultValues?: typeof emptyLrpDraft;
   onDraftChange?: (v: typeof emptyLrpDraft) => void;
   onClose: () => void;
-  onSave: (d: Omit<LrpProgram, "id">) => void;
+  onSave: (d: LrpFormData) => void;
   showToast?: (msg: string, type?: "success" | "error" | "info") => void;
 }) {
   const [f, setF] = useState(
     initial
-      ? { program: initial.program ?? "", sharepoint_link: initial.sharepoint_link ?? "" }
+      ? { program: initial.program ?? "" }
       : { ...emptyLrpDraft, ...defaultValues }
   );
 
@@ -128,7 +112,6 @@ function LrpForm({
     const missing: string[] = (
       [
         [!f.program, "Nama Program"],
-        [!f.sharepoint_link, "Link SharePoint"],
       ] as [boolean, string][]
     ).filter(([cond]) => cond).map(([, label]) => label);
 
@@ -147,12 +130,6 @@ function LrpForm({
     <Modal title={initial ? "Edit Program LRP" : "Tambah Program LRP"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
         <Field label="Nama Program" required><input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama / judul program LRP" className={inputCls} /></Field>
-        <Field label="SharePoint Link" required hint="Upload file ke SharePoint perusahaan, lalu tempel link HTTPS-nya.">
-          <SharePointLinkInput
-            value={f.sharepoint_link || null} 
-            onChange={url => set("sharepoint_link", url)}
-          />
-        </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
     </Modal>
@@ -186,7 +163,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
 
   useEffect(() => { fetchData(); }, [activeYear, showDeleted]);
 
-  const onAdd = async (d: Omit<LrpProgram, "id">) => {
+  const onAdd = async (d: LrpFormData) => {
     try {
       const year = parseInt(activeYear) || new Date().getFullYear();
       const res = await apiClient.post('/lrp', { ...d, year });
@@ -202,7 +179,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
     }
   };
 
-  const onEdit = async (id: string | number, d: Omit<LrpProgram, "id">) => {
+  const onEdit = async (id: string | number, d: LrpFormData) => {
     try {
       const year = parseInt(activeYear) || new Date().getFullYear();
       const res = await apiClient.put(`/lrp/${id}`, { ...d, year });
@@ -237,34 +214,8 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
 
   const columns: ColumnDef<LrpProgram>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-muted-foreground font-mono">{i + 1}</span> },
+    { header: "Tahun", accessor: "year", sortable: true, render: (p) => <span className="text-xs font-mono text-muted-foreground">{p.year}</span> },
     { header: "Nama Program", accessor: "program", sortable: true, render: (p) => <span className="text-sm font-medium text-foreground">{p.program}</span> },
-    {
-      header: "SharePoint Link",
-      accessor: "sharepoint_link",
-      sortable: true,
-      render: (p) => {
-        const urls = parseSharepointUrls(p.sharepoint_link);
-        if (urls.length === 0) {
-          return <span className="text-muted-foreground text-xs">—</span>;
-        }
-        return (
-          <div className="flex flex-col gap-1">
-            {urls.map((url, i) => (
-              <a
-                key={i}
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-600 hover:underline flex items-center gap-1 text-xs font-mono"
-              >
-                <ExternalLink size={10} className="shrink-0" />
-                <span className="truncate max-w-[200px]">{url}</span>
-              </a>
-            ))}
-          </div>
-        );
-      },
-    },
     { header: "", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
@@ -287,7 +238,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
   const handleExportClick = () => {
     const exportData = filtered.map(p => ({
       "Program": p.program,
-      "SharePoint Link": p.sharepoint_link
+      "Year": p.year
     }));
     onExport?.("LRP", exportData);
   };
@@ -308,7 +259,7 @@ export default function LrpModule({ activeYear, onExport, showToast }: { activeY
       <div className="flex-1 overflow-auto p-6 flex flex-col">
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 flex items-start gap-3 shrink-0">
           <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-700 leading-relaxed">Modul ini belum memiliki sheet Excel berjalan — akan masuk ke sheet baru saat Export &amp; Sync berikutnya.</p>
+          <p className="text-xs text-amber-700 leading-relaxed">Data LRP menyimpan nama program dan tahun. Dokumen terkait dikelola manual di luar CRMS.</p>
         </div>
         <div className="flex-1 min-h-0">
           <DataTable columns={columns} data={filtered} />

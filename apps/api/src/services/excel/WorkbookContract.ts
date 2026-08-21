@@ -16,7 +16,7 @@ export const WORKBOOK_MODULES = [
 
 export type WorkbookModule = (typeof WORKBOOK_MODULES)[number];
 
-export const LRP_SHEET_HEADERS = ['No', 'Program', 'SharePoint Link'] as const;
+export const LRP_SHEET_HEADERS = ['No', 'Program', 'Year'] as const;
 
 export interface WorkbookSheetContract {
   module: WorkbookModule;
@@ -74,6 +74,7 @@ const CONTRACTS: readonly WorkbookSheetContract[] = [
       'Docs',
       'Supporting Docs',
       'Next Plan',
+      'Year',
     ],
   },
   {
@@ -120,7 +121,7 @@ const CONTRACTS: readonly WorkbookSheetContract[] = [
     module: 'grievance',
     canonicalName: 'Grievance',
     namePattern: /^grievance(?:\s+\d{4})?$/i,
-    headerRows: [5],
+    headerRows: [6, 5],
     dataStartRow: 7,
     headers: [
       'Register No.',

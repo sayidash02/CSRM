@@ -20,7 +20,7 @@ describe('POST /api/grievance', () => {
     };
     const res = await request(app).post('/api/grievance').send(payload);
     expect(res.status).toBe(201);
-    expect(res.body.data.register_no).toBe('GRV-2026-001');
+    expect(res.body.data.register_no).toMatch(/^GRV-2026-\d{4}$/);
     expect(res.body.data.complainant_name).toBe('John Doe');
   });
 
@@ -30,7 +30,7 @@ describe('POST /api/grievance', () => {
     expect(res.status).toBe(400);
   });
 
-  it('Negative: Should fail if register_no is duplicate', async () => {
+  it('Ignores a client-supplied registration number and allocates a new one', async () => {
     const payload = {
       register_no: 'GRV-2026-001',
       log_date: '2026-07-25',
@@ -38,7 +38,9 @@ describe('POST /api/grievance', () => {
       significance: 'Medium'
     };
     const res = await request(app).post('/api/grievance').send(payload);
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
+    expect(res.body.data.register_no).toMatch(/^GRV-2026-\d{4}$/);
+    expect(res.body.data.register_no).not.toBe('GRV-2026-001');
   });
 });
 
@@ -67,12 +69,11 @@ describe('DELETE /api/grievance/:id', () => {
     expect(res.body.data.is_deleted).toBe(true);
 
     const listAfter = await request(app).get('/api/grievance');
-    expect(listAfter.body.data.length).toBe(0);
+    expect(listAfter.body.data.some((item: any) => item.id === id)).toBe(false);
 
     const listDeleted = await request(app).get('/api/grievance?is_deleted=true');
     expect(listDeleted.status).toBe(200);
-    expect(listDeleted.body.data.length).toBe(1);
-    expect(listDeleted.body.data[0].id).toBe(id);
+    expect(listDeleted.body.data.some((item: any) => item.id === id)).toBe(true);
   });
 
   it('Should return 404 when deleting non-existent grievance', async () => {
@@ -91,7 +92,7 @@ describe('PATCH /api/grievance/:id/restore', () => {
     expect(res.body.data.is_deleted).toBe(false);
 
     const listAfter = await request(app).get('/api/grievance');
-    expect(listAfter.body.data.length).toBe(1);
+    expect(listAfter.body.data.some((item: any) => item.id === id)).toBe(true);
   });
 
   it('Should return 404 when restoring non-existent grievance', async () => {
@@ -104,9 +105,10 @@ describe('PUT /api/grievance/:id', () => {
   it('Should update an existing grievance', async () => {
     const list = await request(app).get('/api/grievance');
     const id = list.body.data[0].id;
+    const originalRegisterNo = list.body.data[0].register_no;
     
     const updatePayload = {
-      register_no: 'GRV-2026-003-UPD',
+      register_no: 'CLIENT-MUST-NOT-RENUMBER',
       log_date: '2026-07-26',
       complainant_name: 'John Doe Updated',
       significance: 'Low'
@@ -114,7 +116,7 @@ describe('PUT /api/grievance/:id', () => {
     
     const res = await request(app).put(`/api/grievance/${id}`).send(updatePayload);
     expect(res.status).toBe(200);
-    expect(res.body.data.register_no).toBe('GRV-2026-003-UPD');
+    expect(res.body.data.register_no).toBe(originalRegisterNo);
     expect(res.body.data.complainant_name).toBe('John Doe Updated');
     expect(res.body.data.significance).toBe('Low');
   });

@@ -81,8 +81,8 @@ describe('WorkbookExportService', () => {
         supporting_files: 'https://contoso.sharepoint.com/grievance',
       }],
       lrps: [{
+        year: 2026,
         program: 'LRP Program',
-        sharepoint_link: 'https://contoso.sharepoint.com/lrp',
       }],
     });
 
@@ -93,7 +93,7 @@ describe('WorkbookExportService', () => {
     expect(daily.getCell('A2').value).toBe(1);
     expect(daily.getCell('K2').value).toBe('Keterangan terpisah');
     expect(daily.getCell('L2').value).toBe('Hasil terpisah');
-    expect((daily.getCell('M2').value as ExcelJS.CellHyperlinkValue).hyperlink).toBe('https://contoso.sharepoint.com/daily');
+    expect(daily.getCell('M2').value).toBe('');
 
     expect(workbook.getWorksheet('Stakeholder Engagement 2026')!.getCell('A5').value).toBe(1);
     expect(workbook.getWorksheet('Top Issue')!.getCell('C4').value).toBe('Issue');
@@ -101,7 +101,8 @@ describe('WorkbookExportService', () => {
     expect(workbook.getWorksheet('CSR Project 2026')!.getCell('C2').value).toBe('Program CSR');
     expect(workbook.getWorksheet('Grievance 2026')!.getCell('A7').value).toBe('GRV-001');
     expect(workbook.getWorksheet('LRP')!.getCell('B2').value).toBe('LRP Program');
-    expect((workbook.getWorksheet('LRP')!.getCell('C2').value as ExcelJS.CellHyperlinkValue).hyperlink).toBe('https://contoso.sharepoint.com/lrp');
+    expect(workbook.getWorksheet('LRP')!.getCell('C2').value).toBe(2026);
+    expect(workbook.getWorksheet('LRP')!.getCell('D2').value).toBeNull();
     expect(workbook.getWorksheet('Master (jangan dihapus)')).toBeDefined();
   }, 30000);
 });

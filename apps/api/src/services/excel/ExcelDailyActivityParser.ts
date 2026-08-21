@@ -1,6 +1,5 @@
 import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
-import { containsFileScheme, validateAttachmentLinkValue } from '../../lib/sharePointLinkValidation';
 import { extractCellString } from './ExcelCellUtils';
 import type { ExcelImportErrorRow, ExcelImportResult, ParsedDailyActivityRow } from '../ExcelImportService';
 
@@ -53,7 +52,9 @@ export async function parseDailyActivitiesWorkbook(buffer: Buffer): Promise<Exce
 
     const keterangan = extractCellString(values[11]);
     const hasil = extractCellString(values[12]);
-    const document_link = extractCellString(values[13]);
+    // Column 13 is retained as a legacy workbook slot, but its old URL value
+    // is deliberately ignored. Photos are uploaded through the authenticated
+    // MySQL photo endpoint after import.
     const rawPic = extractCellString(values[14]);
 
     const description_result = [keterangan, hasil].filter(Boolean).join(' - ');
@@ -71,7 +72,6 @@ export async function parseDailyActivitiesWorkbook(buffer: Buffer): Promise<Exce
     if (!activity_date) errors.push("Tanggal kosong atau salah format");
     if (!activity) errors.push("Kegiatan wajib diisi");
     if (costError) errors.push(`Biaya '${values[10]}' bukan berupa angka`);
-    if (containsFileScheme(document_link) || !validateAttachmentLinkValue(document_link)) errors.push('Attachment harus berupa link HTTPS yang disepakati');
     if (rawCat && !categoryMatch) errors.push(`Kategori '${rawCat}' tidak ditemukan`);
     if (rawSubCat && !subCategoryMatch) errors.push(`Sub Category '${rawSubCat}' tidak ditemukan`);
     if (rawPicNames.length > 0) {
@@ -97,7 +97,6 @@ export async function parseDailyActivitiesWorkbook(buffer: Buffer): Promise<Exce
       keterangan,
       hasil,
       description_result,
-      document_link,
       pic_ids: picMatches.map(p => p ? String(p.id) : '').filter(Boolean),
       category_name: rawCat,
       sub_category_name: rawSubCat,

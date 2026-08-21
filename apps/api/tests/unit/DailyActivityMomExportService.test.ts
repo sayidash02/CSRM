@@ -51,7 +51,6 @@ describe('DailyActivityMomExportService Unit Tests', () => {
         hasil: 'Perlu verifikasi data nelayan anggota',
         kesimpulan: 'Nelayan sepakat mengajukan data perwakilan',
         next_plan: 'Kunjungan verifikasi minggu depan',
-        document_link: 'https://sharepoint.com/site/crms/notulensi.xlsx',
         is_deleted: false,
         daily_activity_pics: {
           create: [{ pic_id: picId1 }, { pic_id: picId2 }]
@@ -131,7 +130,7 @@ describe('DailyActivityMomExportService Unit Tests', () => {
     expect(headers).toContain('Daily Title / Kegiatan');
     expect(headers).toContain('Kesimpulan');
     expect(headers).toContain('Next Plan');
-    expect(headers).toContain('Supporting Documents');
+    expect(headers).toContain('Supporting Documents / Photos');
 
     expect(workbook.worksheets.length).toBeGreaterThan(1);
   });

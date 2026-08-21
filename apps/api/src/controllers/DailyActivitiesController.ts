@@ -1,12 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
-import fs from 'fs';
-import path from 'path';
+import { createHash } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import prisma from '../lib/prisma';
 import { parseDailyActivitiesExcel } from '../services/ExcelImportService';
 import { DailyActivityMomExportService } from '../services/excel/DailyActivityMomExportService';
+import { MomDocumentExportService, MomExportFilters } from '../services/mom/MomDocumentExportService';
 import { catchAsync } from '../lib/catchAsync';
+import { makeDailyActivityIdentity } from '../services/excel/ImportIdentity';
+import { mergeImportedRows } from '../services/excel/ImportDuplicateGuard';
 
 const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 },
@@ -25,11 +27,15 @@ const upload = multer({
 });
 
 const photoUpload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const isAllowedExt = file.originalname.match(/\.(jpg|jpeg|png|webp|gif|pdf|docx)$/i);
-    if (!isAllowedExt) {
-      return cb(new Error('Hanya file gambar (JPG, PNG, WEBP) atau PDF/Word yang diperbolehkan'));
+    const isAllowedExt = file.originalname.match(/\.(jpg|jpeg|png)$/i);
+    const allowedMimeTypes = [
+      'image/jpeg', 'image/png',
+    ];
+    if (!isAllowedExt || !allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error('Hanya file foto JPG/JPEG atau PNG yang diperbolehkan'));
     }
     cb(null, true);
   }
@@ -42,6 +48,22 @@ const normalizeText = (value: unknown): string | null => {
   if (value === undefined || value === null) return null;
   const normalized = String(value).trim();
   return normalized || null;
+};
+
+const parseId = (value: unknown): bigint => {
+  if (typeof value === 'bigint') return value;
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    const error: any = new Error('ID referensi tidak valid');
+    error.status = 400;
+    throw error;
+  }
+  const text = String(value).trim();
+  if (!/^\d+$/.test(text)) {
+    const error: any = new Error('ID referensi tidak valid');
+    error.status = 400;
+    throw error;
+  }
+  return BigInt(text);
 };
 
 /**
@@ -61,7 +83,7 @@ const normalizeDailyActivityText = (body: Record<string, unknown>) => {
 };
 
 export const createDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan } = req.body;
   const dailyText = normalizeDailyActivityText(req.body);
 
   const rawPicIds = pic_ids || (pic_id ? [pic_id] : []);
@@ -95,7 +117,6 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
       kesimpulan: normalizeText(kesimpulan),
       next_plan: normalizeText(next_plan),
       description_result: dailyText.description_result,
-      document_link,
       category_id: BigInt(category_id),
       sub_category_id: BigInt(sub_category_id),
       daily_activity_pics: {
@@ -194,13 +215,23 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     }
   }
 
-  const include = { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true };
+  const include = {
+    daily_activity_pics: { include: { pic: true } },
+    category: true,
+    sub_category: true,
+    photos: {
+      where: { is_deleted: false },
+      select: { id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true },
+      orderBy: { sort_order: 'asc' as const }
+    }
+  };
 
   if (no_paginate === 'true') {
     const activities = await prisma.daily_activities.findMany({ where, include, orderBy: orderByConfig });
     const formattedActivities = activities.map((a: any) => ({
       ...a,
-      pics: a.daily_activity_pics?.map((dap: any) => dap.pic) || []
+      pics: a.daily_activity_pics?.map((dap: any) => dap.pic) || [],
+      photos: a.photos?.map((photo: any) => ({ ...photo, url: `/api/daily-activities/${a.id}/photos/${photo.id}` })) || []
     }));
     res.status(200).json({ data: formattedActivities });
     return;
@@ -223,7 +254,8 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
   
   const formattedActivities = activities.map((a: any) => ({
     ...a,
-    pics: a.daily_activity_pics?.map((dap: any) => dap.pic) || []
+    pics: a.daily_activity_pics?.map((dap: any) => dap.pic) || [],
+    photos: a.photos?.map((photo: any) => ({ ...photo, url: `/api/daily-activities/${a.id}/photos/${photo.id}` })) || []
   }));
 
   res.status(200).json({ 
@@ -257,7 +289,7 @@ export const restoreDailyActivity = catchAsync(async (req: Request, res: Respons
 
 export const updateDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { activity_date, activity, institution_group, address, focus, location, cost, document_link, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan } = req.body;
   const dailyText = normalizeDailyActivityText(req.body);
 
   if (!activity_date || !activity || (!pic_ids && !pic_id) || !category_id || !sub_category_id) {
@@ -327,7 +359,6 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
       focus,
       location,
       cost: cost !== undefined && cost !== null ? Number(cost) : null,
-      document_link,
       category_id: BigInt(category_id),
       sub_category_id: BigInt(sub_category_id),
       ...textUpdate,
@@ -363,51 +394,86 @@ export const importCommitExcel = catchAsync(async (req: Request, res: Response) 
     return;
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    let count = 0;
-    for (const r of rows) {
-      const pIds = Array.isArray(r.pic_ids) ? r.pic_ids : (r.pic_id ? [r.pic_id] : []);
-      if (!r.category_id || !r.sub_category_id || pIds.length === 0) {
-        const err: any = new Error('Field referensi (category_id, sub_category_id, pic_ids) wajib diisi untuk setiap baris');
-        err.status = 400;
-        throw err;
-      }
-
-      const dailyTextBody: Record<string, unknown> = {
-        description_result: r.description_result
-      };
-      if (hasOwn(r, 'keterangan')) dailyTextBody.keterangan = r.keterangan;
-      if (hasOwn(r, 'hasil')) dailyTextBody.hasil = r.hasil;
-      const dailyText = normalizeDailyActivityText(dailyTextBody);
-      
-      await tx.daily_activities.create({
-        data: {
-          activity_date: new Date(r.activity_date),
-          activity: String(r.activity || ''),
-          institution_group: r.institution_group ? String(r.institution_group) : null,
-          address: String(r.address || ''),
-          category_id: BigInt(r.category_id),
-          sub_category_id: BigInt(r.sub_category_id),
-          daily_activity_pics: {
-            create: pIds.map((id: any) => ({ pic_id: BigInt(id) }))
-          },
-          focus: String(r.focus || ''),
-          location: String(r.location || ''),
-          cost: Number(r.cost) || 0,
-          keterangan: dailyText.keterangan,
-          hasil: dailyText.hasil,
-          kesimpulan: normalizeText(r.kesimpulan),
-          next_plan: normalizeText(r.next_plan),
-          description_result: dailyText.description_result,
-          document_link: String(r.document_link || ''),
-          is_deleted: false,
-          created_at: new Date(),
-          updated_at: new Date()
-        }
-      });
-      count++;
+  const normalizedRows = rows.map((r: any, index: number) => {
+    const activityDate = new Date(r.activity_date);
+    const pIdsRaw = Array.isArray(r.pic_ids) ? r.pic_ids : (r.pic_id ? [r.pic_id] : []);
+    const pIds = pIdsRaw.map((id: unknown) => parseId(id));
+    const categoryId = parseId(r.category_id);
+    const subCategoryId = parseId(r.sub_category_id);
+    const cost = r.cost === undefined || r.cost === null || r.cost === '' ? null : Number(r.cost);
+    if (Number.isNaN(activityDate.getTime()) || !String(r.activity || '').trim() || pIds.length === 0 || categoryId <= 0n || subCategoryId <= 0n || (cost !== null && !Number.isFinite(cost))) {
+      const error: any = new Error(`Baris ${index + 1} tidak valid; tidak ada default data yang diterapkan`);
+      error.status = 400;
+      throw error;
     }
-    return { count };
+    const dailyTextBody: Record<string, unknown> = { description_result: r.description_result };
+    if (hasOwn(r, 'keterangan')) dailyTextBody.keterangan = r.keterangan;
+    if (hasOwn(r, 'hasil')) dailyTextBody.hasil = r.hasil;
+    return {
+      activity_date: activityDate,
+      activity: String(r.activity).trim(),
+      institution_group: normalizeText(r.institution_group),
+      address: normalizeText(r.address),
+      focus: normalizeText(r.focus),
+      location: normalizeText(r.location),
+      keterangan: normalizeDailyActivityText(dailyTextBody).keterangan,
+      hasil: normalizeDailyActivityText(dailyTextBody).hasil,
+      description_result: normalizeDailyActivityText(dailyTextBody).description_result,
+      kesimpulan: normalizeText(r.kesimpulan),
+      next_plan: normalizeText(r.next_plan),
+      cost,
+      category_id: categoryId,
+      sub_category_id: subCategoryId,
+      pic_ids: pIds,
+    };
+  });
+
+  const [categories, subCategories, pics] = await Promise.all([
+    prisma.categories.findMany({ where: { id: { in: normalizedRows.map((row) => row.category_id) } } }),
+    prisma.sub_categories.findMany({ where: { id: { in: normalizedRows.map((row) => row.sub_category_id) } } }),
+    prisma.pics.findMany({ where: { id: { in: normalizedRows.flatMap((row) => row.pic_ids) } } }),
+  ]);
+  const categoryIds = new Set(categories.map((row) => String(row.id)));
+  const subCategoryMap = new Map(subCategories.map((row) => [String(row.id), String(row.category_id)]));
+  const picIds = new Set(pics.map((row) => String(row.id)));
+  for (const row of normalizedRows) {
+    if (!categoryIds.has(String(row.category_id)) || subCategoryMap.get(String(row.sub_category_id)) !== String(row.category_id) || row.pic_ids.some((id: bigint) => !picIds.has(String(id)))) {
+      const error: any = new Error('Referensi kategori, sub-kategori, atau PIC tidak valid');
+      error.status = 400;
+      throw error;
+    }
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const existing = await tx.daily_activities.findMany({ where: { is_deleted: false }, include: { daily_activity_pics: { select: { pic_id: true } } } });
+    const mergeResult = await mergeImportedRows({
+      existing,
+      incoming: normalizedRows,
+      getIncomingIdentity: (row) => makeDailyActivityIdentity(row, row.category_id, row.sub_category_id, row.pic_ids),
+      getExistingIdentities: (row) => [makeDailyActivityIdentity(row, row.category_id, row.sub_category_id, row.daily_activity_pics.map((pic) => pic.pic_id))],
+      create: (row) => tx.daily_activities.create({
+        data: {
+          activity_date: row.activity_date,
+          activity: row.activity,
+          institution_group: row.institution_group,
+          address: row.address,
+          category_id: row.category_id,
+          sub_category_id: row.sub_category_id,
+          daily_activity_pics: { create: row.pic_ids.map((id: bigint) => ({ pic_id: id })) },
+          focus: row.focus,
+          location: row.location,
+          cost: row.cost,
+          keterangan: row.keterangan,
+          hasil: row.hasil,
+          kesimpulan: row.kesimpulan,
+          next_plan: row.next_plan,
+          description_result: row.description_result,
+        },
+        include: { daily_activity_pics: { select: { pic_id: true } } },
+      }),
+      mergeExisting: async () => undefined,
+    });
+    return { count: mergeResult.created + mergeResult.merged };
   });
 
   res.json({ status: 200, data: { count: result.count } });
@@ -419,29 +485,59 @@ export const exportSingleMom = catchAsync(async (req: Request, res: Response): P
     res.status(400).json({ error: 'ID kegiatan wajib disertakan' });
     return;
   }
-  const { buffer, fileName } = await DailyActivityMomExportService.generateSingleMomBuffer(id as string);
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-  res.setHeader('Content-Length', buffer.byteLength);
-  res.status(200).send(buffer);
+  const format = String(req.query.format || 'xlsx').toLowerCase();
+  if (!['xlsx', 'docx', 'pdf'].includes(format)) {
+    res.status(400).json({ error: 'Format MOM harus xlsx, docx, atau pdf', code: 'BAD_REQUEST' });
+    return;
+  }
+
+  const result = format === 'docx'
+    ? await MomDocumentExportService.generateSingleDocxBuffer(id as string)
+    : format === 'pdf'
+      ? await MomDocumentExportService.generateSinglePdfBuffer(id as string)
+      : await DailyActivityMomExportService.generateSingleMomBuffer(id as string);
+  const contentType = format === 'docx'
+    ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    : format === 'pdf'
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+  res.setHeader('Content-Length', result.buffer.byteLength);
+  res.status(200).send(result.buffer);
 });
 
 export const exportMomWorkbook = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { year, is_deleted, search, cat, sub_cat, start, end } = req.query;
-  const { buffer, fileName, count } = await DailyActivityMomExportService.generateMomWorkbookBuffer({
+  const options: MomExportFilters = {
     year: year as string,
     is_deleted: is_deleted === 'true',
     search: search as string,
     cat: cat as string,
     sub_cat: sub_cat as string,
     start: start as string,
-    end: end as string
-  });
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-  res.setHeader('Content-Length', buffer.byteLength);
-  res.setHeader('X-Total-Count', String(count));
-  res.status(200).send(buffer);
+    end: end as string,
+  };
+  const format = String(req.query.format || 'xlsx').toLowerCase();
+  if (!['xlsx', 'docx', 'pdf'].includes(format)) {
+    res.status(400).json({ error: 'Format MOM harus xlsx, docx, atau pdf', code: 'BAD_REQUEST' });
+    return;
+  }
+  const result = format === 'docx'
+    ? await MomDocumentExportService.generateCombinedDocxBuffer(options)
+    : format === 'pdf'
+      ? await MomDocumentExportService.generateCombinedPdfBuffer(options)
+      : await DailyActivityMomExportService.generateMomWorkbookBuffer(options);
+  const contentType = format === 'docx'
+    ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    : format === 'pdf'
+      ? 'application/pdf'
+      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+  res.setHeader('Content-Length', result.buffer.byteLength);
+  if ('count' in result) res.setHeader('X-Total-Count', String(result.count));
+  res.status(200).send(result.buffer);
 });
 
 export const uploadPhoto = (req: Request, res: Response, next: NextFunction) => {
@@ -450,32 +546,78 @@ export const uploadPhoto = (req: Request, res: Response, next: NextFunction) => 
     if (!req.file) return res.status(400).json({ error: 'File is required' });
 
     try {
-      const { activity_date, pic_name } = req.body;
-      const actDate = activity_date ? new Date(activity_date) : new Date();
-      const finalPic = pic_name || 'User';
+      const activityId = parseId(req.body?.activity_id);
+      const buffer = req.file.buffer;
+      const isJpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+      const isPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+      const matchesMime = (req.file.mimetype === 'image/jpeg' && isJpeg) || (req.file.mimetype === 'image/png' && isPng);
+      if (!matchesMime) {
+        res.status(400).json({ error: 'Isi file tidak cocok dengan tipe gambar yang diklaim' });
+        return;
+      }
 
-      const year = isNaN(actDate.getTime()) ? new Date().getFullYear() : actDate.getFullYear();
-      const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-      const month = monthNames[isNaN(actDate.getTime()) ? new Date().getMonth() : actDate.getMonth()] || 'Januari';
-      const day = isNaN(actDate.getTime()) ? new Date().getDate() : actDate.getDate();
-      const weekNumber = Math.ceil(day / 7);
+      const activity = await prisma.daily_activities.findFirst({
+        where: { id: activityId, is_deleted: false },
+        select: { id: true }
+      });
+      if (!activity) {
+        res.status(404).json({ error: 'Kegiatan tidak ditemukan' });
+        return;
+      }
 
-      const targetSubDir = path.join('0. Testing', String(year), month, `Week ${weekNumber}`);
-      const baseMockDir = path.resolve(process.cwd(), '.sharepoint_mock');
-      const fullDirPath = path.join(baseMockDir, targetSubDir);
-      await fs.promises.mkdir(fullDirPath, { recursive: true });
-
-      const datePrefix = `${year}${String((isNaN(actDate.getTime()) ? new Date().getMonth() : actDate.getMonth()) + 1).padStart(2, '0')}${String(day).padStart(2, '0')}`;
-      const safePic = finalPic.replace(/[^a-zA-Z0-9]/g, '_');
-      const safeFileName = `${datePrefix}_${safePic}_${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-      const fullFilePath = path.join(fullDirPath, safeFileName);
-
-      await fs.promises.writeFile(fullFilePath, req.file.buffer);
-
-      const relativeUrl = `/uploads/${targetSubDir.replace(/\\/g, '/')}/${safeFileName}`;
-      res.status(200).json({ data: { url: relativeUrl, path: fullFilePath } });
+      const lastPhoto = await prisma.daily_activity_photos.findFirst({
+        where: { activity_id: activityId },
+        orderBy: { sort_order: 'desc' },
+        select: { sort_order: true }
+      });
+      const digest = createHash('sha256').update(buffer).digest('hex');
+      const photo = await prisma.daily_activity_photos.create({
+        data: {
+          activity_id: activityId,
+          photo_data: buffer,
+          mime_type: req.file.mimetype,
+          original_name: req.file.originalname.slice(0, 255),
+          size_bytes: buffer.length,
+          sha256: digest,
+          sort_order: (lastPhoto?.sort_order ?? -1) + 1
+        },
+        select: { id: true, activity_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
+      });
+      res.status(201).json({ data: { ...photo, url: `/api/daily-activities/${activityId}/photos/${photo.id}` } });
     } catch (error: any) {
+      if (error?.code === 'P2002') {
+        res.status(409).json({ error: 'Foto yang sama sudah terpasang pada kegiatan ini' });
+        return;
+      }
       next(error);
     }
   });
 };
+
+export const getPhoto = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const activityId = parseId(req.params.id);
+  const photoId = parseId(req.params.photoId);
+  const photo = await prisma.daily_activity_photos.findFirst({
+    where: { id: photoId, activity_id: activityId, is_deleted: false },
+    select: { photo_data: true, mime_type: true, original_name: true, size_bytes: true }
+  });
+  if (!photo) {
+    res.status(404).json({ error: 'Foto tidak ditemukan' });
+    return;
+  }
+  res.setHeader('Content-Type', photo.mime_type);
+  res.setHeader('Content-Length', String(photo.size_bytes));
+  res.setHeader('Content-Disposition', `inline; filename="${photo.original_name.replace(/[^a-zA-Z0-9._-]/g, '_')}"`);
+  res.status(200).send(Buffer.from(photo.photo_data));
+});
+
+export const deletePhoto = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const activityId = parseId(req.params.id);
+  const photoId = parseId(req.params.photoId);
+  const result = await prisma.daily_activity_photos.updateMany({
+    where: { id: photoId, activity_id: activityId, is_deleted: false },
+    data: { is_deleted: true }
+  });
+  if (result.count === 0) { res.status(404).json({ error: 'Foto tidak ditemukan' }); return; }
+  res.status(204).send();
+});

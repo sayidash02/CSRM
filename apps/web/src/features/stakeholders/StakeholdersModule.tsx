@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
-import { SharePointLinkInput } from '../../components/ui/FileInput';
+import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -14,7 +13,6 @@ export interface Stakeholder {
   date: string | null;
   venue: string | null;
   concern_issue: string | null;
-  document_link: string | null;
 }
 
 const inputCls = "w-full text-sm rounded-lg border border-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all";
@@ -100,24 +98,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
 }
 
 const emptyStakeholderDraft = {
-  stakeholder: "", date: "", venue: "", concern_issue: "", document_link: ""
-};
-
-const parseDocumentLinks = (link?: string | null): string[] => {
-  if (!link) return [];
-  const trimmed = link.trim();
-  if (!trimmed || trimmed === "[]") return [];
-  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed.filter((u): u is string => typeof u === "string" && u.trim() !== "");
-      }
-    } catch {
-      // fallback
-    }
-  }
-  return [trimmed];
+  stakeholder: "", date: "", venue: "", concern_issue: ""
 };
 
 function StakeholderForm({ 
@@ -141,8 +122,7 @@ function StakeholderForm({
           stakeholder: initial.stakeholder ?? "",
           date: formatInputDate(initial.date),
           venue: initial.venue ?? "",
-          concern_issue: initial.concern_issue ?? "",
-          document_link: initial.document_link ?? ""
+          concern_issue: initial.concern_issue ?? ""
         }
       : { ...emptyStakeholderDraft, ...defaultValues }
   );
@@ -175,8 +155,7 @@ function StakeholderForm({
       ...f,
       date: f.date || null,
       venue: f.venue || null,
-      concern_issue: f.concern_issue || null,
-      document_link: f.document_link || null
+      concern_issue: f.concern_issue || null
     });
     if (!initial) onDraftChange?.({ ...emptyStakeholderDraft });
     onClose();
@@ -203,12 +182,6 @@ function StakeholderForm({
           </div>
         </div>
         <Field label="Concern / Isu yang Dibahas"><textarea rows={3} value={f.concern_issue} onChange={e => set("concern_issue", e.target.value)} placeholder="Topik atau isu yang dibahas dalam pertemuan" className={`${inputCls} resize-none`} /></Field>
-        <Field label="Link Dokumen">
-          <SharePointLinkInput
-            value={f.document_link || null} 
-            onChange={url => set("document_link", url)}
-          />
-        </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan"} isEdit={!!initial} />
     </Modal>
@@ -314,8 +287,7 @@ export default function StakeholdersModule({
       return {
         "Stakeholder": s.stakeholder,
         "Date/Venue": (formattedDate && s.venue) ? `${formattedDate} / ${s.venue}` : (formattedDate || s.venue || ""),
-        "Concern/Issue": s.concern_issue || "",
-        "Document Link": s.document_link || ""
+        "Concern/Issue": s.concern_issue || ""
       };
     });
     onExport("Stakeholders_Engagement", exportData);
@@ -345,31 +317,6 @@ export default function StakeholdersModule({
       } 
     },
     { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
-    { 
-      header: "Docs", 
-      className: "text-center", 
-      render: (s) => {
-        const links = parseDocumentLinks(s.document_link);
-        if (links.length === 0) {
-          return <span className="text-muted-foreground text-xs">—</span>;
-        }
-        return (
-          <div className="flex items-center justify-center gap-1.5 flex-wrap">
-            {links.map((link, idx) => (
-              <a
-                key={idx}
-                href={link}
-                target="_blank"
-                rel="noreferrer"
-                className="text-blue-600 hover:text-blue-800 cursor-pointer inline-flex items-center"
-              >
-                <ExternalLink size={13} />
-              </a>
-            ))}
-          </div>
-        );
-      }
-    },
     { header: "", render: (s) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

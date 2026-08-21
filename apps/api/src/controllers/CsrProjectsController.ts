@@ -13,9 +13,7 @@ export const createCsrProject = catchAsync(async (req: Request, res: Response): 
     objective, 
     status, 
     budget, 
-    implementation_period, 
-    documentation_image, 
-    document
+    implementation_period
   } = req.body;
 
   if (!project_year || isNaN(Number(project_year)) || !program) {
@@ -34,9 +32,7 @@ export const createCsrProject = catchAsync(async (req: Request, res: Response): 
       objective,
       status: status || 'Planning',
       budget,
-      implementation_period,
-      documentation_image,
-      document
+      implementation_period
     }
   });
 
@@ -70,9 +66,7 @@ export const updateCsrProject = catchAsync(async (req: Request, res: Response): 
     objective, 
     status, 
     budget, 
-    implementation_period, 
-    documentation_image, 
-    document
+    implementation_period
   } = req.body;
 
   if (!project_year || !program) {
@@ -92,9 +86,7 @@ export const updateCsrProject = catchAsync(async (req: Request, res: Response): 
       objective,
       status,
       budget,
-      implementation_period,
-      documentation_image,
-      document
+      implementation_period
     }
   });
 

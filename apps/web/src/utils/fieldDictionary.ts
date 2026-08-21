@@ -16,7 +16,6 @@ export const FIELD_DICTIONARY: Record<string, string> = {
   pic_id: 'PIC',
   category_id: 'Kategori',
   sub_category_id: 'Sub Kategori',
-  document_link: 'Link Dokumen',
   
   // Stakeholder Engagement
   stakeholder: 'Nama Stakeholder',
@@ -30,16 +29,12 @@ export const FIELD_DICTIONARY: Record<string, string> = {
   description: 'Deskripsi',
   follow_up: 'Tindak Lanjut',
   next_plan: 'Rencana Selanjutnya',
-  main_document: 'Dokumen Utama',
-  supporting_document: 'Dokumen Pendukung',
 
   // Proposals
   registration_no: 'No Registrasi',
   date_received: 'Tanggal Diterima',
   institution: 'Institusi / Pemohon',
   proposal_description: 'Deskripsi Proposal',
-  proposal_file: 'File Proposal',
-  assessment_file: 'File Assessment',
 
   // CSR Projects
   project_year: 'Tahun Proyek',
@@ -48,8 +43,6 @@ export const FIELD_DICTIONARY: Record<string, string> = {
   target_beneficiaries: 'Target / Sasaran',
   objective: 'Tujuan',
   implementation_period: 'Periode Pelaksanaan',
-  documentation_image: 'Image Dokumentasi',
-  document: 'Dokumen',
 
   // Grievance
   register_no: 'No Registrasi',
@@ -63,10 +56,8 @@ export const FIELD_DICTIONARY: Record<string, string> = {
   feedback: 'Feedback Pelapor',
   completion_date: 'Tanggal Selesai',
   remarks: 'Catatan',
-  supporting_files: 'File Pendukung',
 
   // LRP
-  sharepoint_link: 'Link SharePoint'
 };
 
 export const translateField = (key: string): string => {

@@ -1,0 +1,63 @@
+name: CRMS P0 quality gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  p0:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: crms_test_isolated
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.17.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: API typecheck
+        run: pnpm typecheck:api
+
+      - name: Web typecheck
+        run: pnpm typecheck:web
+
+      - name: Frontend build
+        run: pnpm build:web
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Integration, migration, and seed preparation
+        run: pnpm test:integration
+
+      - name: Migration on empty database
+        run: pnpm test:migration:empty
+
+      - name: Backup/restore smoke test
+        run: pnpm test:backup-restore

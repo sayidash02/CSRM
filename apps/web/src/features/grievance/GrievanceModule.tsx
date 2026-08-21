@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
-import { SharePointLinkInput } from '../../components/ui/FileInput';
+import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -24,7 +23,6 @@ export interface Grievance {
   feedback: string | null;
   status: string;
   completion_date: string | null;
-  supporting_files: string | null;
   remarks: string | null;
 }
 
@@ -110,7 +108,7 @@ const emptyGrievanceDraft = {
   register_no: "", log_date: "", complainant_name: "", address: "", phone: "",
   category: "", significance: "Low", description: "", location: "",
   investigation: "", resolution: "", feedback: "", status: "Open",
-  completion_date: "", supporting_files: "", remarks: ""
+  completion_date: "", remarks: ""
 };
 
 function GrievanceForm({
@@ -132,7 +130,7 @@ function GrievanceForm({
 }) {
   const [f, setF] = useState(
     initial
-      ? { register_no: initial.register_no ?? nextRegNo, log_date: initial.log_date ? String(initial.log_date).split('T')[0] : "", complainant_name: initial.complainant_name ?? "", address: initial.address ?? "", phone: initial.phone ?? "", category: initial.category ?? "", significance: initial.significance ?? "Low", description: initial.description ?? "", location: initial.location ?? "", investigation: initial.investigation ?? "", resolution: initial.resolution ?? "", feedback: initial.feedback ?? "", status: initial.status ?? "Open", completion_date: initial.completion_date ? String(initial.completion_date).split('T')[0] : "", supporting_files: initial.supporting_files ?? "", remarks: initial.remarks ?? "" }
+      ? { register_no: initial.register_no ?? nextRegNo, log_date: initial.log_date ? String(initial.log_date).split('T')[0] : "", complainant_name: initial.complainant_name ?? "", address: initial.address ?? "", phone: initial.phone ?? "", category: initial.category ?? "", significance: initial.significance ?? "Low", description: initial.description ?? "", location: initial.location ?? "", investigation: initial.investigation ?? "", resolution: initial.resolution ?? "", feedback: initial.feedback ?? "", status: initial.status ?? "Open", completion_date: initial.completion_date ? String(initial.completion_date).split('T')[0] : "", remarks: initial.remarks ?? "" }
       : { ...emptyGrievanceDraft, register_no: defaultValues?.register_no || nextRegNo, ...defaultValues }
   );
   
@@ -151,7 +149,6 @@ function GrievanceForm({
   const handleSave = () => {
     const missing: string[] = (
       [
-        [!f.register_no, "No. Registrasi"],
         [!f.log_date, "Tanggal Pengaduan"],
         [!f.complainant_name, "Nama Pelapor"],
         [!f.significance, "Signifikansi"],
@@ -169,7 +166,6 @@ function GrievanceForm({
       resolution: f.resolution || null,
       feedback: f.feedback || null,
       completion_date: f.completion_date || null,
-      supporting_files: f.supporting_files || null,
       remarks: f.remarks || null
     });
     if (!initial) onDraftChange?.({ ...emptyGrievanceDraft });
@@ -180,7 +176,7 @@ function GrievanceForm({
     <Modal title={initial ? "Edit Pengaduan" : "Tambah Pengaduan"} onClose={onClose} size="lg">
       <div className="px-6 py-4 space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="No. Registrasi"><input type="text" value={f.register_no} onChange={e => set("register_no", e.target.value)} className={`${inputCls} font-mono`} /></Field>
+          <Field label="No. Registrasi" hint="Dibuat otomatis oleh server"><input type="text" value={initial ? f.register_no : "Akan dibuat server"} readOnly className={`${inputCls} font-mono bg-muted text-muted-foreground`} /></Field>
           <Field label="Tanggal Pengaduan" required><input type="date" value={f.log_date} onChange={e => set("log_date", e.target.value)} className={inputCls} /></Field>
         </div>
         <Field label="Nama Pelapor" required><input type="text" value={f.complainant_name} onChange={e => set("complainant_name", e.target.value)} placeholder="Nama lengkap pelapor" className={inputCls} /></Field>
@@ -202,12 +198,6 @@ function GrievanceForm({
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Open</option><option>On Progress</option><option>Resolved</option><option>Closed</option></select></Field>
           <Field label="Tanggal Selesai"><input type="date" value={f.completion_date} onChange={e => set("completion_date", e.target.value)} className={inputCls} /></Field>
         </div>
-        <Field label="Link Dokumen Pendukung">
-          <SharePointLinkInput
-            value={f.supporting_files || null} 
-            onChange={url => set("supporting_files", url)}
-          />
-        </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Pengaduan"} isEdit={!!initial} />
     </Modal>
@@ -288,7 +278,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
   const [addDraft, setAddDraft] = useState({ ...emptyGrievanceDraft });
   
-  const nextRegNo = `GRV-2026-${String(items.length + 1).padStart(4, "0")}`;
+  const nextRegNo = "Akan dibuat server";
   const displayed = filtered;
 
   const columns: ColumnDef<Grievance>[] = useMemo(() => [
@@ -324,7 +314,6 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       ],
       render: (g) => <div><StatusBadge status={g.status} />{g.completion_date && <div className="text-xs text-muted-foreground font-mono mt-1">Selesai: {formatDate(g.completion_date)}</div>}</div> 
     },
-    { header: "Docs", render: (g) => g.supporting_files ? <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 border border-blue-100 bg-blue-50 rounded px-2 py-1 cursor-pointer"><ExternalLink size={11} /> Dok</span> : <span className="text-muted-foreground text-xs">—</span> },
     { header: "", render: (g) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

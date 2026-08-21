@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
-import { SharePointLinkInput } from '../../components/ui/FileInput';
+import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
@@ -21,8 +20,6 @@ export interface CsrProject {
   status: string;
   budget: number | null;
   implementation_period: string | null;
-  documentation_image: string | null;
-  document: string | null;
   grievance_id?: string | number | null;
   grievance?: any;
 }
@@ -110,8 +107,6 @@ const emptyCsrDraft = {
   status: "Planning",
   budget: "",
   implementation_period: "",
-  documentation_image: "",
-  document: "",
   grievance_id: ""
 };
 
@@ -144,8 +139,6 @@ function CsrForm({
           status: initial.status ?? "Planning",
           budget: initial.budget ? String(initial.budget) : "",
           implementation_period: initial.implementation_period ?? "",
-          documentation_image: initial.documentation_image ?? "",
-          document: initial.document ?? "",
           grievance_id: initial.grievance_id != null ? String(initial.grievance_id) : ""
         }
       : { ...emptyCsrDraft, ...defaultValues }
@@ -186,8 +179,6 @@ function CsrForm({
       target_beneficiaries: f.target_beneficiaries || null,
       objective: f.objective || null,
       implementation_period: f.implementation_period || null,
-      documentation_image: f.documentation_image || null,
-      document: f.document || null
     });
     if (!initial) onDraftChange?.({ ...emptyCsrDraft });
     onClose();
@@ -211,20 +202,6 @@ function CsrForm({
         <div className="grid grid-cols-2 gap-4">
           <Field label="Status"><select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}><option>Planning</option><option>On Going</option><option>Completed</option><option>Cancelled</option></select></Field>
           <Field label="Realisasi"><CurrencyInput value={f.budget} onChange={val => set("budget", val)} className={`${inputCls} font-mono`} /></Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Link Dokumen">
-            <SharePointLinkInput
-              value={f.document || null} 
-              onChange={url => set("document", url)}
-            />
-          </Field>
-          <Field label="Link Dokumentasi">
-            <SharePointLinkInput
-              value={f.documentation_image || null} 
-              onChange={url => set("documentation_image", url)}
-            />
-          </Field>
         </div>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
@@ -332,12 +309,6 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     },
     { header: "Realisasi", accessor: "budget", sortable: true, render: (p) => <div className="text-sm font-semibold font-mono whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
     { header: "Periode Pelaksanaan", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-foreground whitespace-nowrap">{p.implementation_period || "—"}</div> },
-    { header: "Image Dokumentasi", render: (p) => (
-      p.documentation_image ? <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Gambar</span> : <span className="text-muted-foreground text-xs">—</span>
-    )},
-    { header: "Docx", render: (p) => (
-      p.document ? <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-1"><ExternalLink size={11} />Dokumen</span> : <span className="text-muted-foreground text-xs">—</span>
-    )},
     { header: "", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

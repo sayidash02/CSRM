@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, Trash2, Search, Plus, Download, FileText, RotateCcw, History } from "lucide-react";
-import { SharePointLinkInput } from '../../components/ui/FileInput';
+import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -14,8 +13,6 @@ export interface TopIssue {
   issue: string;
   description: string;
   follow_up: string;
-  main_document: string | null;
-  supporting_document: string | null;
   next_plan: string;
 }
 
@@ -83,9 +80,7 @@ const emptyTopIssueDraft = {
   issue: "",
   description: "",
   follow_up: "",
-  next_plan: "",
-  main_document: "",
-  supporting_document: ""
+  next_plan: ""
 };
 
 function TopIssueForm({
@@ -110,9 +105,7 @@ function TopIssueForm({
           issue: initial.issue ?? "",
           description: initial.description ?? "",
           follow_up: initial.follow_up ?? "",
-          next_plan: initial.next_plan ?? "",
-          main_document: initial.main_document ?? "",
-          supporting_document: initial.supporting_document ?? ""
+          next_plan: initial.next_plan ?? ""
         }
       : { ...emptyTopIssueDraft, ...defaultValues }
   );
@@ -142,11 +135,7 @@ function TopIssueForm({
       }
       return;
     }
-    onSave({
-      ...f,
-      main_document: f.main_document || null,
-      supporting_document: f.supporting_document || null
-    });
+    onSave(f);
     if (!initial) onDraftChange?.({ ...emptyTopIssueDraft });
     onClose();
   };
@@ -159,20 +148,6 @@ function TopIssueForm({
         <Field label="Deskripsi"><textarea rows={3} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Penjelasan detail isu" className={`${inputCls} resize-none`} /></Field>
         <Field label="Follow Up"><textarea rows={2} value={f.follow_up} onChange={e => set("follow_up", e.target.value)} placeholder="Tindakan yang sudah / sedang dilakukan" className={`${inputCls} resize-none`} /></Field>
         <Field label="Next Plan"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut berikutnya" className={`${inputCls} resize-none`} /></Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Link Dokumen Utama">
-            <SharePointLinkInput
-              value={f.main_document || null} 
-              onChange={url => set("main_document", url)}
-            />
-          </Field>
-          <Field label="Link Dokumen Pendukung">
-            <SharePointLinkInput
-              value={f.supporting_document || null} 
-              onChange={url => set("supporting_document", url)}
-            />
-          </Field>
-        </div>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Isu"} isEdit={!!initial} />
     </Modal>
@@ -267,21 +242,6 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
     { header: "Deskripsi", accessor: "description", sortable: true, render: (issue) => <div className="text-sm text-foreground leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-3">{issue.description}</div></div> },
     { header: "Follow Up", accessor: "follow_up", sortable: true, render: (issue) => <div className="text-sm text-foreground leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-3">{issue.follow_up}</div></div> },
     { header: "Next Plan", accessor: "next_plan", sortable: true, render: (issue) => <div className="text-sm text-foreground leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-3">{issue.next_plan}</div></div> },
-    { header: "Docs", className: "whitespace-nowrap", render: (issue) => (
-      <div className="flex flex-col gap-1.5">
-        {issue.main_document && (
-          <a href={issue.main_document} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
-            <FileText size={11} /> Main Doc
-          </a>
-        )}
-        {issue.supporting_document && (
-          <a href={issue.supporting_document} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
-            <FileText size={11} /> Support Doc
-          </a>
-        )}
-        {!issue.main_document && !issue.supporting_document && <span className="text-muted-foreground text-xs">—</span>}
-      </div>
-    )},
     { header: "", render: (issue) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

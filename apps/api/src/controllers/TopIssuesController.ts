@@ -3,7 +3,7 @@ import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 
 export const createTopIssue = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { period, issue, description, follow_up, main_document, supporting_document, next_plan, year } = req.body;
+  const { period, issue, description, follow_up, next_plan, year } = req.body;
 
   if (!period || !issue) {
     res.status(400).json({ error: 'Missing required fields: period, issue' });
@@ -23,8 +23,6 @@ export const createTopIssue = catchAsync(async (req: Request, res: Response): Pr
       issue,
       description,
       follow_up,
-      main_document,
-      supporting_document,
       next_plan
     }
   });
@@ -62,7 +60,7 @@ export const deleteTopIssue = catchAsync(async (req: Request, res: Response): Pr
 
 export const updateTopIssue = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { period, issue, description, follow_up, main_document, supporting_document, next_plan, year } = req.body;
+  const { period, issue, description, follow_up, next_plan, year } = req.body;
 
   if (!period || !issue) {
     res.status(400).json({ error: 'Missing required fields: period, issue' });
@@ -74,8 +72,6 @@ export const updateTopIssue = catchAsync(async (req: Request, res: Response): Pr
     issue,
     description,
     follow_up,
-    main_document,
-    supporting_document,
     next_plan
   };
 

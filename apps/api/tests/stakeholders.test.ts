@@ -11,14 +11,14 @@ afterAll(async () => {
 });
 
 describe('POST /api/stakeholders', () => {
-  it('rejects non-HTTPS attachment links before touching the database', async () => {
+  it('ignores legacy SharePoint attachment fields', async () => {
     const res = await request(app).post('/api/stakeholders').send({
       stakeholder: 'Test stakeholder',
       document_link: 'javascript:alert(1)',
     });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain('document_link');
+    expect(res.status).toBe(201);
+    expect(res.body.data).not.toHaveProperty('document_link');
   });
 
   it('Positive: Should create a new stakeholder engagement', async () => {

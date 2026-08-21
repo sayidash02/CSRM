@@ -6,7 +6,6 @@ export interface StakeholderEngagementItem {
   date?: string | null;
   venue?: string | null;
   concern_issue?: string | null;
-  document_link?: string | null;
 }
 
 export async function getStakeholderEngagements(): Promise<any[]> {

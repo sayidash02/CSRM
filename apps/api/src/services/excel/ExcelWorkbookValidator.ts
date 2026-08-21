@@ -1,6 +1,5 @@
 import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
-import { containsFileScheme, validateAttachmentLinkValue } from '../../lib/sharePointLinkValidation';
 import { extractCellString } from './ExcelCellUtils';
 import { parseCellDate, parseCellNumber } from './ExcelValueParser';
 import {
@@ -51,11 +50,10 @@ export function findColIndex(colMap: Map<string, number>, keywords: string[]): n
 }
 
 export function extractAttachmentValue(value: unknown): string | null {
-  const extracted = extractCellString(value) || null;
-  if (containsFileScheme(extracted) || !validateAttachmentLinkValue(extracted)) {
-    throw Object.assign(new Error('file:// attachment links are not allowed'), { status: 400 });
-  }
-  return extracted;
+  // Legacy document cells are compatibility columns only. CRMS does not
+  // persist or resolve their URL values; photos use the authenticated binary
+  // upload endpoint instead.
+  return extractCellString(value) || null;
 }
 
 export function isRowNonEmpty(row: ExcelJS.Row): boolean {
@@ -222,7 +220,78 @@ export function validationDate(value: unknown): Date | null {
 
 export function validationYear(value: unknown): number | null {
   const parsed = parseCellNumber(value);
-  return parsed !== null && Number.isInteger(parsed) && parsed >= 1900 && parsed <= 2100 ? parsed : null;
+  if (parsed !== null && Number.isInteger(parsed) && parsed >= 1900 && parsed <= 2100) return parsed;
+  if (typeof value === 'string') {
+    const match = value.match(/\b(19\d\d|20\d\d|2100)\b/);
+    if (match && match[1]) return parseInt(match[1], 10);
+  }
+  return null;
+}
+
+export function normalizeCategoryName(val: string | null | undefined): string {
+  if (!val) return '';
+  const s = val.trim();
+  const lower = s.toLowerCase();
+  if (lower === 'papper work' || lower === 'paper work' || lower === 'paperwork') return 'Paper Work';
+  if (lower === 'stakeholder engagement' || lower === 'engagement') return 'Stakeholder Engagement';
+  return s;
+}
+
+export function normalizeSubCategoryName(val: string | null | undefined, categoryName?: string): string {
+  if (!val) return '';
+  const s = val.trim();
+  const lower = s.toLowerCase();
+  if (lower === 'olah data' || lower === 'data processing (olah data)' || lower === 'data processing') {
+    return 'Data Processing (Olah Data)';
+  }
+  if (lower === 'issue dan grievance' || lower === 'issue & grievance' || lower === 'issue-grievance') {
+    return 'Issue & Grievance';
+  }
+  return s;
+}
+
+export function normalizeCsrStatus(val: string | null | undefined): string {
+  if (!val) return 'Planning';
+  const lower = val.trim().toLowerCase();
+  if (['completed', 'sudah terlaksana', 'terlaksana', 'selesai', 'done'].includes(lower)) return 'Completed';
+  if (['on going', 'on-going', 'ongoing', 'sedang berjalan', 'dalam proses', 'proses'].includes(lower)) return 'On Going';
+  if (['planning', 'perencanaan', 'rencana'].includes(lower)) return 'Planning';
+  if (['cancelled', 'canceled', 'dibatalkan', 'batal'].includes(lower)) return 'Cancelled';
+  return val.trim() || 'Planning';
+}
+
+export function normalizeProposalStatus(val: string | null | undefined): string {
+  if (!val) return 'Accept';
+  const lower = val.trim().toLowerCase();
+  if (['accept', 'accepted', 'diterima', 'setuju', 'disetujui', ''].includes(lower)) return 'Accept';
+  if (['decline', 'declined', 'ditolak', 'tidak disetujui'].includes(lower)) return 'Decline';
+  return val.trim() || 'Accept';
+}
+
+export function normalizeGrievanceSignificance(val: string | null | undefined): string {
+  if (!val) return 'Low';
+  const lower = val.trim().toLowerCase();
+  if (lower === 'low' || lower === 'rendah') return 'Low';
+  if (lower === 'medium' || lower === 'sedang') return 'Medium';
+  if (lower === 'high' || lower === 'tinggi') return 'High';
+  if (lower === 'critical' || lower === 'kritis') return 'Critical';
+  return val.trim() || 'Low';
+}
+
+export function normalizeGrievanceStatus(val: string | null | undefined): string {
+  if (!val) return 'Open';
+  const lower = val.trim().toLowerCase();
+  if (lower === 'open' || lower === 'buka') return 'Open';
+  if (lower === 'on progress' || lower === 'progress' || lower === 'proses') return 'On Progress';
+  if (lower === 'resolved' || lower === 'selesai') return 'Resolved';
+  if (lower === 'closed' || lower === 'tutup') return 'Closed';
+  return val.trim() || 'Open';
+}
+
+export function normalizePicName(val: string): string {
+  const trimmed = val.trim();
+  if (trimmed.toLowerCase() === 'ziya') return 'Ziya Ramadhani';
+  return trimmed;
 }
 
 export function allocateImportRegistration(prefix: 'PROP' | 'GRV', year: number, used: Set<string>): string {
@@ -284,10 +353,6 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
       seen.set(key, { signature, row });
     }
   };
-  const checkLink = (module: keyof ImportPreviewSummary, row: number, value: string, field: string) => {
-    if (value && !validateAttachmentLinkValue(value)) add(module, row, 'INVALID_ATTACHMENT', `${field} harus berupa link HTTPS yang disepakati (file:// dan path lokal ditolak)`);
-  };
-
   for (const worksheet of workbook.worksheets) {
     const detection = detectSheetHeader(worksheet);
     if (!detection) continue;
@@ -301,19 +366,40 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
       if (module === 'dailyActivities') {
         const date = rowValue(row, columns, ['tanggal', 'date', 'activity_date']);
         const activity = rowValue(row, columns, ['kegiatan', 'activity', 'nama kegiatan']);
-        const category = rowValue(row, columns, ['category', 'kategori']);
-        const subCategory = rowValue(row, columns, ['sub_category', 'sub category', 'subkategori', 'sub kategori']);
+        const rawCat = rowValue(row, columns, ['category', 'kategori']);
+        const rawSubCat = rowValue(row, columns, ['sub_category', 'sub category', 'subkategori', 'sub kategori']);
         const pic = rowValue(row, columns, ['pic', 'pic name', 'nama pic']);
+
+        const category = normalizeCategoryName(rawCat);
+        const subCategory = normalizeSubCategoryName(rawSubCat, category);
+
         if (!validationDate(date)) add(module, rowNumber, 'INVALID_DATE', 'Tanggal wajib diisi dan harus valid');
         if (!activity) add(module, rowNumber, 'REQUIRED_ACTIVITY', 'Kegiatan wajib diisi');
-        if (!category || !categoryNames.has(category.toLowerCase())) add(module, rowNumber, 'UNKNOWN_CATEGORY', `Kategori '${category}' tidak ditemukan`);
+        if (!category) {
+          add(module, rowNumber, 'REQUIRED_CATEGORY', 'Kategori wajib diisi');
+        } else if (!categoryNames.has(category.toLowerCase())) {
+          add(module, rowNumber, 'NEW_CATEGORY', `Kategori baru '${category}' akan dibuat otomatis`, false);
+        }
+
         const categoryId = categories.find((item) => item.name.trim().toLowerCase() === category.toLowerCase())?.id;
-        if (!subCategory || !categoryId || !subCategoryNames.has(`${categoryId}:${subCategory.toLowerCase()}`)) add(module, rowNumber, 'UNKNOWN_SUBCATEGORY', `Sub Category '${subCategory}' tidak ditemukan untuk kategori tersebut`);
-        if (!pic) add(module, rowNumber, 'REQUIRED_PIC', 'PIC wajib diisi');
-        else for (const name of pic.split(/[,&]|\bdan\b/i).map((item) => item.trim()).filter(Boolean)) if (!picNames.has(name.toLowerCase())) add(module, rowNumber, 'UNKNOWN_PIC', `PIC '${name}' tidak ditemukan`);
+        if (!subCategory) {
+          add(module, rowNumber, 'REQUIRED_SUBCATEGORY', 'Sub Category wajib diisi');
+        } else if (!categoryId || !subCategoryNames.has(`${categoryId}:${subCategory.toLowerCase()}`)) {
+          add(module, rowNumber, 'NEW_SUBCATEGORY', `Sub Category baru '${subCategory}' akan dibuat otomatis`, false);
+        }
+
+        if (!pic) {
+          add(module, rowNumber, 'EMPTY_PIC', 'PIC tidak diisi; baris akan diimpor tanpa PIC', false);
+        } else {
+          for (const rawName of pic.split(/[,&]|\bdan\b/i).map((item) => item.trim()).filter(Boolean)) {
+            const name = normalizePicName(rawName);
+            if (!picNames.has(name.toLowerCase())) {
+              add(module, rowNumber, 'NEW_PIC', `PIC baru '${name}' akan dibuat otomatis`, false);
+            }
+          }
+        }
         const cost = rowValue(row, columns, ['biaya', 'cost', 'anggaran']);
         if (cost && parseCellNumber(cost) === null) add(module, rowNumber, 'INVALID_NUMBER', `Biaya '${cost}' bukan berupa angka`);
-        checkLink(module, rowNumber, rowValue(row, columns, ['link dokumen', 'dokumen', 'document_link', 'lampiran', 'link']), 'Lampiran');
         continue;
       }
 
@@ -322,15 +408,15 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
         if (!stakeholder) add(module, rowNumber, 'REQUIRED_STAKEHOLDER', 'Stakeholder wajib diisi');
         const date = rowValue(row, columns, ['tanggal', 'date', 'waktu']);
         if (date && !validationDate(date)) add(module, rowNumber, 'INVALID_DATE', 'Tanggal stakeholder tidak valid');
-        checkLink(module, rowNumber, rowValue(row, columns, ['link dokumen', 'dokumen', 'document_link', 'lampiran', 'link', 'docs', 'doc', 'document']), 'Dokumen');
         continue;
       }
 
       if (module === 'topIssues') {
         const period = rowValue(row, columns, ['periode', 'period']);
         const issue = rowValue(row, columns, ['top issue', 'issue', 'isu', 'masalah']);
-        const year = validationYear(rowValue(row, columns, ['year', 'tahun'])) ?? validationYear(period);
-        if (!period || year === null) add(module, rowNumber, 'INVALID_YEAR', 'Periode wajib berupa tahun 1900–2100');
+        const rawYear = rowValue(row, columns, ['year', 'tahun']);
+        const year = validationYear(rawYear) ?? validationYear(period) ?? 2026;
+        if (!period) add(module, rowNumber, 'REQUIRED_PERIOD', 'Periode wajib diisi');
         if (!issue) add(module, rowNumber, 'REQUIRED_ISSUE', 'Issue wajib diisi');
         const identity = validationSignature(period, issue, year);
         if (period && issue) {
@@ -338,8 +424,6 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
           if (existing) add(module, rowNumber, existing.is_deleted ? 'SOFT_DELETED_MATCH' : 'DUPLICATE_IDENTICAL', existing.is_deleted ? 'Issue cocok dengan record soft-deleted; import diblokir' : 'Issue identik sudah ada; akan dilewati', existing.is_deleted, { identity, existingId: String(existing.id) });
           recordDuplicate(module, rowNumber, identity, validationSignature(period, issue, rowValue(row, columns, ['deskripsi', 'description', 'keterangan']), rowValue(row, columns, ['follow up', 'tindak lanjut', 'follow_up'])));
         }
-        checkLink(module, rowNumber, rowValue(row, columns, ['docs', 'dokumen utama', 'main_document', 'main document', 'dokumen']), 'Dokumen utama');
-        checkLink(module, rowNumber, rowValue(row, columns, ['supporting docs', 'dokumen pendukung', 'supporting_document', 'supporting document', 'pendukung']), 'Dokumen pendukung');
         continue;
       }
 
@@ -347,10 +431,11 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
         const registration = rowValue(row, columns, ['no registrasi', 'no reg', 'registration_no', 'nomor registrasi', 'no. reg', 'no.']);
         const date = rowValue(row, columns, ['tanggal diterima', 'date_received', 'tanggal', 'date']);
         const institution = rowValue(row, columns, ['instansi', 'institution', 'lembaga']);
-        const status = rowValue(row, columns, ['status']);
+        const rawStatus = rowValue(row, columns, ['status']);
+        const status = normalizeProposalStatus(rawStatus);
         if (!validationDate(date)) add(module, rowNumber, 'INVALID_DATE', 'Tanggal penerimaan wajib diisi dan harus valid');
         if (!institution) add(module, rowNumber, 'REQUIRED_INSTITUTION', 'Instansi wajib diisi');
-        if (!['Accept', 'Decline'].includes(status)) add(module, rowNumber, 'INVALID_STATUS', `Status proposal '${status}' tidak valid`);
+        if (!['Accept', 'Decline'].includes(status)) add(module, rowNumber, 'INVALID_STATUS', `Status proposal '${rawStatus}' tidak valid`);
         const identity = registration ? validationSignature('proposal-registration', registration) : validationSignature('proposal-fallback', date, institution, rowValue(row, columns, ['alamat', 'address']), rowValue(row, columns, ['deskripsi proposal', 'proposal_description', 'deskripsi', 'perihal', 'keterangan']));
         // Attachment columns are deliberately excluded: a second import may
         // legitimately backfill a link while preserving the same record.
@@ -363,20 +448,19 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
           }
         }
         recordDuplicate(module, rowNumber, identity, signature);
-        checkLink(module, rowNumber, rowValue(row, columns, ['proposal', 'proposal_file', 'link proposal', 'file proposal']), 'Proposal file');
-        checkLink(module, rowNumber, rowValue(row, columns, ['assessment', 'assessment_file', 'link assessment', 'file assessment']), 'Assessment file');
         continue;
       }
 
       if (module === 'csr') {
-        const year = rowValue(row, columns, ['tahun', 'project_year', 'year']);
+        const rawYear = rowValue(row, columns, ['tahun', 'project_year', 'year']);
+        const rawPeriod = rowValue(row, columns, ['periode pelaksanaan', 'waktu pelaksanaan', 'implementation_period', 'durasi', 'periode']);
+        const year = validationYear(rawYear) ?? validationYear(rawPeriod) ?? 2026;
         const program = rowValue(row, columns, ['nama program', 'program']);
-        const status = rowValue(row, columns, ['status']);
-        if (validationYear(year) === null) add(module, rowNumber, 'INVALID_YEAR', 'Tahun CSR wajib berupa 1900–2100');
+        const rawStatus = rowValue(row, columns, ['status']);
+        const status = normalizeCsrStatus(rawStatus);
+        if (year === null) add(module, rowNumber, 'INVALID_YEAR', 'Tahun CSR wajib berupa 1900–2100');
         if (!program) add(module, rowNumber, 'REQUIRED_PROGRAM', 'Program CSR wajib diisi');
-        if (!['Planning', 'On Going', 'Completed', 'Cancelled'].includes(status)) add(module, rowNumber, 'INVALID_STATUS', `Status CSR '${status}' tidak valid`);
-        checkLink(module, rowNumber, rowValue(row, columns, ['image dokumentasi', 'image', 'dokumentasi', 'gambar']), 'Dokumentasi');
-        checkLink(module, rowNumber, rowValue(row, columns, ['docx', 'document', 'dokumen']), 'Dokumen');
+        if (!['Planning', 'On Going', 'Completed', 'Cancelled'].includes(status)) add(module, rowNumber, 'INVALID_STATUS', `Status CSR '${rawStatus}' tidak valid`);
         continue;
       }
 
@@ -384,12 +468,14 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
         const registration = rowValue(row, columns, ['no registrasi', 'no reg', 'register_no', 'nomor registrasi', 'no. reg', 'no.', 'register no.', 'register no']);
         const date = rowValue(row, columns, ['tanggal log', 'log_date', 'tanggal', 'date', 'log date']);
         const complainant = rowValue(row, columns, ['nama pelapor', 'complainant_name', 'pelapor', 'complainant', 'name']);
-        const significance = rowValue(row, columns, ['signifikansi', 'significance', 'tingkat']);
-        const status = rowValue(row, columns, ['status']);
+        const rawSig = rowValue(row, columns, ['signifikansi', 'significance', 'tingkat']);
+        const significance = normalizeGrievanceSignificance(rawSig);
+        const rawStatus = rowValue(row, columns, ['status']);
+        const status = normalizeGrievanceStatus(rawStatus);
         if (!validationDate(date)) add(module, rowNumber, 'INVALID_DATE', 'Log date wajib diisi dan harus valid');
         if (!complainant) add(module, rowNumber, 'REQUIRED_COMPLAINANT', 'Nama pelapor wajib diisi');
-        if (!['Low', 'Medium', 'High', 'Critical'].includes(significance)) add(module, rowNumber, 'INVALID_SIGNIFICANCE', `Significance '${significance}' tidak valid`);
-        if (status && !['Open', 'On Progress', 'Resolved', 'Closed'].includes(status)) add(module, rowNumber, 'INVALID_STATUS', `Status grievance '${status}' tidak valid`);
+        if (!['Low', 'Medium', 'High', 'Critical'].includes(significance)) add(module, rowNumber, 'INVALID_SIGNIFICANCE', `Significance '${rawSig}' tidak valid`);
+        if (status && !['Open', 'On Progress', 'Resolved', 'Closed'].includes(status)) add(module, rowNumber, 'INVALID_STATUS', `Status grievance '${rawStatus}' tidak valid`);
         const identity = registration ? validationSignature('grievance-register', registration) : validationSignature('grievance-fallback', date, complainant, rowValue(row, columns, ['alamat', 'address']), rowValue(row, columns, ['phone', 'no hp', 'telepon', 'no telepon']), rowValue(row, columns, ['kategori', 'category']), rowValue(row, columns, ['deskripsi', 'description', 'keluhan', 'rincian']), rowValue(row, columns, ['location', 'lokasi']));
         // Supporting files may be backfilled on re-import and are not part of
         // the conflict signature.
@@ -402,23 +488,20 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
           add(module, rowNumber, existing.is_deleted ? 'SOFT_DELETED_MATCH' : existingSignature === signature ? 'DUPLICATE_IDENTICAL' : 'IDENTITY_CONFLICT', existing.is_deleted ? 'Nomor registrasi cocok dengan record soft-deleted; import diblokir' : existingSignature === signature ? 'Grievance identik sudah ada; akan dilewati' : 'Nomor registrasi sudah dipakai dengan data berbeda', existing.is_deleted || existingSignature !== signature, { identity, existingId: String(existing.id) });
         }
         recordDuplicate(module, rowNumber, identity, signature);
-        checkLink(module, rowNumber, rowValue(row, columns, ['related supporting docs (photo, settlement note etc)', 'related supporting docs', 'supporting docs', 'dokumen pendukung', 'supporting_files', 'docs']), 'Supporting files');
         continue;
       }
 
       if (module === 'lrp') {
         const program = rowValue(row, columns, ['program']);
         const year = rowValue(row, columns, ['year', 'tahun']);
-        const link = rowValue(row, columns, ['sharepoint link', 'sharepoint_link', 'link']);
         if (!program) add(module, rowNumber, 'REQUIRED_PROGRAM', 'Program LRP wajib diisi');
         if (validationYear(year) === null) add(module, rowNumber, 'INVALID_YEAR', 'Tahun LRP wajib berupa 1900–2100');
-        if (!link || !validateAttachmentLinkValue(link) || !/^https:\/\//i.test(link)) add(module, rowNumber, 'INVALID_ATTACHMENT', 'SharePoint link LRP wajib HTTPS');
         const identity = makeLrpIdentity(program, validationYear(year)!);
-        const signature = validationSignature(program, year, link);
+        const signature = validationSignature(program, year);
         const existing = lrps.find((item) => makeLrpIdentity(item.program, item.year) === identity);
         if (existing) {
-          const existingSignature = validationSignature(existing.program, existing.year, existing.sharepoint_link);
-          add(module, rowNumber, existing.is_deleted ? 'SOFT_DELETED_MATCH' : existingSignature === signature ? 'DUPLICATE_IDENTICAL' : 'IDENTITY_CONFLICT', existing.is_deleted ? 'LRP cocok dengan record soft-deleted; import diblokir' : existingSignature === signature ? 'LRP identik sudah ada; akan dilewati' : 'Program dan tahun LRP sudah dipakai dengan link berbeda', existing.is_deleted || existingSignature !== signature, { identity, existingId: String(existing.id) });
+          const existingSignature = validationSignature(existing.program, existing.year);
+          add(module, rowNumber, existing.is_deleted ? 'SOFT_DELETED_MATCH' : existingSignature === signature ? 'DUPLICATE_IDENTICAL' : 'IDENTITY_CONFLICT', existing.is_deleted ? 'LRP cocok dengan record soft-deleted; import diblokir' : existingSignature === signature ? 'LRP identik sudah ada; akan dilewati' : 'Program dan tahun LRP sudah dipakai dengan data berbeda', existing.is_deleted || existingSignature !== signature, { identity, existingId: String(existing.id) });
         }
         recordDuplicate(module, rowNumber, identity, signature);
       }

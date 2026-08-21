@@ -12,6 +12,13 @@ import {
   findColIndex,
   isRowIdentical,
   isRowNonEmpty,
+  normalizeCategoryName,
+  normalizeCsrStatus,
+  normalizeGrievanceSignificance,
+  normalizeGrievanceStatus,
+  normalizePicName,
+  normalizeProposalStatus,
+  normalizeSubCategoryName,
   rowColumnMap,
   rowValue,
   shouldReadDataRow,
@@ -36,11 +43,10 @@ export interface ParsedDailyActivityRow {
   sub_category_id: string | null;
   focus: string;
   location: string;
-  cost: number;
+  cost: number | null;
   keterangan: string;
   hasil: string;
   description_result: string;
-  document_link: string;
   pic_ids: string[];
   category_name: string;
   sub_category_name: string;
@@ -63,6 +69,18 @@ export interface ImportPreviewSummary {
   proposals: number;
   csr: number;
   grievance: number;
+  lrp: number;
+}
+
+export interface ImportConflict {
+  module: keyof ImportPreviewSummary;
+  row: number;
+  code: string;
+  message: string;
+  blocking: boolean;
+  identity?: string;
+  existingId?: string;
+  fields?: string[];
 }
 
 export interface ImportPreviewResult {
@@ -88,6 +106,14 @@ export class ExcelImportService {
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(fileId);
+    const validation = await validateWorkbook(workbook);
+    const blockingConflicts = validation.conflicts.filter((conflict) => conflict.blocking);
+    if (blockingConflicts.length > 0) {
+      throw Object.assign(new Error('Import preview contains blocking conflicts'), {
+        status: 422,
+        conflicts: validation.conflicts,
+      });
+    }
 
     const rawDailyActivities: Array<{
       activity_date: Date;
@@ -98,6 +124,8 @@ export class ExcelImportService {
       location: string | null;
       keterangan: string | null;
       hasil: string | null;
+      kesimpulan: string | null;
+      next_plan: string | null;
       description_result: string | null;
       cost: number | null;
       document_link: string | null;
@@ -116,12 +144,18 @@ export class ExcelImportService {
 
     const rawTopIssues: Array<{
       period: string;
+      year: number;
       issue: string;
       description: string | null;
       follow_up: string | null;
       main_document: string | null;
       supporting_document: string | null;
       next_plan: string | null;
+    }> = [];
+
+    const rawLrps: Array<{
+      program: string;
+      year: number;
     }> = [];
 
     const rawProposals: Array<{
@@ -206,34 +240,37 @@ export class ExcelImportService {
         const catCol = findColIndex(colMap, ['category', 'kategori']);
         const ketCol = findColIndex(colMap, ['keterangan']);
         const hasCol = findColIndex(colMap, ['hasil']);
+        const kesCol = findColIndex(colMap, ['kesimpulan', 'conclusion']);
+        const planCol = findColIndex(colMap, ['next_plan', 'next plan', 'rencana', 'rencana selanjutnya']);
         const descCol = findColIndex(colMap, ['description_result', 'deskripsi / hasil', 'keterangan / hasil', 'deskripsi']);
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
-          if (!isRowNonEmpty(row)) continue;
+          if (!shouldReadDataRow(worksheet, detection, r) || !isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
-          const activity_date = dateCol !== -1 && row.getCell(dateCol).value ? (parseCellDate(row.getCell(dateCol).value) || new Date()) : new Date();
-          const activity = actCol !== -1 ? truncStr(extractCellString(row.getCell(actCol).value), 255, 'Kegiatan') : 'Kegiatan';
+          const activity_date = parseCellDate(row.getCell(dateCol).value)!;
+          const activity = truncStr(extractCellString(row.getCell(actCol).value), 255);
           const institution_group = instCol !== -1 ? trunc(extractCellString(row.getCell(instCol).value), 255) : null;
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
           const focus = focusCol !== -1 ? trunc(extractCellString(row.getCell(focusCol).value), 255) : null;
           const location = locCol !== -1 ? trunc(extractCellString(row.getCell(locCol).value), 255) : null;
           const cost = costCol !== -1 ? parseCellNumber(row.getCell(costCol).value) : null;
-          const document_link = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
-          let raw_pic_name = picCol !== -1 ? extractCellString(row.getCell(picCol).value).trim() : '';
-          if (!raw_pic_name || raw_pic_name.length > 255) raw_pic_name = 'Umum';
-          let pic_names = raw_pic_name.split(/[,&]|\bdan\b/i).map(n => n.trim()).filter(Boolean);
-          if (pic_names.length === 0) pic_names = ['Umum'];
+          const document_link = docCol !== -1 ? extractAttachmentValue(row.getCell(docCol).value) : null;
+          const raw_pic_name = picCol !== -1 ? extractCellString(row.getCell(picCol).value).trim() : '';
+          let pic_names = raw_pic_name.split(/[,&]|\bdan\b/i).map(n => normalizePicName(n.trim())).filter(Boolean);
+          if (pic_names.length === 0) pic_names = [];
           
-          let category_name = catCol !== -1 ? extractCellString(row.getCell(catCol).value).trim() : '';
-          if (!category_name || category_name.length > 50) category_name = 'Umum';
+          const rawCat = catCol !== -1 ? extractCellString(row.getCell(catCol).value).trim() : '';
+          const category_name = normalizeCategoryName(rawCat);
           
-          let sub_category_name = subCatCol !== -1 ? extractCellString(row.getCell(subCatCol).value).trim() : '';
-          if (!sub_category_name || sub_category_name.length > 100) sub_category_name = 'Umum';
+          const rawSubCat = subCatCol !== -1 ? extractCellString(row.getCell(subCatCol).value).trim() : '';
+          const sub_category_name = normalizeSubCategoryName(rawSubCat, category_name);
 
           const keterangan = ketCol !== -1 ? (extractCellString(row.getCell(ketCol).value) || null) : null;
           const hasil = hasCol !== -1 ? (extractCellString(row.getCell(hasCol).value) || null) : null;
+          const kesimpulan = kesCol !== -1 ? (extractCellString(row.getCell(kesCol).value) || null) : null;
+          const next_plan = planCol !== -1 ? (extractCellString(row.getCell(planCol).value) || null) : null;
           let description_result: string | null = null;
           if (descCol !== -1) {
             description_result = extractCellString(row.getCell(descCol).value) || null;
@@ -250,6 +287,8 @@ export class ExcelImportService {
             location,
             keterangan,
             hasil,
+            kesimpulan,
+            next_plan,
             description_result,
             cost,
             document_link,
@@ -267,7 +306,7 @@ export class ExcelImportService {
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
-          if (!isRowNonEmpty(row)) continue;
+          if (!shouldReadDataRow(worksheet, detection, r) || !isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const stakeholder = stkCol !== -1 ? truncStr(extractCellString(row.getCell(stkCol).value), 255) : '';
@@ -286,7 +325,7 @@ export class ExcelImportService {
             }
           }
           const concern_issue = issueCol !== -1 ? (extractCellString(row.getCell(issueCol).value) || null) : null;
-          const document_link = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
+          const document_link = docCol !== -1 ? extractAttachmentValue(row.getCell(docCol).value) : null;
 
           rawStakeholders.push({
             stakeholder,
@@ -297,7 +336,8 @@ export class ExcelImportService {
           });
         }
       } else if (sheetType === 'topIssues') {
-        const periodCol = findColIndex(colMap, ['periode', 'period', 'tahun']);
+        const periodCol = findColIndex(colMap, ['periode', 'period']);
+        const yearCol = findColIndex(colMap, ['year', 'tahun']);
         const issueCol = findColIndex(colMap, ['top issue', 'issue', 'isu', 'masalah']);
         const descCol = findColIndex(colMap, ['description', 'deskripsi', 'keterangan']);
         const folCol = findColIndex(colMap, ['tindak lanjut', 'follow_up', 'follow up']);
@@ -307,21 +347,24 @@ export class ExcelImportService {
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
-          if (!isRowNonEmpty(row)) continue;
+          if (!shouldReadDataRow(worksheet, detection, r) || !isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const issue = issueCol !== -1 ? truncStr(extractCellString(row.getCell(issueCol).value), 255) : '';
           if (!issue) continue;
 
-          const period = periodCol !== -1 ? truncStr(extractCellString(row.getCell(periodCol).value), 50, '2024') : '2024';
+          const period = truncStr(extractCellString(row.getCell(periodCol).value), 50);
+          const rawYear = yearCol !== -1 ? row.getCell(yearCol).value : null;
+          const year = validationYear(rawYear) ?? validationYear(period) ?? 2026;
           const description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
           const follow_up = folCol !== -1 ? (extractCellString(row.getCell(folCol).value) || null) : null;
-          const main_document = mainDocCol !== -1 ? (extractCellString(row.getCell(mainDocCol).value) || null) : null;
-          const supporting_document = suppDocCol !== -1 ? (extractCellString(row.getCell(suppDocCol).value) || null) : null;
+          const main_document = mainDocCol !== -1 ? extractAttachmentValue(row.getCell(mainDocCol).value) : null;
+          const supporting_document = suppDocCol !== -1 ? extractAttachmentValue(row.getCell(suppDocCol).value) : null;
           const next_plan = planCol !== -1 ? (extractCellString(row.getCell(planCol).value) || null) : null;
 
           rawTopIssues.push({
             period,
+            year,
             issue,
             description,
             follow_up,
@@ -342,7 +385,7 @@ export class ExcelImportService {
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
-          if (!isRowNonEmpty(row)) continue;
+          if (!shouldReadDataRow(worksheet, detection, r) || !isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const rawInst = instCol !== -1 ? extractCellString(row.getCell(instCol).value).trim() : '';
@@ -351,22 +394,18 @@ export class ExcelImportService {
           if (!rawInst && !rawPropDesc && !rawPropReg) continue;
 
           const source_registration_no = rawPropReg ? truncStr(rawPropReg, 50) : null;
-          let registration_no = source_registration_no;
-          if (!registration_no) {
-            do {
-              registration_no = `PROP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-            } while (usedProposalRegNos.has(registration_no.toLowerCase()));
-          }
-          registration_no = truncStr(registration_no, 50);
-          usedProposalRegNos.add(registration_no.toLowerCase());
+          const provisionalYear = parseCellDate(row.getCell(dateCol).value)!.getUTCFullYear();
+          const registration_no = source_registration_no
+            ? truncStr(source_registration_no, 50)
+            : allocateImportRegistration('PROP', provisionalYear, usedProposalRegNos);
 
-          const date_received = dateCol !== -1 && row.getCell(dateCol).value ? (parseCellDate(row.getCell(dateCol).value) || new Date()) : new Date();
-          const institution = truncStr(rawInst, 255, 'Umum');
+          const date_received = parseCellDate(row.getCell(dateCol).value)!;
+          const institution = truncStr(rawInst, 255);
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
           const proposal_description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
-          const proposal_file = proposalFileCol !== -1 ? (extractCellString(row.getCell(proposalFileCol).value) || null) : null;
-          const assessment_file = assessmentFileCol !== -1 ? (extractCellString(row.getCell(assessmentFileCol).value) || null) : null;
-          const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Accept') : 'Accept';
+          const proposal_file = proposalFileCol !== -1 ? extractAttachmentValue(row.getCell(proposalFileCol).value) : null;
+          const assessment_file = assessmentFileCol !== -1 ? extractAttachmentValue(row.getCell(assessmentFileCol).value) : null;
+          const status = normalizeProposalStatus(extractCellString(row.getCell(statusCol).value));
 
           rawProposals.push({
             registration_no,
@@ -396,24 +435,25 @@ export class ExcelImportService {
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
-          if (!isRowNonEmpty(row)) continue;
+          if (!shouldReadDataRow(worksheet, detection, r) || !isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const program = progCol !== -1 ? truncStr(extractCellString(row.getCell(progCol).value), 255) : '';
           if (!program) continue;
 
-          const parsedYear = yearCol !== -1 ? parseCellNumber(row.getCell(yearCol).value) : null;
-          const project_year = parsedYear ? Math.floor(parsedYear) : new Date().getFullYear();
+          const rawYear = yearCol !== -1 ? row.getCell(yearCol).value : null;
+          const rawPeriod = periodCol !== -1 ? row.getCell(periodCol).value : null;
+          const project_year = validationYear(rawYear) ?? validationYear(rawPeriod) ?? 2026;
           const activity = actCol !== -1 ? trunc(extractCellString(row.getCell(actCol).value), 255) : null;
           const type_of_activity = typeCol !== -1 ? trunc(extractCellString(row.getCell(typeCol).value), 100) : null;
           const location = locCol !== -1 ? trunc(extractCellString(row.getCell(locCol).value), 255) : null;
           const target_beneficiaries = benCol !== -1 ? trunc(extractCellString(row.getCell(benCol).value), 255) : null;
           const objective = objCol !== -1 ? (extractCellString(row.getCell(objCol).value) || null) : null;
-          const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Planning') : 'Planning';
+          const status = normalizeCsrStatus(extractCellString(row.getCell(statusCol).value));
           const budget = budCol !== -1 ? parseCellNumber(row.getCell(budCol).value) : null;
           const implementation_period = periodCol !== -1 ? trunc(extractCellString(row.getCell(periodCol).value), 100) : null;
-          const documentation_image = imgCol !== -1 ? (extractCellString(row.getCell(imgCol).value) || null) : null;
-          const document = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
+          const documentation_image = imgCol !== -1 ? extractAttachmentValue(row.getCell(imgCol).value) : null;
+          const document = docCol !== -1 ? extractAttachmentValue(row.getCell(docCol).value) : null;
 
           rawCsr.push({
             project_year,
@@ -449,7 +489,7 @@ export class ExcelImportService {
 
         for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
           const row = worksheet.getRow(r);
-          if (!isRowNonEmpty(row)) continue;
+          if (!shouldReadDataRow(worksheet, detection, r) || !isRowNonEmpty(row)) continue;
           if (isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
 
           const rawCompName = compCol !== -1 ? extractCellString(row.getCell(compCol).value).trim() : '';
@@ -458,29 +498,25 @@ export class ExcelImportService {
           if (!rawCompName && !rawGrievanceDesc && !rawGrievanceReg) continue;
 
           const source_register_no = rawGrievanceReg ? truncStr(rawGrievanceReg, 50) : null;
-          let register_no = source_register_no;
-          if (!register_no) {
-            do {
-              register_no = `GRV-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-            } while (usedGrievanceRegNos.has(register_no.toLowerCase()));
-          }
-          register_no = truncStr(register_no, 50);
-          usedGrievanceRegNos.add(register_no.toLowerCase());
+          const provisionalYear = parseCellDate(row.getCell(dateCol).value)!.getUTCFullYear();
+          const register_no = source_register_no
+            ? truncStr(source_register_no, 50)
+            : allocateImportRegistration('GRV', provisionalYear, usedGrievanceRegNos);
 
-          const log_date = dateCol !== -1 && row.getCell(dateCol).value ? (parseCellDate(row.getCell(dateCol).value) || new Date()) : new Date();
-          const complainant_name = truncStr(rawCompName, 255, 'Anonim');
+          const log_date = parseCellDate(row.getCell(dateCol).value)!;
+          const complainant_name = truncStr(rawCompName, 255);
           const address = addrCol !== -1 ? trunc(extractCellString(row.getCell(addrCol).value), 255) : null;
           const phone = phoneCol !== -1 ? trunc(extractCellString(row.getCell(phoneCol).value), 30) : null;
           const category = catCol !== -1 ? trunc(extractCellString(row.getCell(catCol).value), 100) : null;
-          const significance = sigCol !== -1 ? truncStr(extractCellString(row.getCell(sigCol).value), 20, 'Low') : 'Low';
+          const significance = normalizeGrievanceSignificance(extractCellString(row.getCell(sigCol).value));
           const description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
           const location = locCol !== -1 ? trunc(extractCellString(row.getCell(locCol).value), 255) : null;
           const investigation = invCol !== -1 ? (extractCellString(row.getCell(invCol).value) || null) : null;
           const resolution = resCol !== -1 ? (extractCellString(row.getCell(resCol).value) || null) : null;
           const feedback = feedCol !== -1 ? (extractCellString(row.getCell(feedCol).value) || null) : null;
-          const status = statusCol !== -1 ? truncStr(extractCellString(row.getCell(statusCol).value), 20, 'Open') : 'Open';
+          const status = normalizeGrievanceStatus(extractCellString(row.getCell(statusCol).value));
           const remarks = remCol !== -1 ? (extractCellString(row.getCell(remCol).value) || null) : null;
-          const supporting_files = docCol !== -1 ? (extractCellString(row.getCell(docCol).value) || null) : null;
+          const supporting_files = docCol !== -1 ? extractAttachmentValue(row.getCell(docCol).value) : null;
 
           rawGrievance.push({
             register_no,
@@ -499,6 +535,17 @@ export class ExcelImportService {
             status,
             remarks,
             supporting_files
+          });
+        }
+      } else if (sheetType === 'lrp') {
+        const programCol = findColIndex(colMap, ['program']);
+        const yearCol = findColIndex(colMap, ['year', 'tahun']);
+        for (let r = detection.headerRowIndex + 1; r <= worksheet.rowCount; r++) {
+          const row = worksheet.getRow(r);
+          if (!shouldReadDataRow(worksheet, detection, r) || !isRowNonEmpty(row) || isRowIdentical(row, worksheet.getRow(detection.headerRowIndex))) continue;
+          rawLrps.push({
+            program: truncStr(extractCellString(row.getCell(programCol).value), 255),
+            year: validationYear(row.getCell(yearCol).value)!,
           });
         }
       }

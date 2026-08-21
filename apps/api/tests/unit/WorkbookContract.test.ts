@@ -23,14 +23,14 @@ describe('workbook contract', () => {
     ['Top Issue', 'topIssues', 3, 4],
     ['Proposal 2026', 'proposals', 1, 3],
     ['CSR Project 2026', 'csr', 1, 2],
-    ['Grievance 2026', 'grievance', 5, 7],
-    ['LRP', 'lrp', 1, 2],
+    ['Grievance 2026', 'grievance', [6, 5], 7],
+    ['LRP', 'lrp', [1], 2],
   ])(
     'resolves %s to %s with the source row contract',
-    (sheetName, module, headerRow, dataStartRow) => {
+    (sheetName, module, headerRows, dataStartRow) => {
       expect(getWorkbookSheetContract(sheetName)).toMatchObject({
         module,
-        headerRows: [headerRow],
+        headerRows: Array.isArray(headerRows) ? headerRows : [headerRows],
         dataStartRow,
       });
     },
@@ -43,7 +43,7 @@ describe('workbook contract', () => {
   });
 
   it('defines the new LRP output sheet without file-upload semantics', () => {
-    expect(LRP_SHEET_HEADERS).toEqual(['No', 'Program', 'SharePoint Link']);
+    expect(LRP_SHEET_HEADERS).toEqual(['No', 'Program', 'Year']);
     expect(getWorkbookSheetContract('LRP')).toMatchObject({
       canonicalName: 'LRP',
       headers: LRP_SHEET_HEADERS,

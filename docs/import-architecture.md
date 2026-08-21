@@ -19,6 +19,9 @@ pipeline. Removing the adapter requires migrating that screen to
 `ImportWizardModal` and a workstation smoke test; it is deliberately deferred so
 this refactor does not change the current user workflow.
 
-The SharePoint sync route is disabled and returns `410`. Upload clients remain
-active because `/api/upload` still selects Graph in configured production
-environments and the mock client in development/test environments.
+The import pipeline has no technical SharePoint dependency. Legacy workbook
+attachment/link columns may still be parsed for historical compatibility, but
+their values are reported or discarded according to the import contract; they
+are never persisted as URLs and never select a Graph or mock client. The user
+downloads the resulting files and uploads them to SharePoint manually outside
+CRMS.

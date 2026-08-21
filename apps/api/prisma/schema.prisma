@@ -7,6 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model users {
+  id            BigInt        @id @default(autoincrement())
+  username      String        @unique @db.VarChar(100)
+  password_hash String        @db.VarChar(255)
+  role          String        @default("USER") @db.VarChar(20)
+  is_active     Boolean       @default(true)
+  last_login_at DateTime?
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+  audit_logs    audit_logs[]
+  export_logs   export_logs[]
+
+  @@index([role])
+  @@index([is_active])
+}
+
 model pics {
   id                  BigInt                @id @default(autoincrement())
   name                String                @unique @db.VarChar(100)
@@ -52,10 +68,10 @@ model daily_activities {
   created_at          DateTime              @default(now())
   updated_at          DateTime              @updatedAt
   cost                Decimal?              @db.Decimal(15, 2)
-  document_link       String?               @db.Text
   category            categories            @relation(fields: [category_id], references: [id])
   sub_category        sub_categories        @relation(fields: [sub_category_id], references: [id])
   daily_activity_pics daily_activity_pics[]
+  photos              daily_activity_photos[]
 
   @@index([activity_date])
   @@index([is_deleted])
@@ -74,13 +90,31 @@ model daily_activity_pics {
   @@index([pic_id])
 }
 
+model daily_activity_photos {
+  id            BigInt           @id @default(autoincrement())
+  activity_id   BigInt
+  photo_data    Bytes            @db.MediumBlob
+  mime_type     String           @db.VarChar(100)
+  original_name String           @db.VarChar(255)
+  size_bytes    Int
+  sha256        String           @db.Char(64)
+  sort_order    Int              @default(0)
+  is_deleted    Boolean          @default(false)
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+  activity      daily_activities @relation(fields: [activity_id], references: [id], onDelete: Cascade)
+
+  @@index([activity_id, sort_order])
+  @@index([is_deleted])
+  @@unique([activity_id, sha256], map: "daily_activity_photos_activity_sha256_key")
+}
+
 model stakeholder_engagement {
   id            BigInt    @id @default(autoincrement())
   stakeholder   String?   @db.VarChar(255)
   date          DateTime? @db.Date
   venue         String?   @db.VarChar(255)
   concern_issue String?   @db.Text
-  document_link String?   @db.Text
   is_deleted    Boolean   @default(false)
   is_archived   Boolean   @default(false)
   created_at    DateTime  @default(now())
@@ -91,19 +125,17 @@ model stakeholder_engagement {
 }
 
 model top_issues {
-  id                  BigInt   @id @default(autoincrement())
-  period              String   @db.VarChar(50)
-  year                Int      @default(2026)
-  issue               String   @db.VarChar(255)
-  description         String?  @db.Text
-  follow_up           String?  @db.Text
-  next_plan           String?  @db.Text
-  is_deleted          Boolean  @default(false)
-  is_archived         Boolean  @default(false)
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
-  main_document       String?  @db.Text
-  supporting_document String?  @db.Text
+  id              BigInt   @id @default(autoincrement())
+  period          String   @db.VarChar(50)
+  year            Int      @default(2026)
+  issue           String   @db.VarChar(255)
+  description     String?  @db.Text
+  follow_up       String?  @db.Text
+  next_plan       String?  @db.Text
+  is_deleted      Boolean  @default(false)
+  is_archived     Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
   @@index([is_deleted])
   @@index([is_archived])
@@ -117,8 +149,6 @@ model proposals {
   institution          String   @db.VarChar(255)
   address              String?  @db.VarChar(255)
   proposal_description String?  @db.Text
-  proposal_file        String?  @db.Text
-  assessment_file      String?  @db.Text
   status               String   @db.VarChar(20)
   is_deleted           Boolean  @default(false)
   is_archived          Boolean  @default(false)
@@ -142,8 +172,6 @@ model csr_projects {
   status                String   @default("Planning") @db.VarChar(20)
   budget                Decimal? @db.Decimal(15, 2)
   implementation_period String?  @db.VarChar(100)
-  documentation_image   String?  @db.Text
-  document              String?  @db.Text
   is_deleted            Boolean  @default(false)
   is_archived           Boolean  @default(false)
   created_at            DateTime @default(now())
@@ -172,7 +200,6 @@ model grievance {
   status           String    @default("Open") @db.VarChar(20)
   completion_date  DateTime? @db.Date
   remarks          String?   @db.Text
-  supporting_files String?   @db.Text
   is_deleted       Boolean   @default(false)
   is_archived      Boolean   @default(false)
   created_at       DateTime  @default(now())
@@ -185,39 +212,45 @@ model grievance {
 }
 
 model lrp {
-  id              BigInt   @id @default(autoincrement())
-  program         String   @db.VarChar(255)
-  year            Int      @default(2026)
-  sharepoint_link String   @db.Text
-  is_deleted      Boolean  @default(false)
-  is_archived     Boolean  @default(false)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id           BigInt   @id @default(autoincrement())
+  program      String   @db.VarChar(255)
+  year         Int      @default(2026)
+  is_deleted   Boolean  @default(false)
+  is_archived  Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 
   @@index([is_deleted])
   @@index([is_archived])
   @@index([year])
 }
 
-model sync_log {
-  id            BigInt   @id @default(autoincrement())
-  synced_at     DateTime @db.Timestamp(0)
-  synced_year   Int?
-  status        String   @db.VarChar(20)
-  error_message String?  @db.Text
-  file_url      String?  @db.VarChar(500)
-  triggered_by  String?  @db.VarChar(100)
+model export_logs {
+  id            BigInt    @id @default(autoincrement())
+  exported_at   DateTime  @default(now())
+  scope_year    Int?
+  format        String    @db.VarChar(10)
+  status        String    @db.VarChar(20)
+  error_message String?   @db.Text
+  actor_user_id BigInt?
+  actor         users?    @relation(fields: [actor_user_id], references: [id], onDelete: SetNull)
+
+  @@index([exported_at])
+  @@index([status])
+  @@index([actor_user_id])
 }
 
 model audit_logs {
-  id          BigInt   @id @default(autoincrement())
-  entity_type String   @db.VarChar(50)
-  entity_id   BigInt
-  action      String   @db.VarChar(20)
-  changes     Json?
-  created_at  DateTime @default(now())
+  id            BigInt   @id @default(autoincrement())
+  entity_type   String   @db.VarChar(50)
+  entity_id     BigInt
+  action        String   @db.VarChar(20)
+  changes       Json?
+  actor_user_id BigInt?
+  actor         users?   @relation(fields: [actor_user_id], references: [id], onDelete: SetNull)
+  created_at    DateTime @default(now())
 
   @@index([entity_type, entity_id])
   @@index([created_at])
+  @@index([actor_user_id])
 }
-

@@ -19,7 +19,7 @@ describe('POST /api/proposals', () => {
     };
     const res = await request(app).post('/api/proposals').send(payload);
     expect(res.status).toBe(201);
-    expect(res.body.data.registration_no).toBe('PROP-001');
+    expect(res.body.data.registration_no).toMatch(/^PROP-2026-\d{4}$/);
     expect(res.body.data.institution).toBe('Inst A');
   });
 
@@ -29,7 +29,7 @@ describe('POST /api/proposals', () => {
     expect(res.status).toBe(400);
   });
 
-  it('Negative: Should fail with duplicate registration_no', async () => {
+  it('Ignores a client-supplied registration number and allocates a new one', async () => {
     const payload = { 
       registration_no: 'PROP-001',
       date_received: '2026-07-30',
@@ -37,7 +37,9 @@ describe('POST /api/proposals', () => {
       status: 'Accept'
     };
     const res = await request(app).post('/api/proposals').send(payload);
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
+    expect(res.body.data.registration_no).toMatch(/^PROP-2026-\d{4}$/);
+    expect(res.body.data.registration_no).not.toBe('PROP-001');
   });
 });
 
@@ -65,11 +67,10 @@ describe('DELETE /api/proposals/:id', () => {
     expect(res.body.data.is_deleted).toBe(true);
 
     const listAfter = await request(app).get('/api/proposals');
-    expect(listAfter.body.data.length).toBe(0);
+    expect(listAfter.body.data.some((item: any) => item.id === id)).toBe(false);
 
     const listDeleted = await request(app).get('/api/proposals?is_deleted=true');
-    expect(listDeleted.body.data.length).toBe(1);
-    expect(listDeleted.body.data[0].id).toBe(id);
+    expect(listDeleted.body.data.some((item: any) => item.id === id)).toBe(true);
   });
 
   it('Should return 404 when deleting non-existent proposal', async () => {
@@ -88,7 +89,7 @@ describe('PATCH /api/proposals/:id/restore', () => {
     expect(res.body.data.is_deleted).toBe(false);
 
     const listAfter = await request(app).get('/api/proposals');
-    expect(listAfter.body.data.length).toBe(1);
+    expect(listAfter.body.data.some((item: any) => item.id === id)).toBe(true);
   });
 
   it('Should return 404 when restoring non-existent proposal', async () => {
@@ -109,7 +110,7 @@ describe('PUT /api/proposals/:id', () => {
     const id = createRes.body.data.id;
     
     const updatePayload = {
-      registration_no: 'PROP-003-UPD',
+      registration_no: 'CLIENT-MUST-NOT-RENUMBER',
       date_received: '2026-08-01',
       institution: 'Inst C Updated',
       status: 'Decline'
@@ -117,7 +118,7 @@ describe('PUT /api/proposals/:id', () => {
     
     const res = await request(app).put(`/api/proposals/${id}`).send(updatePayload);
     expect(res.status).toBe(200);
-    expect(res.body.data.registration_no).toBe('PROP-003-UPD');
+    expect(res.body.data.registration_no).toBe(createRes.body.data.registration_no);
     expect(res.body.data.institution).toBe('Inst C Updated');
     expect(res.body.data.status).toBe('Decline');
   });

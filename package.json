@@ -6,10 +6,20 @@
     "node": ">=22.6.0"
   },
   "scripts": {
+    "dev": "concurrently -n \"API,WEB\" -c \"cyan,magenta\" \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:api": "pnpm --dir apps/api dev",
     "dev:web": "pnpm --dir apps/web dev",
     "test:api": "pnpm --dir apps/api test",
-    "build:web": "pnpm --dir apps/web build"
+    "typecheck:api": "pnpm --dir apps/api typecheck",
+    "typecheck:web": "pnpm --dir apps/web typecheck",
+    "db:seed": "pnpm --dir apps/api seed",
+    "build:web": "pnpm --dir apps/web build",
+    "test:unit": "pnpm --dir apps/api test:unit",
+    "test:web": "pnpm --dir apps/web test",
+    "test:integration": "pnpm --dir apps/api test:integration",
+    "test:migration:empty": "pnpm --dir apps/api db:test-migration",
+    "test:backup-restore": "pnpm --dir apps/api db:backup-restore-smoke",
+    "test:p0": "pnpm typecheck:api && pnpm typecheck:web && pnpm build:web && pnpm test:unit && pnpm test:web && pnpm test:integration && pnpm test:migration:empty && pnpm test:backup-restore"
   },
   "devDependencies": {
     "concurrently": "^10.0.5",

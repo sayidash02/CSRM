@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
-import { Edit2, ExternalLink, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
-import { SharePointLinkInput } from '../../components/ui/FileInput';
+import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
@@ -16,8 +15,6 @@ export interface Proposal {
   institution: string;
   address: string | null;
   proposal_description: string | null;
-  proposal_file: string | null;
-  assessment_file: string | null;
   status: string;
 }
 
@@ -90,7 +87,7 @@ function StatusBadge({ status }: { status: string }) {
 
 const emptyProposalDraft = {
   registration_no: "", date_received: "", institution: "", address: "",
-  proposal_description: "", proposal_file: "", assessment_file: "", status: ""
+  proposal_description: "", status: ""
 };
 
 function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultValues, onDraftChange }: {
@@ -104,7 +101,7 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
 }) {
   const [f, setF] = useState(
     initial
-      ? { registration_no: initial.registration_no ?? nextRegNo, date_received: initial.date_received ? String(initial.date_received).split('T')[0] : "", institution: initial.institution ?? "", address: initial.address ?? "", proposal_description: initial.proposal_description ?? "", proposal_file: initial.proposal_file ?? "", assessment_file: initial.assessment_file ?? "", status: initial.status ?? "" }
+      ? { registration_no: initial.registration_no ?? nextRegNo, date_received: initial.date_received ? String(initial.date_received).split('T')[0] : "", institution: initial.institution ?? "", address: initial.address ?? "", proposal_description: initial.proposal_description ?? "", status: initial.status ?? "" }
       : { ...emptyProposalDraft, registration_no: defaultValues?.registration_no || nextRegNo, ...defaultValues }
   );
   
@@ -121,17 +118,11 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
   };
   
   const handleSave = () => {
-    if (!f.registration_no || !f.date_received || !f.institution || !f.status) {
-      toast.error("Registration No, Date, Institution, dan Status wajib diisi.");
+    if (!f.date_received || !f.institution || !f.status) {
+      toast.error("Date, Institution, dan Status wajib diisi.");
       return;
     }
-    onSave({
-      ...f,
-      proposal_file: f.proposal_file || null,
-      assessment_file: f.assessment_file || null,
-      address: f.address || null,
-      proposal_description: f.proposal_description || null
-    });
+    onSave({ ...f, address: f.address || null, proposal_description: f.proposal_description || null });
     if (!initial) onDraftChange?.({ ...emptyProposalDraft });
     onClose();
   };
@@ -140,26 +131,12 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
     <Modal title={initial ? "Edit Proposal" : "Tambah Proposal"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Field label="No. Registrasi"><input type="text" value={f.registration_no} onChange={e => set("registration_no", e.target.value)} className={inputCls} /></Field>
+          <Field label="No. Registrasi" hint="Dibuat otomatis oleh server"><input type="text" value={initial ? f.registration_no : "Akan dibuat server"} readOnly className={`${inputCls} bg-muted text-muted-foreground`} /></Field>
           <Field label="Tanggal Penerimaan" required><input type="date" value={f.date_received} onChange={e => set("date_received", e.target.value)} className={inputCls} /></Field>
         </div>
         <Field label="Institusi / Pemohon" required><input type="text" value={f.institution} onChange={e => set("institution", e.target.value)} placeholder="Nama institusi atau kelompok" className={inputCls} /></Field>
         <Field label="Alamat"><input type="text" value={f.address || ''} onChange={e => set("address", e.target.value)} placeholder="Alamat lengkap" className={inputCls} /></Field>
         <Field label="Keterangan Proposal"><textarea rows={3} value={f.proposal_description || ''} onChange={e => set("proposal_description", e.target.value)} placeholder="Ringkasan isi proposal" className={`${inputCls} resize-none`} /></Field>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Link Proposal">
-            <SharePointLinkInput
-              value={f.proposal_file || null} 
-              onChange={url => set("proposal_file", url)}
-            />
-          </Field>
-          <Field label="Link Assessment">
-            <SharePointLinkInput
-              value={f.assessment_file || null} 
-              onChange={url => set("assessment_file", url)}
-            />
-          </Field>
-        </div>
         <Field label="Status">
           <select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}>
             <option value="" disabled>Pilih Status...</option>
@@ -232,7 +209,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
   
   const displayed = filtered;
-  const nextRegNo = `PRP-${activeYear || '2026'}-${String(items.length + 1).padStart(4, "0")}`;
+  const nextRegNo = "Akan dibuat server";
 
   const columns: ColumnDef<Proposal>[] = useMemo(() => [
     { header: "No. Reg", accessor: "registration_no", sortable: true, render: (p) => <span className="text-xs font-mono text-blue-600">{p.registration_no}</span> },
@@ -250,12 +227,6 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       ],
       render: (p) => <StatusBadge status={p.status} /> 
     },
-    { header: "Files", render: (p) => (
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {p.proposal_file && <span className="text-xs text-blue-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Prop</span>}
-        {p.assessment_file && <span className="text-xs text-violet-600 cursor-pointer flex items-center gap-0.5"><ExternalLink size={11} />Assess</span>}
-      </div>
-    )},
     { header: "", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

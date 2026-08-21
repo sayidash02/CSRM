@@ -109,13 +109,13 @@ describe('PUT /api/csr-projects/:id', () => {
     const updatePayload = {
       project_year: 2027,
       program: 'Program B Updated',
-      status: 'Ongoing'
+      status: 'On Going'
     };
     
     const res = await request(app).put(`/api/csr-projects/${id}`).send(updatePayload);
     expect(res.status).toBe(200);
     expect(res.body.data.program).toBe('Program B Updated');
     expect(res.body.data.project_year).toBe(2027);
-    expect(res.body.data.status).toBe('Ongoing');
+    expect(res.body.data.status).toBe('On Going');
   });
 });

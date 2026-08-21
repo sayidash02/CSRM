@@ -21,7 +21,7 @@ function Field({ label, required, hint, children }: { label: string; required?: 
 export const emptyDailyDraft = {
   activity_date: "", activity: "", stakeholder_id: "", institution_group: "", address: "",
   focus: "", location: "", cost: "", pic_ids: [] as (string | number)[], category_id: "",
-  sub_category_id: "", keterangan: "", hasil: "", kesimpulan: "", next_plan: "", description_result: "", document_link: ""
+  sub_category_id: "", keterangan: "", hasil: "", kesimpulan: "", next_plan: "", description_result: "", photos: [], pendingFiles: [] as File[]
 };
 
 export function DailyActivityForm({
@@ -54,7 +54,8 @@ export function DailyActivityForm({
           kesimpulan: initial.kesimpulan ?? "",
           next_plan: initial.next_plan ?? "",
           description_result: initial.description_result ?? "",
-          document_link: initial.document_link ?? "",
+          photos: initial.photos ?? [],
+          pendingFiles: [],
         }
       : { ...emptyDailyDraft, ...defaultValues }
   );
@@ -98,7 +99,8 @@ export function DailyActivityForm({
       kesimpulan: f.kesimpulan || null,
       next_plan: f.next_plan || null,
       description_result: legacyDescription || null,
-      document_link: f.document_link || null
+      photos: f.photos,
+      pendingFiles: f.pendingFiles,
     } as any);
     if (!initial) onDraftChange?.({ ...emptyDailyDraft });
     onClose();
@@ -180,10 +182,10 @@ export function DailyActivityForm({
 
         <div className="col-span-3">
           <PhotoGalleryAttachmentInput
-            value={f.document_link || null}
-            onChange={(url) => set("document_link", url)}
-            activityDate={f.activity_date}
-            picName={refs.pics.find(p => f.pic_ids.map(String).includes(String(p.id)))?.name}
+            value={f.photos || []}
+            onChange={(photos) => setF({ ...f, photos })}
+            activityId={initial?.id}
+            onPendingFilesChange={(files) => setF({ ...f, pendingFiles: files })}
             showToast={showToast}
           />
         </div>

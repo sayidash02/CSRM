@@ -2,16 +2,23 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 
-export const createLrp = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { program, sharepoint_link, year } = req.body;
+function readYear(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) return value >= 1900 && value <= 2100 ? value : null;
+  if (typeof value !== 'string' || !/^\d{4}$/.test(value.trim())) return null;
+  const year = Number(value);
+  return Number.isInteger(year) && year >= 1900 && year <= 2100 ? year : null;
+}
 
-  if (!program || !sharepoint_link) {
+export const createLrp = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const { program, year } = req.body;
+
+  if (!program) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
 
-  const parsedYear = parseInt(year);
-  if (!year || isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
+  const parsedYear = readYear(year);
+  if (parsedYear === null) {
     res.status(400).json({ error: 'Field year wajib diisi dan harus berupa tahun valid (1900–2100)' });
     return;
   }
@@ -19,8 +26,7 @@ export const createLrp = catchAsync(async (req: Request, res: Response): Promise
   const result = await prisma.lrp.create({
     data: {
       program,
-      year: parsedYear,
-      sharepoint_link
+      year: parsedYear
     }
   });
 
@@ -32,8 +38,8 @@ export const getLrps = catchAsync(async (req: Request, res: Response): Promise<v
   const isDeletedFilter = is_deleted === 'true';
   const where: any = { is_deleted: isDeletedFilter, is_archived: false };
   if (year) {
-    const parsedYear = parseInt(year as string);
-    if (isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
+    const parsedYear = readYear(year);
+    if (parsedYear === null) {
       res.status(400).json({ error: 'Parameter year tidak valid' });
       return;
     }
@@ -48,18 +54,18 @@ export const getLrps = catchAsync(async (req: Request, res: Response): Promise<v
 
 export const updateLrp = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { program, sharepoint_link, year } = req.body;
+  const { program, year } = req.body;
 
-  if (!program || !sharepoint_link) {
+  if (!program) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
 
-  const updateData: any = { program, sharepoint_link };
+  const updateData: any = { program };
 
   if (year !== undefined) {
-    const parsedYear = parseInt(year);
-    if (isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
+    const parsedYear = readYear(year);
+    if (parsedYear === null) {
       res.status(400).json({ error: 'Field year harus berupa tahun valid (1900–2100)' });
       return;
     }

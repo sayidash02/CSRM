@@ -63,8 +63,12 @@ export function makeStakeholderIdentity(item: {
   return makeImportIdentity('stakeholder', item.stakeholder, item.date, item.venue, item.concern_issue);
 }
 
-export function makeTopIssueIdentity(period: string, issue: string): string {
-  return makeImportIdentity('top-issue', period, issue);
+export function makeTopIssueIdentity(period: string, issue: string, year?: number): string {
+  return makeImportIdentity('top-issue', period, issue, year);
+}
+
+export function makeLrpIdentity(program: string, year: number): string {
+  return makeImportIdentity('lrp', program, year);
 }
 
 export function makeProposalFallbackIdentity(item: {

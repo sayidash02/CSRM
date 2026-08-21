@@ -1,338 +1,308 @@
--- ============================================================
--- CRMS Database Schema — v3
--- Catatan: ditulis dengan sintaks MySQL, gampang diadaptasi ke
--- PostgreSQL/lainnya (ganti AUTO_INCREMENT -> SERIAL, dst)
+-- CRMS canonical MySQL schema v3.0
 --
--- Perubahan dari v2: PIC pada Daily Activities diubah dari
--- single-value (kolom pic_id) menjadi MULTI-SELECT lewat tabel
--- pivot many-to-many (daily_activity_pics). Alasan perubahan:
--- laporan per-individu yang presisi jadi butuh setiap PIC
--- tercatat sebagai baris terpisah, bukan digabung jadi satu
--- entry string seperti "Ziya & Adji" di v2 — pendekatan lama
--- itu tidak bisa dipecah otomatis untuk dihitung per orang.
--- Tabel `pics` sendiri TIDAK berubah strukturnya dari v2.
--- ============================================================
-
--- ============================================================
--- LOOKUP TABLES (dipakai bersama di beberapa/semua modul)
--- ============================================================
-
--- PIC bukan daftar tetap yang di-manage terpisah oleh admin —
--- pegawai bisa menambah PIC baru sendiri langsung dari form saat
--- input data (self-service "add new"), bukan cuma pilih dari
--- daftar yang sudah ada. Tabel lookup tetap dipertahankan (bukan
--- kolom teks bebas di tiap baris modul) supaya penulisan nama
--- tetap konsisten antar baris — data historis menunjukkan nama
--- yang sama sering ditulis beda-beda kalau dibiarkan teks bebas
--- (mis. "Ziya" vs "Ziyadu", "Fadhil" vs "Pak. Fadhil" vs "Pak.FADHIL").
--- Sejak v3: kalau 1 aktivitas melibatkan beberapa orang sekaligus,
--- pegawai memilih beberapa PIC langsung dari daftar (multi-select),
--- disimpan lewat tabel pivot daily_activity_pics di bawah — bukan
--- lagi lewat entry gabungan custom seperti "Ziya & Adji".
-CREATE TABLE pics (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL UNIQUE,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE categories (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(50) NOT NULL UNIQUE   -- 'Stakeholder Engagement', 'Paper Work'
-);
-
--- Catatan: di Excel yang berjalan sekarang, dropdown Sub Category
--- TIDAK difilter berdasarkan Category yang dipilih (satu daftar
--- flat yang sama selalu tampil, dikonfirmasi lewat pengecekan
--- data validation Excel-nya) — jadi FE/BE TIDAK perlu memvalidasi
--- kecocokan pasangan category_id-sub_category_id. Tetap dipisah
--- jadi 2 tabel karena field-nya memang dropdown (bukan teks bebas),
--- bukan karena ada aturan dependency yang harus dijaga.
-CREATE TABLE sub_categories (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  category_id BIGINT NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  FOREIGN KEY (category_id) REFERENCES categories(id),
-  UNIQUE (category_id, name)
-);
-CREATE INDEX idx_sub_categories_category ON sub_categories(category_id);
-
--- Seed data awal untuk category/sub_category sesuai spec
-INSERT INTO categories (name) VALUES ('Stakeholder Engagement'), ('Paper Work');
-
-INSERT INTO sub_categories (category_id, name)
-SELECT id, sub FROM categories,
-  (SELECT 'Donasi' AS sub UNION ALL SELECT 'Internal Meeting' UNION ALL
-   SELECT 'Issue' UNION ALL SELECT 'Issue & Grievance' UNION ALL
-   SELECT 'Kehumasan' UNION ALL SELECT 'Project CSR' UNION ALL
-   SELECT 'Security' UNION ALL SELECT 'Support Project') AS s
-WHERE categories.name = 'Stakeholder Engagement';
-
-INSERT INTO sub_categories (category_id, name)
-SELECT id, 'Data Processing (Olah Data)' FROM categories WHERE name = 'Paper Work';
-
-
--- ============================================================
--- 1. STAKEHOLDER ENGAGEMENT
--- ============================================================
-CREATE TABLE stakeholder_engagement (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  stakeholder VARCHAR(255),
-  date DATE,
-  venue VARCHAR(255),
-  concern_issue TEXT,
-  document_link TEXT,             -- kolom "Docs"
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_stakeholder_deleted ON stakeholder_engagement(is_deleted);
-
-
--- ============================================================
--- 2. DAILY ACTIVITIES
--- ============================================================
--- Sejak v3: PIC dipindah dari kolom pic_id (single value) ke
--- relasi many-to-many lewat tabel daily_activity_pics di bawah,
--- supaya satu aktivitas bisa punya lebih dari satu PIC sekaligus
--- (multi-select), masing-masing sebagai baris terpisah yang bisa
--- dihitung/dilaporkan per individu.
-CREATE TABLE daily_activities (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  activity_date DATE NOT NULL,
-  activity VARCHAR(255) NOT NULL,
-  institution_group VARCHAR(255),
-  address VARCHAR(255),
-  focus VARCHAR(255),                     -- kolom "Fokus": teks bebas, tidak ada dropdown di Excel asli
-  location VARCHAR(255),
-  cost DECIMAL(15,2),                     -- kolom "Biaya"
-  keterangan TEXT,                         -- kolom Keterangan pada workbook perusahaan
-  hasil TEXT,                              -- kolom Hasil pada workbook perusahaan
-  kesimpulan TEXT,                         -- kolom Kesimpulan pada format MOM / Daily Notes
-  next_plan TEXT,                          -- kolom Next Plan pada format MOM / Daily Notes
-  description_result TEXT,                -- legacy compatibility value; diturunkan dari keterangan + hasil
-  document_link TEXT,             -- kolom "link" — cuma 1 kolom link di Excel, bukan 2
-  category_id BIGINT NOT NULL,
-  sub_category_id BIGINT NOT NULL,
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (category_id) REFERENCES categories(id),
-  FOREIGN KEY (sub_category_id) REFERENCES sub_categories(id)
-);
-CREATE INDEX idx_daily_activities_date ON daily_activities(activity_date);
-CREATE INDEX idx_daily_activities_deleted ON daily_activities(is_deleted);
-CREATE INDEX idx_daily_activities_category ON daily_activities(category_id);
-CREATE INDEX idx_daily_activities_sub_category ON daily_activities(sub_category_id);
-
--- Tabel pivot: satu daily_activity bisa punya banyak PIC, dan
--- satu PIC bisa terlibat di banyak daily_activity (many-to-many).
--- composite primary key (activity_id, pic_id) otomatis mencegah
--- PIC yang sama tercatat dobel pada aktivitas yang sama.
-CREATE TABLE daily_activity_pics (
-  activity_id BIGINT NOT NULL,
-  pic_id BIGINT NOT NULL,
-  PRIMARY KEY (activity_id, pic_id),
-  FOREIGN KEY (activity_id) REFERENCES daily_activities(id) ON DELETE CASCADE,
-  FOREIGN KEY (pic_id) REFERENCES pics(id)
-);
-CREATE INDEX idx_daily_activity_pics_pic ON daily_activity_pics(pic_id);
--- Index untuk activity_id sudah otomatis ter-cover oleh composite
--- primary key di atas (activity_id sebagai kolom pertama).
-
-
--- ============================================================
--- 3. TOP ISSUES
--- ============================================================
--- Excel aslinya: No, Periode, Issue, Deskripsi, Follow Up, Docs,
--- Supporting Docs, Next Plan — tidak ada kolom Risk Level atau PIC.
-CREATE TABLE top_issues (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  period VARCHAR(50) NOT NULL,             -- format perlu disepakati, misal "April 2026 : Tanggal 13-17"
-  issue VARCHAR(255) NOT NULL,
-  description TEXT,
-  follow_up TEXT,
-  main_document TEXT,
-  supporting_document TEXT,
-  next_plan TEXT,
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_top_issues_deleted ON top_issues(is_deleted);
-
-
--- ============================================================
--- 4. PROPOSALS
--- ============================================================
--- Excel aslinya: NO, NO REGISTRASI, TANGGAL PENERIMAAN PROPOSAL,
--- INSTANSI, ALAMAT, KETERANGAN PROPOSAL, PROPOSAL, ASSESSMENT,
--- STATUS — tidak ada kolom PIC.
-CREATE TABLE proposals (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  registration_no VARCHAR(50) NOT NULL UNIQUE,   -- auto-generate di backend, misal PRP-2026-0001
-  date_received DATE NOT NULL,
-  institution VARCHAR(255) NOT NULL,
-  address VARCHAR(255),
-  proposal_description TEXT,
-  proposal_file TEXT,
-  assessment_file TEXT,
-  status VARCHAR(20) NOT NULL
-    CHECK (status IN ('Accept','Decline')),
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_proposals_status ON proposals(status);
-CREATE INDEX idx_proposals_deleted ON proposals(is_deleted);
-
-
--- ============================================================
--- 5. GRIEVANCE
--- ============================================================
--- Kolom sudah cocok dengan Excel sejak v1 (tidak ada PIC di
--- sheet Grievance 2026, jadi memang sengaja tidak ada pic_id).
--- Catatan: tidak ada kolom "tanggal selesai" yang eksplisit di
--- Excel — kemungkinan selama ini cuma disebut di teks bebas
--- (kolom Status/Remarks). completion_date dipertahankan sebagai
--- field terstruktur baru; perlu dikonfirmasi ke pegawai supaya
--- benar-benar diisi konsisten di sistem baru.
-CREATE TABLE grievance (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  register_no VARCHAR(50) NOT NULL UNIQUE,   -- auto-generate di backend, misal GRV-2026-0001
-  log_date DATE NOT NULL,
-  complainant_name VARCHAR(255) NOT NULL,
-  address VARCHAR(255),
-  phone VARCHAR(30),
-  category VARCHAR(100),
-  significance VARCHAR(20) NOT NULL CHECK (significance IN ('Low','Medium','High','Critical')),
-  description TEXT,
-  location VARCHAR(255),
-  investigation TEXT,
-  resolution TEXT,
-  feedback TEXT,
-  status VARCHAR(20) NOT NULL DEFAULT 'Open'
-    CHECK (status IN ('Open','On Progress','Resolved','Closed')),
-  completion_date DATE,
-  remarks TEXT,
-  supporting_files TEXT,
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_grievance_status ON grievance(status);
-CREATE INDEX idx_grievance_significance ON grievance(significance);
-CREATE INDEX idx_grievance_deleted ON grievance(is_deleted);
-
-
--- ============================================================
--- 6. CSR PROJECTS
--- ============================================================
--- Kolom sudah cocok dengan Excel sejak v1 (tidak ada PIC di
--- sheet CSR Project 2026, jadi memang sengaja tidak ada pic_id).
--- Catatan: kolom "REALISASI" di Excel masih kosong semua di
--- contoh yang tersedia — belum bisa dipastikan angka (cocok utk
--- DECIMAL) atau teks naratif. `budget` di bawah ini asumsi
--- sementara, perlu dikonfirmasi ke pegawai sebelum go-live.
-CREATE TABLE csr_projects (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  project_year YEAR NOT NULL,
-  program VARCHAR(255) NOT NULL,
-  activity VARCHAR(255),
-  type_of_activity VARCHAR(100),
-  location VARCHAR(255),
-  target_beneficiaries VARCHAR(255),
-  objective TEXT,
-  status VARCHAR(20) NOT NULL DEFAULT 'Planning'
-    CHECK (status IN ('Planning','On Going','Completed','Cancelled')),
-  budget DECIMAL(15,2),                    -- pemetaan dari kolom "REALISASI" — perlu konfirmasi tipe data asli
-  implementation_period VARCHAR(100),      -- teks bebas, misal "Jan - Mar 2026"
-  documentation_image TEXT,
-  document TEXT,
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_csr_year ON csr_projects(project_year);
-CREATE INDEX idx_csr_status ON csr_projects(status);
-CREATE INDEX idx_csr_deleted ON csr_projects(is_deleted);
-
-
--- ============================================================
--- 7. LRP (Livelihood Restoration Program)
--- ============================================================
--- Modul baru — belum ada sheet-nya sama sekali di Excel yang
--- berjalan sekarang. Sesuai keterangan pegawai: "seluruh program
--- community development / pemulihan mata pencaharian masyarakat
--- sekitar perusahaan, kolomnya hanya hyperlink SharePoint yang
--- mengarah ke file2 docx/pdf/gambar dsb." Sengaja dibuat SANGAT
--- minim. `program` ditambahkan sebagai satu-satunya field di
--- luar permintaan literal pegawai — supaya tiap baris di daftar
--- masih bisa dibedakan/dicari (baris isinya cuma link mentah
--- tanpa label akan sulit ditelusuri). Kalau ternyata pegawai
--- benar-benar tidak mau ada field ini juga, tinggal dihapus.
-CREATE TABLE lrp (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  program VARCHAR(255) NOT NULL,          -- nama/judul program, supaya baris bisa dibedakan
-  sharepoint_link TEXT NOT NULL,  -- link ke folder/file SharePoint (docx, pdf, gambar, dst)
-  is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-CREATE INDEX idx_lrp_deleted ON lrp(is_deleted);
-
-
--- ============================================================
--- SYNC LOG (untuk tombol "Export & Sync")
--- ============================================================
-CREATE TABLE sync_log (
-  id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  synced_at TIMESTAMP NOT NULL,
-  status VARCHAR(20) NOT NULL CHECK (status IN ('SUCCESS','FAILED')),
-  error_message TEXT,                       -- diisi kalau status = FAILED
-  file_url VARCHAR(500),                    -- link Excel di SharePoint hasil sync ini
-  triggered_by VARCHAR(100)                 -- untuk future-proof kalau nanti multi-user
-);
--- Query "ada berapa data belum di-sync" dari aplikasi:
---   SELECT last successful synced_at, lalu COUNT(*) WHERE created_at > synced_at
---   di ketujuh tabel modul (gabungkan dgn UNION ALL atau loop per tabel)
-
-
--- ============================================================
--- CONTOH QUERY — Daily Activities dengan multi-PIC
--- ============================================================
-
--- Ambil daftar aktivitas beserta semua nama PIC-nya digabung
--- jadi satu string (mirip tampilan lama), pakai GROUP_CONCAT
--- (MySQL) / STRING_AGG (PostgreSQL):
+-- Source of truth for a fresh database. CRMS stores structured data and Daily
+-- Activity photos in MySQL. SharePoint is an external manual handoff and has no
+-- URL, credential, sync, or upload field in this schema.
 --
--- SELECT
---   da.id,
---   da.activity_date,
---   da.activity,
---   GROUP_CONCAT(p.name ORDER BY p.name SEPARATOR ', ') AS pic_names
--- FROM daily_activities da
--- LEFT JOIN daily_activity_pics dap ON dap.activity_id = da.id
--- LEFT JOIN pics p ON p.id = dap.pic_id
--- WHERE da.is_deleted = FALSE
--- GROUP BY da.id;
+-- Existing databases must be changed through Prisma migrations. Do not run
+-- this file against a database that already contains user data.
 
--- Laporan jumlah aktivitas per PIC (per individu, akurat karena
--- setiap PIC punya baris sendiri di tabel pivot):
---
--- SELECT p.name, COUNT(*) AS total_aktivitas
--- FROM daily_activity_pics dap
--- JOIN pics p ON p.id = dap.pic_id
--- JOIN daily_activities da ON da.id = dap.activity_id
--- WHERE da.is_deleted = FALSE
--- GROUP BY p.name
--- ORDER BY total_aktivitas DESC;
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
 
--- Insert 1 aktivitas dengan 2 PIC sekaligus:
---
--- INSERT INTO daily_activities (activity_date, activity, category_id, sub_category_id)
--- VALUES ('2026-04-13', 'Contoh aktivitas', 1, 1);
--- SET @new_id = LAST_INSERT_ID();
--- INSERT INTO daily_activity_pics (activity_id, pic_id) VALUES
---   (@new_id, 3),  -- id PIC 'Ziya'
---   (@new_id, 7);  -- id PIC 'Adji'
+CREATE TABLE `users` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `username` VARCHAR(100) NOT NULL,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(20) NOT NULL DEFAULT 'USER',
+  `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+  `last_login_at` DATETIME(3) DEFAULT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `users_username_key` (`username`),
+  KEY `users_role_idx` (`role`),
+  KEY `users_is_active_idx` (`is_active`),
+  CONSTRAINT `users_role_check` CHECK (`role` IN ('USER', 'ADMIN'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `pics` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `pics_name_key` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `categories` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(50) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `categories_name_key` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `sub_categories` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `category_id` BIGINT NOT NULL,
+  `name` VARCHAR(100) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `sub_categories_category_id_name_key` (`category_id`, `name`),
+  CONSTRAINT `sub_categories_category_id_fkey`
+    FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `daily_activities` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `activity_date` DATE NOT NULL,
+  `activity` VARCHAR(255) NOT NULL,
+  `institution_group` VARCHAR(255) DEFAULT NULL,
+  `address` VARCHAR(255) DEFAULT NULL,
+  `focus` VARCHAR(255) DEFAULT NULL,
+  `location` VARCHAR(255) DEFAULT NULL,
+  `description_result` TEXT DEFAULT NULL,
+  `keterangan` TEXT DEFAULT NULL,
+  `hasil` TEXT DEFAULT NULL,
+  `kesimpulan` TEXT DEFAULT NULL,
+  `next_plan` TEXT DEFAULT NULL,
+  `category_id` BIGINT NOT NULL,
+  `sub_category_id` BIGINT NOT NULL,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  `cost` DECIMAL(15,2) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `daily_activities_activity_date_idx` (`activity_date`),
+  KEY `daily_activities_is_deleted_idx` (`is_deleted`),
+  KEY `daily_activities_is_archived_idx` (`is_archived`),
+  KEY `daily_activities_category_id_fkey` (`category_id`),
+  KEY `daily_activities_sub_category_id_fkey` (`sub_category_id`),
+  CONSTRAINT `daily_activities_category_id_fkey`
+    FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `daily_activities_sub_category_id_fkey`
+    FOREIGN KEY (`sub_category_id`) REFERENCES `sub_categories` (`id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `daily_activity_pics` (
+  `activity_id` BIGINT NOT NULL,
+  `pic_id` BIGINT NOT NULL,
+  PRIMARY KEY (`activity_id`, `pic_id`),
+  KEY `daily_activity_pics_pic_id_idx` (`pic_id`),
+  CONSTRAINT `daily_activity_pics_activity_id_fkey`
+    FOREIGN KEY (`activity_id`) REFERENCES `daily_activities` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `daily_activity_pics_pic_id_fkey`
+    FOREIGN KEY (`pic_id`) REFERENCES `pics` (`id`)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `daily_activity_photos` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `activity_id` BIGINT NOT NULL,
+  `photo_data` MEDIUMBLOB NOT NULL,
+  `mime_type` VARCHAR(100) NOT NULL,
+  `original_name` VARCHAR(255) NOT NULL,
+  `size_bytes` INT NOT NULL,
+  `sha256` CHAR(64) NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `daily_activity_photos_activity_sha256_key` (`activity_id`, `sha256`),
+  KEY `daily_activity_photos_activity_order_idx` (`activity_id`, `sort_order`),
+  KEY `daily_activity_photos_is_deleted_idx` (`is_deleted`),
+  CONSTRAINT `daily_activity_photos_activity_id_fkey`
+    FOREIGN KEY (`activity_id`) REFERENCES `daily_activities` (`id`)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `daily_activity_photos_size_check`
+    CHECK (`size_bytes` > 0 AND `size_bytes` <= 5242880)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `stakeholder_engagement` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `stakeholder` VARCHAR(255) DEFAULT NULL,
+  `date` DATE DEFAULT NULL,
+  `venue` VARCHAR(255) DEFAULT NULL,
+  `concern_issue` TEXT DEFAULT NULL,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `stakeholder_engagement_is_deleted_idx` (`is_deleted`),
+  KEY `stakeholder_engagement_is_archived_idx` (`is_archived`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `top_issues` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `period` VARCHAR(50) NOT NULL,
+  `year` INT NOT NULL DEFAULT 2026,
+  `issue` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `follow_up` TEXT DEFAULT NULL,
+  `next_plan` TEXT DEFAULT NULL,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `top_issues_is_deleted_idx` (`is_deleted`),
+  KEY `top_issues_is_archived_idx` (`is_archived`),
+  KEY `top_issues_year_idx` (`year`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `proposals` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `registration_no` VARCHAR(50) NOT NULL,
+  `date_received` DATE NOT NULL,
+  `institution` VARCHAR(255) NOT NULL,
+  `address` VARCHAR(255) DEFAULT NULL,
+  `proposal_description` TEXT DEFAULT NULL,
+  `status` VARCHAR(20) NOT NULL,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `proposals_registration_no_key` (`registration_no`),
+  KEY `proposals_status_idx` (`status`),
+  KEY `proposals_is_deleted_idx` (`is_deleted`),
+  KEY `proposals_is_archived_idx` (`is_archived`),
+  CONSTRAINT `proposals_status_check`
+    CHECK (`status` IN ('Accept', 'Decline'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `csr_projects` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `project_year` YEAR NOT NULL,
+  `program` VARCHAR(255) NOT NULL,
+  `activity` VARCHAR(255) DEFAULT NULL,
+  `type_of_activity` VARCHAR(100) DEFAULT NULL,
+  `location` VARCHAR(255) DEFAULT NULL,
+  `target_beneficiaries` VARCHAR(255) DEFAULT NULL,
+  `objective` TEXT DEFAULT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'Planning',
+  `budget` DECIMAL(15,2) DEFAULT NULL,
+  `implementation_period` VARCHAR(100) DEFAULT NULL,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `csr_projects_project_year_idx` (`project_year`),
+  KEY `csr_projects_status_idx` (`status`),
+  KEY `csr_projects_is_deleted_idx` (`is_deleted`),
+  KEY `csr_projects_is_archived_idx` (`is_archived`),
+  CONSTRAINT `csr_projects_status_check`
+    CHECK (`status` IN ('Planning', 'On Going', 'Completed', 'Cancelled'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `grievance` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `register_no` VARCHAR(50) NOT NULL,
+  `log_date` DATE NOT NULL,
+  `complainant_name` VARCHAR(255) NOT NULL,
+  `address` VARCHAR(255) DEFAULT NULL,
+  `phone` VARCHAR(30) DEFAULT NULL,
+  `category` VARCHAR(100) DEFAULT NULL,
+  `significance` VARCHAR(20) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `location` VARCHAR(255) DEFAULT NULL,
+  `investigation` TEXT DEFAULT NULL,
+  `resolution` TEXT DEFAULT NULL,
+  `feedback` TEXT DEFAULT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'Open',
+  `completion_date` DATE DEFAULT NULL,
+  `remarks` TEXT DEFAULT NULL,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `grievance_register_no_key` (`register_no`),
+  KEY `grievance_status_idx` (`status`),
+  KEY `grievance_significance_idx` (`significance`),
+  KEY `grievance_is_deleted_idx` (`is_deleted`),
+  KEY `grievance_is_archived_idx` (`is_archived`),
+  CONSTRAINT `grievance_significance_check`
+    CHECK (`significance` IN ('Low', 'Medium', 'High', 'Critical')),
+  CONSTRAINT `grievance_status_check`
+    CHECK (`status` IN ('Open', 'On Progress', 'Resolved', 'Closed'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `lrp` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `program` VARCHAR(255) NOT NULL,
+  `year` INT NOT NULL DEFAULT 2026,
+  `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE,
+  `is_archived` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `lrp_is_deleted_idx` (`is_deleted`),
+  KEY `lrp_is_archived_idx` (`is_archived`),
+  KEY `lrp_year_idx` (`year`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `export_logs` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `exported_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `scope_year` INT DEFAULT NULL,
+  `format` VARCHAR(10) NOT NULL,
+  `status` VARCHAR(20) NOT NULL,
+  `error_message` TEXT DEFAULT NULL,
+  `actor_user_id` BIGINT DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `export_logs_exported_at_idx` (`exported_at`),
+  KEY `export_logs_status_idx` (`status`),
+  KEY `export_logs_actor_user_id_idx` (`actor_user_id`),
+  CONSTRAINT `export_logs_actor_user_id_fkey`
+    FOREIGN KEY (`actor_user_id`) REFERENCES `users` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT `export_logs_status_check`
+    CHECK (`status` IN ('SUCCESS', 'FAILED'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `audit_logs` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `entity_type` VARCHAR(50) NOT NULL,
+  `entity_id` BIGINT NOT NULL,
+  `action` VARCHAR(20) NOT NULL,
+  `changes` JSON DEFAULT NULL,
+  `actor_user_id` BIGINT DEFAULT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (`id`),
+  KEY `audit_logs_entity_type_entity_id_idx` (`entity_type`, `entity_id`),
+  KEY `audit_logs_created_at_idx` (`created_at`),
+  KEY `audit_logs_actor_user_id_idx` (`actor_user_id`),
+  CONSTRAINT `audit_logs_actor_user_id_fkey`
+    FOREIGN KEY (`actor_user_id`) REFERENCES `users` (`id`)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- Canonical master data. The Prisma seed performs the same idempotent inserts.
+INSERT IGNORE INTO `pics` (`name`, `is_active`) VALUES ('Ziya Ramadhani', TRUE);
+INSERT IGNORE INTO `categories` (`name`)
+  VALUES ('Stakeholder Engagement'), ('Paper Work');
+
+INSERT IGNORE INTO `sub_categories` (`category_id`, `name`)
+SELECT c.`id`, s.`name`
+FROM `categories` c
+JOIN (
+  SELECT 'Stakeholder Engagement' AS category_name, 'Donasi' AS name UNION ALL
+  SELECT 'Stakeholder Engagement', 'Internal Meeting' UNION ALL
+  SELECT 'Stakeholder Engagement', 'Issue' UNION ALL
+  SELECT 'Stakeholder Engagement', 'Issue & Grievance' UNION ALL
+  SELECT 'Stakeholder Engagement', 'Kehumasan' UNION ALL
+  SELECT 'Stakeholder Engagement', 'Project CSR' UNION ALL
+  SELECT 'Stakeholder Engagement', 'Security' UNION ALL
+  SELECT 'Stakeholder Engagement', 'Support Project' UNION ALL
+  SELECT 'Paper Work', 'Data Processing (Olah Data)'
+) s ON s.category_name = c.`name`;

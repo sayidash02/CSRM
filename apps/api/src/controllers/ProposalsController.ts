@@ -1,33 +1,41 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
+import { generateRegistrationNumber } from '../services/RegistrationNumberService';
+
+const PROPOSAL_STATUSES = new Set(['Accept', 'Decline']);
+
+function parseRequiredDate(value: unknown): Date | null {
+  if (typeof value !== 'string' && !(value instanceof Date)) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
 
 export const createProposal = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const {
-    registration_no,
+    registration_no: _registrationNo,
     date_received,
     institution,
     address,
     proposal_description,
-    proposal_file,
-    assessment_file,
     status
   } = req.body;
 
-  if (!registration_no || !date_received || !institution || !status) {
+  const receivedDate = parseRequiredDate(date_received);
+  if (!receivedDate || typeof institution !== 'string' || !institution.trim() || !PROPOSAL_STATUSES.has(status)) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
 
+  const registrationNo = await generateRegistrationNumber('proposal', receivedDate);
+
   const result = await prisma.proposals.create({
     data: {
-      registration_no,
-      date_received: new Date(date_received),
+      registration_no: registrationNo,
+      date_received: receivedDate,
       institution,
       address,
       proposal_description,
-      proposal_file,
-      assessment_file,
       status
     }
   });
@@ -56,17 +64,16 @@ export const getProposals = catchAsync(async (req: Request, res: Response): Prom
 export const updateProposal = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const {
-    registration_no,
+    registration_no: _registrationNo,
     date_received,
     institution,
     address,
     proposal_description,
-    proposal_file,
-    assessment_file,
     status
   } = req.body;
 
-  if (!registration_no || !date_received || !institution || !status) {
+  const receivedDate = parseRequiredDate(date_received);
+  if (!receivedDate || typeof institution !== 'string' || !institution.trim() || !PROPOSAL_STATUSES.has(status)) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
@@ -74,13 +81,10 @@ export const updateProposal = catchAsync(async (req: Request, res: Response): Pr
   const result = await prisma.proposals.update({
     where: { id: BigInt(id as string) },
     data: {
-      registration_no,
-      date_received: new Date(date_received),
+      date_received: receivedDate,
       institution,
       address,
       proposal_description,
-      proposal_file,
-      assessment_file,
       status
     }
   });

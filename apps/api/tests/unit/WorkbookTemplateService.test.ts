@@ -28,7 +28,7 @@ describe('sanitizeWorkbookForTemplate', () => {
 
     const lrp = workbook.getWorksheet('LRP');
     expect(lrp).toBeDefined();
-    expect(lrp!.getRow(1).values).toEqual([, 'No', 'Program', 'SharePoint Link']);
+    expect(lrp!.getRow(1).values).toEqual([, 'No', 'Program', 'Year']);
     expect(lrp!.getRow(2).values).toEqual([]);
   });
 

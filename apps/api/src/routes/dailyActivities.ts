@@ -9,7 +9,9 @@ import {
   importCommitExcel,
   exportSingleMom,
   exportMomWorkbook,
-  uploadPhoto
+  uploadPhoto,
+  getPhoto,
+  deletePhoto
 } from '../controllers/DailyActivitiesController';
 
 const router = Router();
@@ -17,6 +19,8 @@ router.post('/upload-photo', uploadPhoto);
 router.post('/import/parse', importParseExcel);
 router.post('/import/commit', importCommitExcel);
 router.get('/export/mom-workbook', exportMomWorkbook);
+router.get('/:id/photos/:photoId', getPhoto);
+router.delete('/:id/photos/:photoId', deletePhoto);
 router.get('/:id/mom', exportSingleMom);
 router.post('/', createDailyActivity);
 router.get('/', getDailyActivities);
@@ -25,4 +29,3 @@ router.patch('/:id/restore', restoreDailyActivity);
 router.put('/:id', updateDailyActivity);
 
 export default router;
-

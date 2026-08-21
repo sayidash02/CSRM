@@ -26,7 +26,7 @@ function addLrpSheet(workbook: ExcelJS.Workbook): void {
   worksheet.columns = [
     { header: LRP_SHEET_HEADERS[0], key: 'no', width: 8 },
     { header: LRP_SHEET_HEADERS[1], key: 'program', width: 42 },
-    { header: LRP_SHEET_HEADERS[2], key: 'sharepoint_link', width: 64 },
+    { header: LRP_SHEET_HEADERS[2], key: 'year', width: 12 },
   ];
 
   const header = worksheet.getRow(1);

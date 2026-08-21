@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
-import { Edit2, ExternalLink, Trash2, RotateCcw, History, FileSpreadsheet, Image } from "lucide-react";
-import { parseSharePointLinks } from "../../components/ui/sharePointLinks";
+import { Edit2, Trash2, RotateCcw, History, FileSpreadsheet, FileText, Image } from "lucide-react";
 import { DataTable, ColumnDef } from "../../components/ui/DataTable";
 import { Pagination } from "../../components/ui/Pagination";
 import type { DailyActivity } from "./DailyActivitiesModule";
@@ -13,7 +12,7 @@ interface DailyActivityTableProps {
   onDelete: (activity: DailyActivity) => void;
   onRestore: (activity: DailyActivity) => void;
   onHistory: (id: string | number) => void;
-  onDownloadSingleMom: (id: string | number, activity: string, date: string) => void;
+  onDownloadSingleMom: (id: string | number, activity: string, date: string, format?: 'xlsx' | 'docx' | 'pdf') => void;
   page: number;
   limit: number;
   onPageChange: (page: number) => void;
@@ -54,29 +53,12 @@ export function DailyActivityTable({
       header: "Dokumentasi",
       className: "text-center whitespace-nowrap",
       render: (a) => {
-        const links = parseSharePointLinks(a.document_link);
-        if (links.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
-        if (links.length === 1) {
-          const l = links[0];
-          const isImg = /\.(jpg|jpeg|png|webp|gif)$/i.test(l) || l.startsWith('/uploads/');
-          const fullUrl = l.startsWith('http') ? l : `http://localhost:3000${l.replace(/^file:\/\//, '').replace(/^\/+/, '/')}`;
-          return (
-            <a
-              href={fullUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-100 transition-colors"
-              title={l}
-            >
-              {isImg ? <Image size={12} className="text-blue-600" /> : <ExternalLink size={12} />}
-              <span>1 File</span>
-            </a>
-          );
-        }
+        const photos = a.photos || [];
+        if (photos.length === 0) return <span className="text-muted-foreground text-xs">—</span>;
         return (
-          <div className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200" title={`${links.length} file dokumentasi terlampir`}>
+          <div className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200" title={`${photos.length} foto dokumentasi terlampir`}>
             <Image size={12} className="text-emerald-600" />
-            <span>{links.length} Foto</span>
+            <span>{photos.length} Foto</span>
           </div>
         );
       }
@@ -85,14 +67,32 @@ export function DailyActivityTable({
       header: "Daily Notes (MOM)",
       className: "text-center whitespace-nowrap",
       render: (a) => (
-        <button
-          onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date)}
-          title={`Unduh lembar Daily Notes / Notulensi MOM: ${a.activity}`}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 rounded-md border border-emerald-300 transition-all shadow-2xs active:scale-95"
-        >
-          <FileSpreadsheet size={13} className="text-emerald-600" />
-          <span>Unduh MOM</span>
-        </button>
+        <div className="inline-flex items-center gap-1">
+          <button
+            onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date, 'xlsx')}
+            title={`Unduh MOM Excel: ${a.activity}`}
+            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 rounded-md border border-emerald-300 transition-all shadow-2xs active:scale-95"
+          >
+            <FileSpreadsheet size={13} className="text-emerald-600" />
+            <span>Excel</span>
+          </button>
+          <button
+            onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date, 'docx')}
+            title={`Unduh MOM Word: ${a.activity}`}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 hover:text-blue-800 rounded-md border border-blue-300 transition-all shadow-2xs active:scale-95"
+          >
+            <FileText size={12} className="text-blue-600" />
+            <span>Word</span>
+          </button>
+          <button
+            onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date, 'pdf')}
+            title={`Unduh MOM PDF: ${a.activity}`}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 hover:text-red-800 rounded-md border border-red-300 transition-all shadow-2xs active:scale-95"
+          >
+            <FileText size={12} className="text-red-600" />
+            <span>PDF</span>
+          </button>
+        </div>
       )
     },
     { header: "Aksi", render: (a) => showDeleted ? (

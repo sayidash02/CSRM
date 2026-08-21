@@ -1,43 +1,41 @@
 import { PrismaClient } from '@prisma/client';
-import { generateDiff } from '../utils/diffHelper';
+import { generateDiff } from '../utils/diffHelper.ts';
 
 const basePrisma = new PrismaClient();
 
+/**
+ * Updates that are visible to users must not succeed without their audit row.
+ * The mutation and audit insert intentionally share one database transaction;
+ * an audit failure therefore rolls the business mutation back as well.
+ */
 const prisma = basePrisma.$extends({
   query: {
     $allModels: {
       async update({ model, operation, args, query }) {
-        if (model === 'audit_logs' || model === 'sync_log') {
-          return query(args); // Skip technical tables
-        }
+        if (model === 'audit_logs' || model === 'export_logs' || model === 'users') return query(args);
 
-        // 1. Ambil data lama
-        const oldData = await (basePrisma as any)[model].findUnique({
-          where: args.where,
-        });
+        return basePrisma.$transaction(async (tx) => {
+          const txModel = (tx as any)[model];
+          const oldData = await txModel.findUnique({ where: args.where });
+          const result = await txModel.update(args);
 
-        // 2. Eksekusi query update utama
-        const result = await query(args);
+          if (!oldData || !result) return result;
 
-        // 3. Catat audit log secara asinkron (terisolasi)
-        if (oldData && result) {
           const action = (args.data as any).is_deleted === true ? 'DELETE' : 'UPDATE';
           const diff = action === 'UPDATE' ? generateDiff(oldData, result) : null;
-
           if (action === 'DELETE' || diff !== null) {
-            // Gunakan fire-and-forget atau await ringan
-            (basePrisma as any).audit_logs.create({
+            await tx.audit_logs.create({
               data: {
                 entity_type: model,
                 entity_id: (result as any).id || BigInt(0),
                 action,
                 changes: diff ? (diff as any) : null,
-              }
-            }).catch((err: any) => console.error('Failed to write audit log:', err));
+              },
+            });
           }
-        }
 
-        return result;
+          return result;
+        });
       },
     },
   },

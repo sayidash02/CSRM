@@ -21,7 +21,9 @@ export interface DailyActivityExportRow {
   keterangan?: string | null;
   hasil?: string | null;
   description_result?: string | null;
+  /** Legacy workbook input only; never emitted as a hyperlink. */
   document_link?: string | null;
+  photos?: Array<{ id: bigint; original_name?: string | null }>;
   daily_activity_pics?: Array<{ pic?: { name?: string | null } | null }>;
 }
 
@@ -34,6 +36,7 @@ export interface StakeholderExportRow {
 }
 
 export interface TopIssueExportRow {
+  year?: number | string | null;
   period?: string | null;
   issue?: string | null;
   description?: string | null;
@@ -88,8 +91,8 @@ export interface GrievanceExportRow {
 }
 
 export interface LrpExportRow {
+  year?: number | string | null;
   program?: string | null;
-  sharepoint_link?: string | null;
 }
 
 export interface WorkbookExportData {
@@ -116,21 +119,6 @@ const numberValue = (value: number | string | null | undefined): number | null =
   if (value === undefined || value === null || value === '') return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-};
-
-const hyperlinkValue = (value: string | null | undefined): ExcelJS.CellValue => {
-  const url = text(value).trim();
-  if (!url) return null;
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'https:' && parsed.hostname
-      ? { text: url, hyperlink: url }
-      : url;
-  } catch {
-    // Preserve a legacy value as plain text rather than emitting an unsafe or
-    // malformed Excel hyperlink.
-    return url;
-  }
 };
 
 const cloneRowStyle = (source: ExcelJS.Row, target: ExcelJS.Row, columnCount: number): void => {
@@ -218,7 +206,12 @@ export class WorkbookExportService {
     const [dailyActivities, stakeholders, topIssues, proposals, csrProjects, grievances, lrps] = await Promise.all([
       prisma.daily_activities.findMany({
         where: dateWhere('activity_date', year),
-        include: { daily_activity_pics: { include: { pic: true } }, category: true, sub_category: true },
+        include: {
+          daily_activity_pics: { include: { pic: true } },
+          category: true,
+          sub_category: true,
+          photos: { where: { is_deleted: false }, select: { id: true, original_name: true } }
+        },
       }),
       prisma.stakeholder_engagement.findMany({ where: dateWhere('date', year) }),
       prisma.top_issues.findMany({ where: numericYearWhere('year', year) }),
@@ -244,6 +237,10 @@ export class WorkbookExportService {
     for (const worksheet of workbook.worksheets) {
       const contract = getWorkbookSheetContract(worksheet.name, worksheet.state);
       if (contract && !result.has(contract.module)) {
+        if (contract.module === 'lrp' || contract.module === 'topIssues') {
+          const headerRow = worksheet.getRow(contract.headerRows[contract.headerRows.length - 1] ?? 1);
+          contract.headers.forEach((header, index) => { headerRow.getCell(index + 1).value = header; });
+        }
         result.set(contract.module, { worksheet, contract });
       }
     }
@@ -253,7 +250,7 @@ export class WorkbookExportService {
       worksheet.columns = [
         { header: LRP_SHEET_HEADERS[0], key: 'no', width: 8 },
         { header: LRP_SHEET_HEADERS[1], key: 'program', width: 42 },
-        { header: LRP_SHEET_HEADERS[2], key: 'sharepoint_link', width: 64 },
+        { header: LRP_SHEET_HEADERS[2], key: 'year', width: 12 },
       ];
       const contract = getWorkbookSheetContract('LRP');
       if (contract) result.set('lrp', { worksheet, contract });
@@ -282,7 +279,7 @@ export class WorkbookExportService {
       numberValue(row.cost),
       text(row.keterangan ?? row.description_result),
       text(row.hasil),
-      hyperlinkValue(row.document_link),
+      row.photos?.length ? `${row.photos.length} foto dokumentasi` : '',
       row.daily_activity_pics?.map((item) => text(item.pic?.name)).filter(Boolean).join(', ') ?? '',
     ], styleSource));
     setAutoFilter(worksheet, contract, rows.length);
@@ -295,7 +292,7 @@ export class WorkbookExportService {
       text(row.stakeholder),
       [dateValue(row.date), text(row.venue)].filter(Boolean).map((value) => value instanceof Date ? value.toISOString().slice(0, 10) : value).join('\n'),
       text(row.concern_issue),
-      hyperlinkValue(row.document_link),
+      '',
     ], styleSource));
     setAutoFilter(worksheet, contract, rows.length);
   }
@@ -308,9 +305,10 @@ export class WorkbookExportService {
       text(row.issue),
       text(row.description),
       text(row.follow_up),
-      hyperlinkValue(row.main_document),
-      hyperlinkValue(row.supporting_document),
+      '',
+      '',
       text(row.next_plan),
+      numberValue(row.year),
     ], styleSource));
     setAutoFilter(worksheet, contract, rows.length);
   }
@@ -324,8 +322,8 @@ export class WorkbookExportService {
       text(row.institution),
       text(row.address),
       text(row.proposal_description),
-      hyperlinkValue(row.proposal_file),
-      hyperlinkValue(row.assessment_file),
+      '',
+      '',
       text(row.status),
     ], styleSource));
     setAutoFilter(worksheet, contract, rows.length);
@@ -345,8 +343,8 @@ export class WorkbookExportService {
       text(row.status),
       numberValue(row.budget),
       text(row.implementation_period),
-      hyperlinkValue(row.documentation_image),
-      hyperlinkValue(row.document),
+      '',
+      '',
     ], styleSource));
     setAutoFilter(worksheet, contract, rows.length);
   }
@@ -368,7 +366,7 @@ export class WorkbookExportService {
       text(row.feedback),
       text(row.status),
       text(row.remarks),
-      hyperlinkValue(row.supporting_files),
+      '',
     ], styleSource));
     setAutoFilter(worksheet, contract, rows.length);
   }
@@ -378,7 +376,7 @@ export class WorkbookExportService {
     rows.forEach((row, index) => writeRow(worksheet, contract.dataStartRow + index, [
       index + 1,
       text(row.program),
-      hyperlinkValue(row.sharepoint_link),
+      numberValue(row.year),
     ], styleSource));
     setAutoFilter(worksheet, contract, rows.length);
   }
