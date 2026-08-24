@@ -225,7 +225,6 @@ function GrievanceForm({
   initial,
   onClose,
   onSave,
-  nextRegNo,
   showToast,
   defaultValues,
   onDraftChange,
@@ -234,7 +233,6 @@ function GrievanceForm({
   initial?: Grievance;
   onClose: () => void;
   onSave: (d: Omit<Grievance, "id">, pendingFiles?: File[]) => void;
-  nextRegNo: string;
   showToast?: (msg: string, type?: "success"|"error"|"info") => void;
   defaultValues?: typeof emptyGrievanceDraft;
   onDraftChange?: (v: typeof emptyGrievanceDraft) => void;
@@ -346,6 +344,7 @@ function GrievanceForm({
   const handleSave = () => {
     const missing: string[] = (
       [
+        [!f.register_no?.trim(), "No. Registrasi"],
         [!f.log_date, "Tanggal Masuk"],
         [!f.complainant_name, "Nama Pelapor"],
         [!f.category, "Kategori"],
@@ -363,7 +362,7 @@ function GrievanceForm({
 
     onSave(
       {
-        register_no: initial ? f.register_no : (nextRegNo.includes("akan") ? "" : nextRegNo),
+        register_no: f.register_no.trim(),
         log_date: f.log_date,
         complainant_name: f.complainant_name,
         address: f.address,
@@ -389,8 +388,14 @@ function GrievanceForm({
     <Modal title={initial ? "Edit Data Pengaduan (Grievance)" : "Registrasi Pengaduan Baru (Grievance)"} onClose={onClose} size="lg">
       <div className="space-y-4">
         <div className="grid grid-cols-3 gap-3">
-          <Field label="No. Registrasi">
-            <input type="text" value={initial ? f.register_no : nextRegNo} disabled className={`${inputCls} opacity-60 font-mono`} />
+          <Field label="No. Registrasi" required hint="Contoh: 001/JSP/Grievance/09/03/2026">
+            <input 
+              type="text" 
+              value={f.register_no} 
+              onChange={e => set("register_no", e.target.value)} 
+              placeholder="Masukkan nomor registrasi..." 
+              className={`${inputCls} font-mono`} 
+            />
           </Field>
           <Field label="Tanggal Masuk" required>
             <input type="date" value={f.log_date} onChange={e => set("log_date", e.target.value)} className={inputCls} />
@@ -632,7 +637,6 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
 
   const displayed = filtered;
-  const nextRegNo = "Akan dibuat server";
 
   const columns: ColumnDef<Grievance>[] = useMemo(() => [
     { 
@@ -741,8 +745,8 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
           <DataTable columns={columns} data={displayed} />
         </div>
       </div>
-      {showForm && <GrievanceForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
-      {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} showToast={showToast} onPhotosUpdated={fetchData} />}
+      {showForm && <GrievanceForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} onPhotosUpdated={fetchData} />}
       {toDelete && <DeleteConfirm label={`${toDelete.register_no} — ${toDelete.complainant_name}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.complainant_name); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={toRestore.complainant_name || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
       {viewingPhotos && <PhotoLightboxModal title={viewingPhotos.title} photos={viewingPhotos.photos} initialIndex={viewingPhotos.initialIndex} onClose={() => setViewingPhotos(null)} />}

@@ -47,7 +47,7 @@ function parseRequiredDate(value: unknown): Date | null {
 
 export const createGrievance = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { 
-    register_no: _registerNo,
+    register_no,
     log_date, 
     complainant_name, 
     address, 
@@ -70,10 +70,20 @@ export const createGrievance = catchAsync(async (req: Request, res: Response): P
     return;
   }
 
-  const registerNo = await generateRegistrationNumber('grievance', logDate);
+  const userRegisterNo = typeof register_no === 'string' && register_no.trim() ? register_no.trim() : null;
+  const finalRegisterNo = userRegisterNo || await generateRegistrationNumber('grievance', logDate);
+
+  const existing = await prisma.grievance.findFirst({
+    where: { register_no: finalRegisterNo, is_deleted: false }
+  });
+  if (existing) {
+    res.status(409).json({ error: `No. Registrasi '${finalRegisterNo}' sudah digunakan.` });
+    return;
+  }
+
   const result = await prisma.grievance.create({
     data: {
-      register_no: registerNo,
+      register_no: finalRegisterNo,
       log_date: logDate,
       complainant_name,
       address,
@@ -128,7 +138,7 @@ export const getGrievances = catchAsync(async (req: Request, res: Response): Pro
 export const updateGrievance = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { 
-    register_no: _registerNo,
+    register_no,
     log_date, 
     complainant_name, 
     address, 
@@ -151,9 +161,22 @@ export const updateGrievance = catchAsync(async (req: Request, res: Response): P
     return;
   }
 
+  const targetId = BigInt(id as string);
+  if (typeof register_no === 'string' && register_no.trim()) {
+    const trimmed = register_no.trim();
+    const conflict = await prisma.grievance.findFirst({
+      where: { register_no: trimmed, id: { not: targetId }, is_deleted: false }
+    });
+    if (conflict) {
+      res.status(409).json({ error: `No. Registrasi '${trimmed}' sudah digunakan oleh pengaduan lain.` });
+      return;
+    }
+  }
+
   const result = await prisma.grievance.update({
-    where: { id: BigInt(id as string) },
+    where: { id: targetId },
     data: {
+      ...(typeof register_no === 'string' && register_no.trim() ? { register_no: register_no.trim() } : {}),
       log_date: logDate,
       complainant_name,
       address,
