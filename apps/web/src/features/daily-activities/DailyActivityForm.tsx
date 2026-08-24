@@ -3,6 +3,7 @@ import { FileSpreadsheet, Settings, Eye } from "lucide-react";
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { Modal } from "../../components/ui/Modal";
 import { PicManagementModal } from "./PicManagementModal";
+import { CategoryManagementModal } from "./CategoryManagementModal";
 import { PhotoGalleryAttachmentInput } from "./PhotoGalleryAttachmentInput";
 import type { DailyActivity } from "./DailyActivitiesModule";
 
@@ -35,6 +36,7 @@ export function DailyActivityForm({
   onViewMom?: () => void;
 }) {
   const [showPicManager, setShowPicManager] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   const [f, setF] = useState(
     initial
@@ -118,8 +120,26 @@ export function DailyActivityForm({
         <Field label="Fokus / Topik Kegiatan"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Topik / Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
 
-        <Field label="Kategori" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}><option value="">Pilih Kategori</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
-        <Field label="Sub Kategori" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Kategori</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
+        <div className="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Field label="Kategori" required>
+            <div className="flex gap-2">
+              <select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}>
+                <option value="">Pilih Kategori</option>
+                {refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <button type="button" onClick={() => setShowCategoryManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0 cursor-pointer" title="Kelola Kategori & Sub Kategori"><Settings size={14} /></button>
+            </div>
+          </Field>
+          <Field label="Sub Kategori" required>
+            <div className="flex gap-2">
+              <select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}>
+                <option value="">Pilih Sub Kategori</option>
+                {refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <button type="button" onClick={() => setShowCategoryManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0 cursor-pointer" title="Kelola Kategori & Sub Kategori"><Settings size={14} /></button>
+            </div>
+          </Field>
+        </div>
 
         <div className="col-span-3">
           <Field label="PIC (Tim Internal CSR)" required>
@@ -251,6 +271,7 @@ export function DailyActivityForm({
         </div>
       </div>
       {showPicManager && <PicManagementModal onClose={() => { setShowPicManager(false); onRefreshReferences(); }} showToast={showToast} />}
+      {showCategoryManager && <CategoryManagementModal onClose={() => { setShowCategoryManager(false); onRefreshReferences(); }} showToast={showToast} onUpdated={onRefreshReferences} />}
     </Modal>
   );
 }

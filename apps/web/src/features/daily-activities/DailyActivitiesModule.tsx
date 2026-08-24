@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Search, Plus, Download, FileSpreadsheet, FileText, ChevronDown, X, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { Search, Plus, Download, FileSpreadsheet, FileText, ChevronDown, X, ChevronLeft, ChevronRight, Image as ImageIcon, Layers } from "lucide-react";
 import { ImportExcelModal } from "./ImportExcelModal";
 import { DailyActivityForm, emptyDailyDraft } from "./DailyActivityForm";
 import { PhotoGalleryAttachmentInput } from "./PhotoGalleryAttachmentInput";
@@ -10,6 +10,7 @@ import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter";
 import { AuditHistoryDrawer } from "../../components/ui/AuditHistoryDrawer";
 import { MomPreviewModal } from "./MomPreviewModal";
+import { CategoryManagementModal } from "./CategoryManagementModal";
 
 function PhotoLightboxModal({ 
   title, 
@@ -141,12 +142,11 @@ const formatDate = (d?: string | Date | null) => {
   const dateObj = new Date(d);
   if (isNaN(dateObj.getTime())) return "-";
   return dateObj.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-};
-
-function TopBar({ 
+};function TopBar({ 
   title, subtitle, onAdd, addLabel, showSearch, searchValue, onSearch, 
   onExportRekap, onExportMomWorkbook, onExportMomDocx, onExportMomPdf, onExportFullWorkbook,
-  children, categories, catFilter, onCatFilterChange, subCategories, subCatFilter, onSubCatFilterChange, showDeleted 
+  children, categories, catFilter, onCatFilterChange, subCategories, subCatFilter, onSubCatFilterChange, showDeleted,
+  onManageCategories
 }: {
   title: string; subtitle?: string; onAdd?: () => void; addLabel?: string;
   showSearch?: boolean; searchValue?: string; onSearch?: (v: string) => void;
@@ -159,6 +159,7 @@ function TopBar({
   categories?: any[]; catFilter?: string; onCatFilterChange?: (v: string) => void;
   subCategories?: any[]; subCatFilter?: string; onSubCatFilterChange?: (v: string) => void;
   showDeleted?: boolean;
+  onManageCategories?: () => void;
 }) {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -235,7 +236,7 @@ function TopBar({
           </button>
 
           {showExportMenu && (
-            <div className="absolute right-0 mt-1 w-64 bg-white border border-line rounded-xl shadow-xl z-50 py-1.5 text-[12px] animate-in fade-in-50 zoom-in-95">
+            <div className="absolute right-0 mt-1.5 w-64 bg-white border border-line rounded-xl shadow-lg z-50 py-1.5 text-xs animate-in fade-in-50 zoom-in-95">
               <button
                 onClick={() => { setShowExportMenu(false); onExportRekap?.(); }}
                 className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors cursor-pointer"
@@ -295,6 +296,17 @@ function TopBar({
           )}
         </div>
 
+        {onManageCategories && (
+          <button
+            onClick={onManageCategories}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"
+            title="Kelola & Kustomisasi Kategori dan Sub Kategori"
+          >
+            <Layers size={13} className="text-forest" />
+            <span>Kelola Kategori</span>
+          </button>
+        )}
+
         {!showDeleted && onAdd && (
           <button
             onClick={onAdd}
@@ -325,6 +337,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const [showForm, setShowForm] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<DailyActivity | null>(null);
   const [toDelete, setToDelete] = useState<DailyActivity | null>(null);
@@ -570,6 +583,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         subCategories={references.sub_categories}
         subCatFilter={subCatFilter}
         onSubCatFilterChange={(val) => { setSubCatFilter(val); setPage(1); }}
+        onManageCategories={() => setShowCategoryManager(true)}
       >
         <div className="flex items-center gap-2 mr-2">
           <span className="text-sm font-medium text-foreground">Data Terhapus:</span>
@@ -686,6 +700,14 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
           onClose={() => setHistoryDrawerOpen(false)}
           entityType="daily_activities"
           entityId={selectedHistoryId}
+        />
+      )}
+
+      {showCategoryManager && (
+        <CategoryManagementModal
+          onClose={() => setShowCategoryManager(false)}
+          showToast={showToast}
+          onUpdated={fetchReferences}
         />
       )}
     </div>
