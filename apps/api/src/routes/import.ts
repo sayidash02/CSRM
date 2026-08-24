@@ -42,5 +42,6 @@ router.post('/preview', (req: Request, res: Response, next: NextFunction) => {
 }, previewImport);
 
 router.post('/confirm', confirmImport);
+router.post('/commit', confirmImport);
 
 export default router;

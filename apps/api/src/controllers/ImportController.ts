@@ -16,7 +16,7 @@ export const previewImport = catchAsync(async (req: Request, res: Response): Pro
 
     res.status(200).json({
       success: true,
-      data: { ...result, fileId },
+      data: { ...result, fileId, fileToken: fileId },
     });
   } catch (error) {
     await fs.rm(req.file.path, { force: true }).catch(() => undefined);
@@ -25,7 +25,7 @@ export const previewImport = catchAsync(async (req: Request, res: Response): Pro
 });
 
 export const confirmImport = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { fileId } = req.body || {};
+  const fileId = req.body?.fileId || req.body?.fileToken;
 
   if (typeof fileId !== 'string' || !fileId) {
     res.status(400).json({ error: 'Missing fileId' });
@@ -48,6 +48,7 @@ export const confirmImport = catchAsync(async (req: Request, res: Response): Pro
   res.status(200).json({
     success: true,
     message: 'Import completed successfully',
-    count: result.count
+    count: result.count,
+    data: { totalImported: result.count }
   });
 });

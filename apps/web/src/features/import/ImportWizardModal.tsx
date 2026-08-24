@@ -35,7 +35,8 @@ interface PreviewData {
     pics: string[];
     categories: string[];
   };
-  fileToken: string;
+  fileToken?: string;
+  fileId?: string;
 }
 
 interface ImportWizardModalProps {
@@ -96,17 +97,23 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
   };
 
   const handleConfirmImport = async () => {
-    if (!previewData?.fileToken) return;
+    const token = previewData?.fileToken || previewData?.fileId;
+    if (!token) {
+      setErrorMessage('Token file import tidak ditemukan. Silakan upload ulang file Excel.');
+      return;
+    }
 
     setIsConfirming(true);
     setErrorMessage(null);
 
     try {
-      const response = await apiClient.post<{ data: { totalImported: number } }>('/import/commit', {
-        fileToken: previewData.fileToken,
+      const response = await apiClient.post<{ data?: { totalImported?: number }; count?: number }>('/import/confirm', {
+        fileId: token,
+        fileToken: token,
       });
 
-      setImportedCount(response.data.data.totalImported);
+      const total = response.data.data?.totalImported ?? response.data.count ?? 0;
+      setImportedCount(total);
       setStep('success');
     } catch (err: any) {
       console.error(err);
