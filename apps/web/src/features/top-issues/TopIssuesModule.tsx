@@ -191,7 +191,16 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
 
   const handleAdd = async (d: Omit<TopIssue, "id">) => {
     try {
-      const res = await apiClient.post('/top-issues', d);
+      const yearMatch = d.period?.match(/\b(19\d\d|20\d\d|2100)\b/)?.[1];
+      const fallbackYear = activeYear && activeYear !== "All" && !isNaN(parseInt(activeYear))
+        ? parseInt(activeYear)
+        : (yearMatch ? parseInt(yearMatch) : new Date().getFullYear());
+
+      const payload = {
+        ...d,
+        year: (d as any).year ?? fallbackYear
+      };
+      const res = await apiClient.post('/top-issues', payload);
       if (res.data?.data) {
         setItems(prev => [res.data.data, ...prev]);
       } else {
@@ -206,7 +215,16 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
 
   const handleEdit = async (id: string | number, d: Omit<TopIssue, "id">) => {
     try {
-      const res = await apiClient.put(`/top-issues/${id}`, d);
+      const yearMatch = d.period?.match(/\b(19\d\d|20\d\d|2100)\b/)?.[1];
+      const fallbackYear = activeYear && activeYear !== "All" && !isNaN(parseInt(activeYear))
+        ? parseInt(activeYear)
+        : (yearMatch ? parseInt(yearMatch) : new Date().getFullYear());
+
+      const payload = {
+        ...d,
+        year: (d as any).year ?? fallbackYear
+      };
+      const res = await apiClient.put(`/top-issues/${id}`, payload);
       setItems(prev => prev.map(i => i.id === id ? res.data.data : i));
       showToast(`Isu '${d.issue}' berhasil diperbarui`, "success");
     } catch (e: any) {

@@ -10,10 +10,23 @@ export const createTopIssue = catchAsync(async (req: Request, res: Response): Pr
     return;
   }
 
-  const parsedYear = parseInt(year);
-  if (!year || isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
-    res.status(400).json({ error: 'Field year wajib diisi dan harus berupa tahun valid (1900–2100)' });
-    return;
+  let parsedYear: number | null = null;
+  if (year !== undefined && year !== null && year !== '') {
+    const p = parseInt(String(year), 10);
+    if (!isNaN(p) && p >= 1900 && p <= 2100) {
+      parsedYear = p;
+    }
+  }
+
+  if (parsedYear === null && typeof period === 'string') {
+    const match = period.match(/\b(19\d\d|20\d\d|2100)\b/);
+    if (match && match[1]) {
+      parsedYear = parseInt(match[1], 10);
+    }
+  }
+
+  if (parsedYear === null) {
+    parsedYear = new Date().getFullYear();
   }
 
   const result = await prisma.top_issues.create({
@@ -75,12 +88,20 @@ export const updateTopIssue = catchAsync(async (req: Request, res: Response): Pr
     next_plan
   };
 
-  if (year !== undefined) {
-    const parsedYear = parseInt(year);
-    if (isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100) {
-      res.status(400).json({ error: 'Field year harus berupa tahun valid (1900–2100)' });
-      return;
+  let parsedYear: number | null = null;
+  if (year !== undefined && year !== null && year !== '') {
+    const p = parseInt(String(year), 10);
+    if (!isNaN(p) && p >= 1900 && p <= 2100) {
+      parsedYear = p;
     }
+  } else if (typeof period === 'string') {
+    const match = period.match(/\b(19\d\d|20\d\d|2100)\b/);
+    if (match && match[1]) {
+      parsedYear = parseInt(match[1], 10);
+    }
+  }
+
+  if (parsedYear !== null) {
     updateData.year = parsedYear;
   }
 
