@@ -374,9 +374,10 @@ export class ExcelImportService {
           const issue = issueCol !== -1 ? truncStr(extractCellString(row.getCell(issueCol).value), 255) : '';
           if (!issue) continue;
 
-          const period = truncStr(extractCellString(row.getCell(periodCol).value), 50);
+          const rawPeriod = periodCol !== -1 ? extractCellString(row.getCell(periodCol).value).trim() : '';
+          const period = truncStr(rawPeriod || '2024', 50);
           const rawYear = yearCol !== -1 ? row.getCell(yearCol).value : null;
-          const year = validationYear(rawYear) ?? validationYear(period) ?? 2026;
+          const year = validationYear(rawYear) ?? validationYear(period) ?? 2024;
           const description = descCol !== -1 ? (extractCellString(row.getCell(descCol).value) || null) : null;
           const follow_up = folCol !== -1 ? (extractCellString(row.getCell(folCol).value) || null) : null;
           const main_document = mainDocCol !== -1 ? extractAttachmentValue(row.getCell(mainDocCol).value) : null;

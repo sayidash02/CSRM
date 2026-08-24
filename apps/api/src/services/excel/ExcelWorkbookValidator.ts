@@ -290,22 +290,22 @@ export function normalizeProposalStatus(val: string | null | undefined): string 
 
 export function normalizeGrievanceSignificance(val: string | null | undefined): string {
   if (!val) return 'Low';
-  const lower = val.trim().toLowerCase();
-  if (lower === 'low' || lower === 'rendah') return 'Low';
-  if (lower === 'medium' || lower === 'sedang') return 'Medium';
-  if (lower === 'high' || lower === 'tinggi') return 'High';
-  if (lower === 'critical' || lower === 'kritis') return 'Critical';
-  return val.trim() || 'Low';
+  const lower = val.trim().toLowerCase().replace(/[,]/g, '');
+  if (lower.includes('critical') || lower.includes('kritis')) return 'Critical';
+  if (lower.includes('high') || lower.includes('tinggi')) return 'High';
+  if (lower.includes('medium') || lower.includes('sedang')) return 'Medium';
+  if (lower.includes('low') || lower.includes('rendah') || lower.includes('not genuine')) return 'Low';
+  return 'Low';
 }
 
 export function normalizeGrievanceStatus(val: string | null | undefined): string {
   if (!val) return 'Open';
   const lower = val.trim().toLowerCase();
-  if (lower === 'open' || lower === 'buka') return 'Open';
-  if (lower === 'on progress' || lower === 'progress' || lower === 'proses') return 'On Progress';
-  if (lower === 'resolved' || lower === 'selesai') return 'Resolved';
-  if (lower === 'closed' || lower === 'tutup') return 'Closed';
-  return val.trim() || 'Open';
+  if (lower.includes('resolved') || lower.includes('selesai')) return 'Resolved';
+  if (lower.includes('closed') || lower.includes('tutup')) return 'Closed';
+  if (lower.includes('progress') || lower.includes('on going') || lower.includes('proses')) return 'On Progress';
+  if (lower.includes('open') || lower.includes('buka')) return 'Open';
+  return 'Open';
 }
 
 export function normalizePicName(val: string): string {
@@ -417,7 +417,8 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
           }
         }
         const cost = rowValue(row, columns, ['biaya', 'cost', 'anggaran']);
-        if (cost && parseCellNumber(cost) === null) add(module, rowNumber, 'INVALID_NUMBER', `Biaya '${cost}' bukan berupa angka`);
+        const isCostEmpty = ['-', '—', 'n/a', 'na', 'nil', 'none', ''].includes(cost.trim().toLowerCase());
+        if (cost && !isCostEmpty && parseCellNumber(cost) === null) add(module, rowNumber, 'INVALID_NUMBER', `Biaya '${cost}' bukan berupa angka`);
         continue;
       }
 
@@ -430,10 +431,10 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
       }
 
       if (module === 'topIssues') {
-        const period = rowValue(row, columns, ['periode', 'period']);
+        const period = rowValue(row, columns, ['periode', 'period']) || '2024';
         const issue = rowValue(row, columns, ['top issue', 'issue', 'isu', 'masalah']);
         const rawYear = rowValue(row, columns, ['year', 'tahun']);
-        const year = validationYear(rawYear) ?? validationYear(period) ?? 2026;
+        const year = validationYear(rawYear) ?? validationYear(period) ?? 2024;
         if (!period) add(module, rowNumber, 'REQUIRED_PERIOD', 'Periode wajib diisi');
         if (!issue) add(module, rowNumber, 'REQUIRED_ISSUE', 'Issue wajib diisi');
         const identity = validationSignature(period, issue, year);
@@ -497,7 +498,14 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
         const identity = registration ? validationSignature('grievance-register', registration) : validationSignature('grievance-fallback', date, complainant, rowValue(row, columns, ['alamat', 'address']), rowValue(row, columns, ['phone', 'no hp', 'telepon', 'no telepon']), rowValue(row, columns, ['kategori', 'category']), rowValue(row, columns, ['deskripsi', 'description', 'keluhan', 'rincian']), rowValue(row, columns, ['location', 'lokasi']));
         // Supporting files may be backfilled on re-import and are not part of
         // the conflict signature.
-        const signature = validationSignature(validationDate(date), complainant, rowValue(row, columns, ['alamat', 'address']), rowValue(row, columns, ['phone', 'no hp', 'telepon', 'no telepon']), rowValue(row, columns, ['kategori', 'category']), significance, rowValue(row, columns, ['deskripsi', 'description', 'keluhan', 'rincian']), rowValue(row, columns, ['location', 'lokasi']), status || 'Open');
+        const signature = validationSignature(
+          validationDate(date),
+          complainant,
+          rowValue(row, columns, ['kategori', 'category']),
+          significance,
+          rowValue(row, columns, ['deskripsi', 'description', 'keluhan', 'rincian']),
+          status || 'Open'
+        );
         const existing = registration
           ? grievances.find((item) => item.register_no.trim().toLowerCase() === registration.toLowerCase())
           : grievances.find((item) => validationSignature('grievance-fallback', item.log_date, item.complainant_name, item.address, item.phone, item.category, item.description, item.location) === identity);

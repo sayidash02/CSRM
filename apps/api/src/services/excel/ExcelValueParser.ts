@@ -20,6 +20,14 @@ export function parseCellDate(val: any): Date | null {
   let str = extractCellString(val);
   if (!str) return null;
 
+  // If multi-line (e.g. "Senin, 15/04/2024\nDepan Housing"), take the first line
+  if (str.includes('\n')) {
+    str = str.split('\n')[0].trim();
+  }
+
+  // Remove Indonesian day names at start (e.g., "Senin, ", "Selasa ", etc.)
+  str = str.replace(/^(senin|selasa|rabu|kamis|jumat|jum'at|sabtu|minggu)[,\s]*/i, '').trim();
+
   // Normalize Indonesian month names & abbreviations to English
   const monthMap: Record<string, string> = {
     'agt': 'Aug', 'agustus': 'August',
@@ -33,6 +41,31 @@ export function parseCellDate(val: any): Date | null {
 
   for (const [idName, enName] of Object.entries(monthMap)) {
     str = str.replace(new RegExp(`\\b${idName}\\b`, 'gi'), enName);
+  }
+
+  // Try parsing ISO YYYY-MM-DD or YYYY/MM/DD (e.g., "2026-08-15", "2024/04/15")
+  const yyyymmddMatch = str.match(/\b(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})\b/);
+  if (yyyymmddMatch) {
+    const year = parseInt(yyyymmddMatch[1], 10);
+    const month = parseInt(yyyymmddMatch[2], 10) - 1;
+    const day = parseInt(yyyymmddMatch[3], 10);
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const d = new Date(Date.UTC(year, month, day));
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // Try parsing DD/MM/YYYY or DD-MM-YYYY (e.g., "15/04/2024", "15-04-2024", "15/4/2024")
+  const ddmmyyyyMatch = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+  if (ddmmyyyyMatch) {
+    const day = parseInt(ddmmyyyyMatch[1], 10);
+    const month = parseInt(ddmmyyyyMatch[2], 10) - 1;
+    let year = parseInt(ddmmyyyyMatch[3], 10);
+    if (year < 100) year += 2000;
+    if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
+      const d = new Date(Date.UTC(year, month, day));
+      if (!isNaN(d.getTime())) return d;
+    }
   }
 
   const tryParseStr = (s: string) => {
@@ -68,13 +101,15 @@ export function parseCellNumber(val: any): number | null {
     const num = Number(val.result);
     return isNaN(num) ? null : num;
   }
-  let str = extractCellString(val).toLowerCase();
+  let str = extractCellString(val).toLowerCase().trim();
+  if (['-', '—', 'n/a', 'na', 'nil', 'none', ''].includes(str)) return null;
+
   str = str.replace(/(rp|idr|\s)/g, '');
   str = str.replace(/[,.]00$/, '');
   str = str.replace(/[.,]/g, '');
   str = str.replace(/[^0-9-]/g, '');
 
-  if (!str) return null;
+  if (!str || str === '-') return null;
   const num = Number(str);
   return isNaN(num) ? null : num;
 }
