@@ -1,5 +1,24 @@
-import { FormEvent, ReactNode, createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { TreePine, Lock, User, AlertCircle } from 'lucide-react';
+import {
+  FormEvent,
+  KeyboardEvent,
+  ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import {
+  TreePine,
+  Lock,
+  User,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  ShieldCheck,
+  Loader2,
+} from 'lucide-react';
 import { apiClient } from '../lib/apiClient';
 
 export type AuthUser = { username: string; role: 'USER' | 'ADMIN' };
@@ -17,6 +36,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [capsLockOn, setCapsLockOn] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,11 +62,13 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!username.trim() || !password.trim()) return;
+
     setError('');
     setLoading(true);
     try {
       const response = await apiClient.post<{ data: { authenticated: true; user: AuthUser } }>('/auth/login', {
-        username,
+        username: username.trim(),
         password,
       });
       setPassword('');
@@ -53,18 +76,29 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setStatus('authenticated');
     } catch (requestError: any) {
       const message = requestError?.response?.data?.error?.message;
-      setError(message || 'Login gagal. Periksa credential yang diberikan IT.');
+      setError(message || 'Login gagal. Periksa kembali username dan kata sandi Anda.');
     } finally {
       setLoading(false);
     }
   };
 
+  const handlePasswordKeyEvents = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (typeof e.getModifierState === 'function') {
+      setCapsLockOn(e.getModifierState('CapsLock'));
+    }
+  };
+
   if (status === 'checking') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-paper text-[13px] text-slate">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-7 h-7 rounded-full border-2 border-forest/30 border-t-forest animate-spin" />
-          <span>Memeriksa sesi login…</span>
+      <div className="flex min-h-screen items-center justify-center bg-paper px-4 text-ink">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-forest text-white shadow-md">
+            <TreePine size={28} className="animate-pulse" />
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate">
+            <Loader2 size={15} className="animate-spin text-forest" />
+            <span>Memeriksa sesi login CRMS...</span>
+          </div>
         </div>
       </div>
     );
@@ -72,87 +106,138 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (status === 'unauthenticated') {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-paper px-4 py-8 text-ink">
-        <div className="w-full max-w-md rounded-2xl border border-line bg-white p-8 shadow-[0_4px_24px_rgba(20,32,27,0.06)]">
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-paper px-4 py-10 text-ink selection:bg-forest/20 selection:text-ink">
+        {/* Subtle Ambient Background Elements */}
+        <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-forest/8 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-ochre/8 blur-3xl" />
+
+        {/* Login Card */}
+        <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-line bg-white p-7 shadow-[0_16px_40px_-12px_rgba(20,32,27,0.08)] sm:p-8 transition-all">
           {/* Brand Header */}
-          <div className="mb-6 text-center">
-            <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-xl bg-forest text-white shadow-inner">
+          <div className="mb-7 text-center">
+            <div className="mx-auto mb-3.5 grid h-12 w-12 place-items-center rounded-xl bg-forest text-white shadow-sm ring-4 ring-forest/10">
               <TreePine size={24} />
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-slate-2">
-              Community Relations Management System
+            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-forest">
+              Community Relations
             </div>
             <h1 className="mt-1 text-xl font-bold tracking-tight text-ink">Masuk ke CRMS</h1>
-            <p className="mt-2 text-[13px] text-slate leading-relaxed">
-              Silakan masukkan username dan kata sandi akun operasional CRMS Anda.
+            <p className="mt-1.5 text-[13px] text-slate leading-relaxed">
+              Masukkan kredensial akun operasional CRS Anda untuk melanjutkan.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Username Input */}
             <div>
-              <label htmlFor="crms-auth-username" className="mb-1.5 block text-[13px] font-medium text-ink">
+              <label
+                htmlFor="crms-auth-username"
+                className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink"
+              >
                 Username
               </label>
               <div className="relative">
-                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-2" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-2">
+                  <User size={16} />
+                </div>
                 <input
                   id="crms-auth-username"
                   type="text"
                   autoComplete="username"
+                  autoFocus
+                  spellCheck={false}
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
                   placeholder="Masukkan username"
-                  className="w-full rounded-lg border border-line bg-paper/50 py-2.5 pl-9 pr-3 text-[13px] text-ink outline-none transition-colors focus:border-forest focus:bg-white focus:ring-2 focus:ring-forest/15"
+                  className="w-full rounded-lg border border-line bg-paper/40 py-2.5 pl-9 pr-3.5 text-sm text-ink placeholder:text-slate-2 outline-none transition-all focus:border-forest focus:bg-white focus:ring-2 focus:ring-forest/15"
                   required
                 />
               </div>
             </div>
 
+            {/* Password Input */}
             <div>
-              <label htmlFor="crms-auth-password" className="mb-1.5 block text-[13px] font-medium text-ink">
-                Kata Sandi
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label
+                  htmlFor="crms-auth-password"
+                  className="block text-xs font-semibold uppercase tracking-wider text-ink"
+                >
+                  Kata Sandi
+                </label>
+                {capsLockOn && (
+                  <span className="font-mono text-[10px] font-semibold text-ochre uppercase tracking-wider">
+                    Caps Lock Aktif
+                  </span>
+                )}
+              </div>
               <div className="relative">
-                <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-2" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-2">
+                  <Lock size={16} />
+                </div>
                 <input
                   id="crms-auth-password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-line bg-paper/50 py-2.5 pl-9 pr-3 text-[13px] text-ink outline-none transition-colors focus:border-forest focus:bg-white focus:ring-2 focus:ring-forest/15"
+                  onKeyDown={handlePasswordKeyEvents}
+                  onKeyUp={handlePasswordKeyEvents}
+                  placeholder="Masukkan kata sandi"
+                  className="w-full rounded-lg border border-line bg-paper/40 py-2.5 pl-9 pr-10 text-sm text-ink placeholder:text-slate-2 outline-none transition-all focus:border-forest focus:bg-white focus:ring-2 focus:ring-forest/15"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-2 hover:text-ink transition-colors cursor-pointer"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </div>
 
+            {/* Error Message */}
             {error && (
-              <div className="flex items-center gap-2 rounded-lg bg-clay/10 border border-clay/20 p-3 text-[12px] text-clay">
-                <AlertCircle size={15} className="shrink-0" />
-                <span>{error}</span>
+              <div
+                role="alert"
+                className="flex items-start gap-2.5 rounded-lg border border-clay/30 bg-clay/10 p-3 text-xs text-clay"
+              >
+                <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                <span className="leading-relaxed">{error}</span>
               </div>
             )}
 
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-forest py-2.5 text-[13px] font-medium text-white shadow-xs transition-colors hover:bg-forest-2 disabled:opacity-50"
+              disabled={loading || !username.trim() || !password.trim()}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-forest py-2.5 px-4 text-sm font-medium text-white shadow-sm transition-all hover:bg-forest-2 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <>
-                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  <span>Memproses...</span>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Memverifikasi Akun...</span>
                 </>
               ) : (
-                'Masuk'
+                <>
+                  <span>Masuk ke Sistem</span>
+                  <ArrowRight size={15} />
+                </>
               )}
             </button>
-
-            <p className="mt-4 text-center text-[11px] text-slate-2 leading-relaxed">
-              Tidak ada pendaftaran mandiri. Jika membutuhkan akses akun baru atau lupa kata sandi, hubungi Administrator Sistem.
-            </p>
           </form>
+
+          {/* Security & IT Footer */}
+          <div className="mt-6 border-t border-line/70 pt-4">
+            <div className="flex items-start gap-2 text-[11px] leading-relaxed text-slate">
+              <ShieldCheck size={14} className="mt-0.5 shrink-0 text-forest" />
+              <span>
+                <strong>Akses Terbatas:</strong> Portal internal operasional CRS. Tidak ada pendaftaran mandiri. Hubungi Administrator Sistem untuk akses akun.
+              </span>
+            </div>
+          </div>
         </div>
       </main>
     );
@@ -161,3 +246,4 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (!context) return null;
   return <AuthContext.Provider value={context}>{children}</AuthContext.Provider>;
 }
+

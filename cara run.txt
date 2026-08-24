@@ -1,0 +1,21 @@
+﻿Cara Menjalankan Project CRMS:
+
+1. Prasyarat:
+   - Node.js (>= 22.6.0)
+   - pnpm (>= 10 / 11)
+   - MySQL database berjalan di port 3306 (sesuai konfigurasi di apps/api/.env)
+
+2. Menjalankan Backend & Frontend secara bersamaan:
+   - Buka terminal di root project:
+     pnpm dev
+   - Atau double-click file: start-dev.bat
+
+3. Menjalankan secara terpisah (opsional):
+   - Terminal 1 (Backend API):
+     pnpm dev:api   (berjalan di http://localhost:3000)
+   - Terminal 2 (Frontend Web):
+     pnpm dev:web   (berjalan di http://localhost:5173)
+
+4. Akses Aplikasi:
+   - Frontend: http://localhost:5173
+   - API Health Check: http://localhost:3000/health

@@ -279,18 +279,51 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
             </button>
           </div>
 
-          <div className="h-56">
+          <div className="h-64">
             {catData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={catData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} interval={0} />
+                <BarChart data={catData} margin={{ top: 8, right: 12, left: -20, bottom: 42 }}>
+                  <XAxis
+                    dataKey="name"
+                    interval={0}
+                    height={52}
+                    tick={({ x, y, payload }: any) => {
+                      const raw = String(payload?.value ?? "");
+                      const formatted = raw.length > 14 ? `${raw.slice(0, 12)}…` : raw;
+                      return (
+                        <g transform={`translate(${x},${y})`}>
+                          <text
+                            x={0}
+                            y={0}
+                            dy={10}
+                            textAnchor="end"
+                            fill="#6F6A5C"
+                            fontSize={10}
+                            fontFamily="JetBrains Mono, monospace"
+                            transform="rotate(-35)"
+                          >
+                            {formatted}
+                          </text>
+                        </g>
+                      );
+                    }}
+                  />
                   <YAxis tick={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace" }} allowDecimals={false} />
                   <Tooltip
-                    contentStyle={{
-                      fontSize: 12,
-                      borderRadius: 8,
-                      border: "1px solid var(--color-line)",
-                      backgroundColor: "#ffffff",
+                    cursor={{ fill: "rgba(47, 107, 79, 0.05)" }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const item = payload[0];
+                        return (
+                          <div className="rounded-lg border border-line bg-white px-3 py-2 shadow-md">
+                            <div className="text-[12px] font-semibold text-ink">{item.payload?.name}</div>
+                            <div className="mt-0.5 font-mono text-[11px] font-medium text-forest">
+                              {item.value} kegiatan
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                   />
                   <Bar dataKey="value" name="Jumlah" radius={[4, 4, 0, 0]}>
@@ -323,11 +356,11 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
             </button>
           </div>
 
-          <div className="h-56 flex-1">
+          <div className="h-64 flex-1">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="45%" innerRadius={42} outerRadius={65} dataKey="value" paddingAngle={3}>
+                  <Pie data={pieData} cx="50%" cy="45%" innerRadius={45} outerRadius={70} dataKey="value" paddingAngle={3}>
                     {pieData.map((d, i) => (
                       <Cell key={i} fill={d.color || PALETTE[i % PALETTE.length]} />
                     ))}

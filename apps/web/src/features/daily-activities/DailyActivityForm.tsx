@@ -185,6 +185,14 @@ export function DailyActivityForm({
             value={f.photos || []}
             onChange={(photos) => setF({ ...f, photos })}
             activityId={initial?.id}
+            activityDate={f.activity_date ? String(f.activity_date).split('T')[0] : ""}
+            location={f.location || f.address || ""}
+            activityTitle={f.activity || ""}
+            onDateExtracted={(dateIso) => {
+              if (!f.activity_date) {
+                set("activity_date", dateIso);
+              }
+            }}
             onPendingFilesChange={(files) => setF({ ...f, pendingFiles: files })}
             showToast={showToast}
           />

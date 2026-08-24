@@ -19,6 +19,7 @@ import auditLogRoutes from './routes/auditLog.routes';
 import authRouter from './routes/auth';
 import adminUsersRouter from './routes/adminUsers';
 import healthRouter from './routes/health';
+import searchRouter from './routes/search';
 import { AppError, errorHandler } from './lib/errorHandler';
 import { authenticationMiddleware, isAllowedOrigin, originGuard } from './lib/auth';
 import { requestIdMiddleware, requestLoggingMiddleware } from './lib/requestId';
@@ -78,6 +79,7 @@ app.use('/api/years', yearsRouter);
 app.use('/api/dev', devRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/admin/users', adminUsersRouter);
+app.use('/api/search', searchRouter);
 
 app.use((_req, _res, next) => next(new AppError('NOT_FOUND', 404, 'Not found')));
 app.use(errorHandler);

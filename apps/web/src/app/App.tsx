@@ -14,10 +14,12 @@ import {
   ChevronRight,
   Menu,
   X,
+  Search,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { apiClient } from "../lib/apiClient";
 import { AuthGate, useAuth } from "../components/AuthGate";
+import { OmnisearchModal } from "../components/OmnisearchModal";
 import DailyActivitiesModule from "../features/daily-activities/DailyActivitiesModule";
 import StakeholdersModule from "../features/stakeholders/StakeholdersModule";
 import TopIssuesModule from "../features/top-issues/TopIssuesModule";
@@ -193,6 +195,7 @@ function CrmsWorkspace() {
   const { logout, user } = useAuth();
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
   const [navOpen, setNavOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const visibleNavItems = useMemo(
     () => NAV_ITEMS.filter((item) => !item.adminOnly || user.role === "ADMIN"),
@@ -209,6 +212,18 @@ function CrmsWorkspace() {
     () => visibleNavItems.find((n) => n.id === activeModule) || visibleNavItems[0],
     [visibleNavItems, activeModule]
   );
+
+  // Global keyboard shortcut for Ctrl+K / Cmd+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Fetch available years from API
   useEffect(() => {
@@ -332,7 +347,22 @@ function CrmsWorkspace() {
             </h1>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Universal Omnisearch Button */}
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-line bg-paper/60 hover:bg-white px-2.5 sm:px-3 py-1.5 text-[12px] text-slate hover:text-ink transition-all shadow-2xs cursor-pointer group"
+              title="Pencarian Global (Ctrl + K)"
+            >
+              <Search size={14} className="text-forest group-hover:scale-110 transition-transform" />
+              <span className="hidden md:inline">Cari data di semua modul...</span>
+              <span className="inline md:hidden">Cari</span>
+              <kbd className="hidden sm:inline-flex items-center rounded bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-2 border border-line">
+                ⌘K
+              </kbd>
+            </button>
+
             <div className="flex items-center gap-1.5 rounded-lg border border-line bg-white px-2.5 py-1.5 shadow-2xs">
               <Calendar size={13} className="text-slate-2" />
               <label htmlFor="header-year-select" className="sr-only">
@@ -397,6 +427,12 @@ function CrmsWorkspace() {
           )}
         </div>
       </main>
+
+      <OmnisearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onNavigate={(m) => navigateTo(m)}
+      />
 
       <Toaster richColors position="bottom-right" />
     </div>
