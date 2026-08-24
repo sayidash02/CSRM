@@ -262,10 +262,10 @@ export class ExcelImportService {
           if (pic_names.length === 0) pic_names = [];
           
           const rawCat = catCol !== -1 ? extractCellString(row.getCell(catCol).value).trim() : '';
-          const category_name = normalizeCategoryName(rawCat);
+          const category_name = normalizeCategoryName(rawCat, activity) || 'Umum';
           
           const rawSubCat = subCatCol !== -1 ? extractCellString(row.getCell(subCatCol).value).trim() : '';
-          const sub_category_name = normalizeSubCategoryName(rawSubCat, category_name);
+          const sub_category_name = normalizeSubCategoryName(rawSubCat, category_name, activity) || 'Lainnya';
 
           const keterangan = ketCol !== -1 ? (extractCellString(row.getCell(ketCol).value) || null) : null;
           const hasil = hasCol !== -1 ? (extractCellString(row.getCell(hasCol).value) || null) : null;

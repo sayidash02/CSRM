@@ -228,8 +228,19 @@ export function validationYear(value: unknown): number | null {
   return null;
 }
 
-export function normalizeCategoryName(val: string | null | undefined): string {
-  if (!val) return '';
+export function normalizeCategoryName(val: string | null | undefined, activityName?: string): string {
+  if (!val) {
+    if (activityName) {
+      const act = activityName.toLowerCase();
+      if (act.includes('security') || act.includes('patroli') || act.includes('laporan') || act.includes('data entry') || act.includes('paper')) {
+        return 'Paper Work';
+      }
+      if (act.includes('engagement') || act.includes('rapat') || act.includes('koordinasi') || act.includes('sosialisasi') || act.includes('donasi') || act.includes('kunjungan')) {
+        return 'Stakeholder Engagement';
+      }
+    }
+    return '';
+  }
   const s = val.trim();
   const lower = s.toLowerCase();
   if (lower === 'papper work' || lower === 'paper work' || lower === 'paperwork') return 'Paper Work';
@@ -237,8 +248,17 @@ export function normalizeCategoryName(val: string | null | undefined): string {
   return s;
 }
 
-export function normalizeSubCategoryName(val: string | null | undefined, categoryName?: string): string {
-  if (!val) return '';
+export function normalizeSubCategoryName(val: string | null | undefined, categoryName?: string, activityName?: string): string {
+  if (!val) {
+    if (activityName) {
+      const act = activityName.toLowerCase();
+      if (act.includes('security')) return 'Security';
+      if (act.includes('meeting') || act.includes('rapat') || act.includes('internal')) return 'Internal Meeting';
+      if (act.includes('olah data') || act.includes('entry') || act.includes('database')) return 'Data Processing (Olah Data)';
+      if (act.includes('donasi') || act.includes('snack') || act.includes('bantuan')) return 'Donasi';
+    }
+    return '';
+  }
   const s = val.trim();
   const lower = s.toLowerCase();
   if (lower === 'olah data' || lower === 'data processing (olah data)' || lower === 'data processing') {
@@ -253,11 +273,11 @@ export function normalizeSubCategoryName(val: string | null | undefined, categor
 export function normalizeCsrStatus(val: string | null | undefined): string {
   if (!val) return 'Planning';
   const lower = val.trim().toLowerCase();
-  if (['completed', 'sudah terlaksana', 'terlaksana', 'selesai', 'done'].includes(lower)) return 'Completed';
-  if (['on going', 'on-going', 'ongoing', 'sedang berjalan', 'dalam proses', 'proses'].includes(lower)) return 'On Going';
-  if (['planning', 'perencanaan', 'rencana'].includes(lower)) return 'Planning';
-  if (['cancelled', 'canceled', 'dibatalkan', 'batal'].includes(lower)) return 'Cancelled';
-  return val.trim() || 'Planning';
+  if (['completed', 'sudah terlaksana', 'terlaksana', 'selesai', 'done', 'closed'].some(s => lower.includes(s))) return 'Completed';
+  if (['on going', 'on-going', 'ongoing', 'sedang berjalan', 'dalam proses', 'proses', 'pelaksanaan', 'masuk', 'tahap', 'belum'].some(s => lower.includes(s))) return 'On Going';
+  if (['planning', 'perencanaan', 'rencana'].some(s => lower.includes(s))) return 'Planning';
+  if (['cancelled', 'canceled', 'dibatalkan', 'batal'].some(s => lower.includes(s))) return 'Cancelled';
+  return 'On Going';
 }
 
 export function normalizeProposalStatus(val: string | null | undefined): string {
@@ -368,20 +388,20 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
         const rawSubCat = rowValue(row, columns, ['sub_category', 'sub category', 'subkategori', 'sub kategori']);
         const pic = rowValue(row, columns, ['pic', 'pic name', 'nama pic']);
 
-        const category = normalizeCategoryName(rawCat);
-        const subCategory = normalizeSubCategoryName(rawSubCat, category);
+        const category = normalizeCategoryName(rawCat, activity) || 'Umum';
+        const subCategory = normalizeSubCategoryName(rawSubCat, category, activity) || 'Lainnya';
 
         if (!validationDate(date)) add(module, rowNumber, 'INVALID_DATE', 'Tanggal wajib diisi dan harus valid');
         if (!activity) add(module, rowNumber, 'REQUIRED_ACTIVITY', 'Kegiatan wajib diisi');
-        if (!category) {
-          add(module, rowNumber, 'REQUIRED_CATEGORY', 'Kategori wajib diisi');
+        if (!rawCat) {
+          add(module, rowNumber, 'EMPTY_CATEGORY', `Kategori tidak diisi; diimpor dengan kategori '${category}'`, false);
         } else if (!categoryNames.has(category.toLowerCase())) {
           add(module, rowNumber, 'NEW_CATEGORY', `Kategori baru '${category}' akan dibuat otomatis`, false);
         }
 
         const categoryId = categories.find((item) => item.name.trim().toLowerCase() === category.toLowerCase())?.id;
-        if (!subCategory) {
-          add(module, rowNumber, 'REQUIRED_SUBCATEGORY', 'Sub Category wajib diisi');
+        if (!rawSubCat) {
+          add(module, rowNumber, 'EMPTY_SUBCATEGORY', `Sub Category tidak diisi; diimpor dengan sub kategori '${subCategory}'`, false);
         } else if (!categoryId || !subCategoryNames.has(`${categoryId}:${subCategory.toLowerCase()}`)) {
           add(module, rowNumber, 'NEW_SUBCATEGORY', `Sub Category baru '${subCategory}' akan dibuat otomatis`, false);
         }
