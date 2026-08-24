@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import prisma from '../../lib/prisma';
 import { truncStr } from './ExcelWorkbookValidator';
 import {
@@ -335,11 +336,59 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
           makeImportIdentity('grievance-register', row.register_no),
           makeGrievanceFallbackIdentity(row)
         ],
-        create: row => {
-          const { source_register_no: _sourceRegisterNo, supporting_files: _supportingFiles, ...grievanceData } = row;
-          return tx.grievance.create({ data: grievanceData });
+        create: async row => {
+          const { source_register_no: _sourceRegisterNo, supporting_files: _supportingFiles, photos: rawPhotos, ...grievanceData } = row as any;
+          const created = await tx.grievance.create({ data: grievanceData });
+          if (rawPhotos && rawPhotos.length > 0) {
+            const seenDigests = new Set<string>();
+            let sortOrder = 0;
+            for (const p of rawPhotos) {
+              if (p.buffer.length > 5 * 1024 * 1024) continue;
+              const sha = createHash('sha256').update(p.buffer).digest('hex');
+              if (seenDigests.has(sha)) continue;
+              seenDigests.add(sha);
+              await tx.grievance_photos.create({
+                data: {
+                  grievance_id: created.id,
+                  photo_data: p.buffer,
+                  mime_type: p.mime_type || (p.extension === 'png' ? 'image/png' : 'image/jpeg'),
+                  original_name: p.original_name || `photo_${sortOrder + 1}.${p.extension || 'jpg'}`,
+                  size_bytes: p.buffer.length,
+                  sha256: sha,
+                  sort_order: sortOrder++
+                }
+              });
+            }
+          }
+          return created;
         },
-        mergeExisting: async () => undefined
+        mergeExisting: async (existingGrievance, incomingRow) => {
+          const rawPhotos = (incomingRow as any).photos;
+          if (rawPhotos && rawPhotos.length > 0) {
+            const existingPhotos = await tx.grievance_photos.findMany({
+              where: { grievance_id: existingGrievance.id }
+            });
+            const existingSha = new Set(existingPhotos.map(p => p.sha256));
+            let sortOrder = existingPhotos.length;
+            for (const p of rawPhotos) {
+              if (p.buffer.length > 5 * 1024 * 1024) continue;
+              const sha = createHash('sha256').update(p.buffer).digest('hex');
+              if (existingSha.has(sha)) continue;
+              existingSha.add(sha);
+              await tx.grievance_photos.create({
+                data: {
+                  grievance_id: existingGrievance.id,
+                  photo_data: p.buffer,
+                  mime_type: p.mime_type || (p.extension === 'png' ? 'image/png' : 'image/jpeg'),
+                  original_name: p.original_name || `photo_${sortOrder + 1}.${p.extension || 'jpg'}`,
+                  size_bytes: p.buffer.length,
+                  sha256: sha,
+                  sort_order: sortOrder++
+                }
+              });
+            }
+          }
+        }
       });
 
       // 10. Insert LRP records using the only active fields: program and year.

@@ -471,6 +471,25 @@ export class ExcelImportService {
           });
         }
       } else if (sheetType === 'grievance') {
+        const sheetImages = worksheet.getImages ? worksheet.getImages() : [];
+        const rowImagesMap = new Map<number, Array<{ buffer: Buffer; extension: string; original_name: string; mime_type: string }>>();
+        for (const img of sheetImages) {
+          const rowIdx = (img.range?.tl?.nativeRow ?? -1) + 1;
+          if (rowIdx <= 0) continue;
+          const media = workbook.getImage(Number(img.imageId));
+          if (media && media.buffer) {
+            const ext = media.extension || 'jpg';
+            const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+            if (!rowImagesMap.has(rowIdx)) rowImagesMap.set(rowIdx, []);
+            rowImagesMap.get(rowIdx)!.push({
+              buffer: Buffer.from(media.buffer as any),
+              extension: ext,
+              original_name: media.name || `doc_${rowIdx}_${rowImagesMap.get(rowIdx)!.length + 1}.${ext}`,
+              mime_type: mime
+            });
+          }
+        }
+
         const regCol = findColIndex(colMap, ['no registrasi', 'no reg', 'register_no', 'nomor registrasi', 'no. reg', 'no.', 'register no.', 'register no']);
         const dateCol = findColIndex(colMap, ['tanggal log', 'log_date', 'tanggal', 'date', 'log date']);
         const compCol = findColIndex(colMap, ['nama pelapor', 'complainant_name', 'pelapor', 'complainant', 'name']);
@@ -517,6 +536,7 @@ export class ExcelImportService {
           const status = normalizeGrievanceStatus(extractCellString(row.getCell(statusCol).value));
           const remarks = remCol !== -1 ? (extractCellString(row.getCell(remCol).value) || null) : null;
           const supporting_files = docCol !== -1 ? extractAttachmentValue(row.getCell(docCol).value) : null;
+          const photos = rowImagesMap.get(r) || [];
 
           rawGrievance.push({
             register_no,
@@ -534,7 +554,8 @@ export class ExcelImportService {
             feedback,
             status,
             remarks,
-            supporting_files
+            supporting_files,
+            photos
           });
         }
       } else if (sheetType === 'lrp') {

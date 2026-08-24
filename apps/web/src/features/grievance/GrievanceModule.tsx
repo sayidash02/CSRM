@@ -1,11 +1,20 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
+import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History, Image, Upload, X, ChevronLeft, ChevronRight, Maximize2 } from "lucide-react";
 import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
+
+export interface GrievancePhoto {
+  id: number | string;
+  url: string;
+  original_name?: string;
+  mime_type?: string;
+  size_bytes?: number;
+  sort_order?: number;
+}
 
 export interface Grievance {
   id: number | string;
@@ -24,6 +33,7 @@ export interface Grievance {
   status: string;
   completion_date: string | null;
   remarks: string | null;
+  photos?: GrievancePhoto[];
 }
 
 const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
@@ -36,6 +46,96 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       <label className="text-xs font-medium text-slate block mb-1.5">{label}{required && <span className="text-clay ml-0.5">*</span>}</label>
       {children}
       {hint && <p className="text-[11px] text-slate-2 mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function PhotoLightboxModal({ 
+  title, 
+  photos, 
+  initialIndex = 0, 
+  onClose 
+}: { 
+  title: string; 
+  photos: GrievancePhoto[]; 
+  initialIndex?: number; 
+  onClose: () => void 
+}) {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const current = photos[currentIndex];
+
+  if (!current) return null;
+
+  return (
+    <div className="fixed inset-0 bg-ink/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4" onClick={onClose}>
+      <div className="relative max-w-4xl w-full bg-white rounded-2xl border border-line overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 bg-paper/80 border-b border-line">
+          <div>
+            <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
+            <p className="text-xs text-slate mt-0.5 font-mono">
+              Foto {currentIndex + 1} dari {photos.length} • {current.original_name || 'Dokumentasi'}
+            </p>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="p-1.5 text-slate hover:text-ink hover:bg-paper-2 rounded-lg transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Image Display */}
+        <div className="relative flex-1 bg-black/95 flex items-center justify-center p-4 min-h-[360px] max-h-[65vh] overflow-hidden select-none">
+          <img 
+            src={current.url} 
+            alt={current.original_name || "Dokumentasi"} 
+            className="max-h-[60vh] max-w-full object-contain rounded shadow-lg"
+          />
+
+          {photos.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white transition-all shadow-md cursor-pointer"
+                title="Foto Sebelumnya"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev < photos.length - 1 ? prev + 1 : 0));
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white transition-all shadow-md cursor-pointer"
+                title="Foto Selanjutnya"
+              >
+                <ChevronRight size={22} />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Thumbnails Footer */}
+        {photos.length > 1 && (
+          <div className="flex items-center gap-2 p-3 bg-paper border-t border-line overflow-x-auto">
+            {photos.map((p, idx) => (
+              <button
+                key={p.id || idx}
+                onClick={() => setCurrentIndex(idx)}
+                className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                  currentIndex === idx ? "border-forest shadow-sm scale-105" : "border-line opacity-60 hover:opacity-100"
+                }`}
+              >
+                <img src={p.url} alt="thumbnail" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -128,15 +228,17 @@ function GrievanceForm({
   nextRegNo,
   showToast,
   defaultValues,
-  onDraftChange
+  onDraftChange,
+  onPhotosUpdated
 }: {
   initial?: Grievance;
   onClose: () => void;
-  onSave: (d: Omit<Grievance, "id">) => void;
+  onSave: (d: Omit<Grievance, "id">, pendingFiles?: File[]) => void;
   nextRegNo: string;
   showToast?: (msg: string, type?: "success"|"error"|"info") => void;
   defaultValues?: typeof emptyGrievanceDraft;
   onDraftChange?: (v: typeof emptyGrievanceDraft) => void;
+  onPhotosUpdated?: () => void;
 }) {
   const [f, setF] = useState(
     initial
@@ -160,6 +262,11 @@ function GrievanceForm({
       : { ...emptyGrievanceDraft, ...defaultValues }
   );
 
+  const [existingPhotos, setExistingPhotos] = useState<GrievancePhoto[]>(initial?.photos || []);
+  const [pendingFiles, setPendingFiles] = useState<Array<{ file: File; preview: string }>>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const set = (k: string, v: string) => {
     const next = { ...f, [k]: v };
     setF(next);
@@ -168,7 +275,72 @@ function GrievanceForm({
 
   const handleClear = () => {
     setF({ ...emptyGrievanceDraft });
+    setPendingFiles([]);
     if (onDraftChange) onDraftChange({ ...emptyGrievanceDraft });
+  };
+
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    for (const file of files) {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        showToast?.(`File "${file.name}" ditolak. Hanya JPG/PNG/WebP diperbolehkan`, "error");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        showToast?.(`File "${file.name}" melebihi batas 5MB`, "error");
+        return;
+      }
+    }
+
+    if (initial?.id) {
+      setUploadingPhoto(true);
+      try {
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await apiClient.post(`/grievance/${initial.id}/photos`, formData, {
+            headers: { "Content-Type": "multipart/form-data" }
+          });
+          setExistingPhotos(prev => [...prev, res.data.data]);
+        }
+        showToast?.("Foto dokumentasi berhasil ditambahkan", "success");
+        onPhotosUpdated?.();
+      } catch (err: any) {
+        showToast?.(err.response?.data?.error || "Gagal mengunggah foto", "error");
+      } finally {
+        setUploadingPhoto(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    } else {
+      const newPending = files.map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      setPendingFiles(prev => [...prev, ...newPending]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDeleteExistingPhoto = async (photoId: string | number) => {
+    if (!initial?.id) return;
+    try {
+      await apiClient.delete(`/grievance/${initial.id}/photos/${photoId}`);
+      setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
+      showToast?.("Foto dokumentasi berhasil dihapus", "success");
+      onPhotosUpdated?.();
+    } catch (err: any) {
+      showToast?.(err.response?.data?.error || "Gagal menghapus foto", "error");
+    }
+  };
+
+  const handleDeletePendingPhoto = (index: number) => {
+    setPendingFiles(prev => {
+      const target = prev[index];
+      if (target?.preview) URL.revokeObjectURL(target.preview);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSave = () => {
@@ -189,23 +361,26 @@ function GrievanceForm({
       return;
     }
 
-    onSave({
-      register_no: initial ? f.register_no : (nextRegNo.includes("akan") ? "" : nextRegNo),
-      log_date: f.log_date,
-      complainant_name: f.complainant_name,
-      address: f.address,
-      phone: f.phone,
-      category: f.category,
-      significance: f.significance,
-      description: f.description,
-      location: f.location,
-      investigation: f.investigation,
-      resolution: f.resolution || null,
-      feedback: f.feedback || null,
-      status: f.status,
-      completion_date: f.completion_date || null,
-      remarks: f.remarks || null
-    });
+    onSave(
+      {
+        register_no: initial ? f.register_no : (nextRegNo.includes("akan") ? "" : nextRegNo),
+        log_date: f.log_date,
+        complainant_name: f.complainant_name,
+        address: f.address,
+        phone: f.phone,
+        category: f.category,
+        significance: f.significance,
+        description: f.description,
+        location: f.location,
+        investigation: f.investigation,
+        resolution: f.resolution || null,
+        feedback: f.feedback || null,
+        status: f.status,
+        completion_date: f.completion_date || null,
+        remarks: f.remarks || null
+      },
+      pendingFiles.map(p => p.file)
+    );
     if (!initial && onDraftChange) onDraftChange({ ...emptyGrievanceDraft });
     onClose();
   };
@@ -284,6 +459,82 @@ function GrievanceForm({
             <input type="text" value={f.remarks} onChange={e => set("remarks", e.target.value)} placeholder="Catatan internal tim CSR" className={inputCls} />
           </Field>
         </div>
+
+        {/* FOTO DOKUMENTASI & LAMPIRAN */}
+        <div className="pt-2 border-t border-line">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-semibold text-ink flex items-center gap-1.5">
+              <Image size={14} className="text-forest" />
+              Foto Dokumentasi & Berita Acara
+            </label>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 transition-all cursor-pointer shadow-2xs"
+            >
+              <Upload size={12} />
+              {uploadingPhoto ? "Mengunggah..." : "Tambah Foto"}
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handlePhotoSelect}
+              multiple
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+            />
+          </div>
+
+          {/* List of Existing & Pending Photos */}
+          {existingPhotos.length === 0 && pendingFiles.length === 0 ? (
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border border-dashed border-line rounded-xl p-4 text-center bg-paper/30 hover:bg-forest/5 hover:border-forest/40 transition-all cursor-pointer"
+            >
+              <Image size={24} className="mx-auto text-slate-2 mb-1" />
+              <p className="text-xs text-slate font-medium">Klik untuk melampirkan foto dokumentasi / berita acara</p>
+              <p className="text-[10px] text-slate-2 mt-0.5">Format JPG, PNG, atau WebP (Maks. 5MB per foto)</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5 max-h-48 overflow-y-auto p-1 bg-paper/20 rounded-xl border border-line">
+              {/* Existing Photos */}
+              {existingPhotos.map((photo) => (
+                <div key={photo.id} className="relative group rounded-lg overflow-hidden border border-line aspect-square bg-paper shadow-2xs">
+                  <img src={photo.url} alt={photo.original_name || "Foto"} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteExistingPhoto(photo.id)}
+                      className="p-1 rounded-md bg-clay text-white hover:opacity-90 transition-opacity shadow"
+                      title="Hapus foto"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* Pending Photos */}
+              {pendingFiles.map((pending, idx) => (
+                <div key={idx} className="relative group rounded-lg overflow-hidden border border-forest/40 aspect-square bg-forest/5 shadow-2xs">
+                  <img src={pending.preview} alt="Pending" className="w-full h-full object-cover" />
+                  <span className="absolute top-1 left-1 px-1 py-0.2 bg-forest text-[9px] font-mono text-white rounded">Baru</span>
+                  <div className="absolute inset-0 bg-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePendingPhoto(idx)}
+                      className="p-1 rounded-md bg-clay text-white hover:opacity-90 transition-opacity shadow"
+                      title="Hapus"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <ModalFooter
         onClose={onClose}
@@ -300,6 +551,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const [items, setItems] = useState<Grievance[]>([]);
   const [showDeleted, setShowDeleted] = useState(false);
   const [addDraft, setAddDraft] = useState({ ...emptyGrievanceDraft });
+  const [viewingPhotos, setViewingPhotos] = useState<{ title: string; photos: GrievancePhoto[]; initialIndex: number } | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -317,10 +569,22 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
     fetchData();
   }, [fetchData]);
 
-  const handleAdd = async (d: Omit<Grievance, "id">) => {
+  const handleAdd = async (d: Omit<Grievance, "id">, pendingPhotos?: File[]) => {
     try {
       const year = parseInt(activeYear) || new Date().getFullYear();
-      await apiClient.post('/grievance', { ...d, year });
+      const res = await apiClient.post('/grievance', { ...d, year });
+      const createdId = res.data.data?.id;
+
+      if (createdId && pendingPhotos && pendingPhotos.length > 0) {
+        for (const file of pendingPhotos) {
+          const form = new FormData();
+          form.append('file', file);
+          await apiClient.post(`/grievance/${createdId}/photos`, form, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+          });
+        }
+      }
+
       if (showToast) showToast(`Pengaduan '${d.complainant_name}' berhasil ditambahkan`, "success");
       fetchData();
     } catch (e: any) {
@@ -403,6 +667,24 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       ],
       render: (g) => <div><StatusBadge status={g.status} />{g.completion_date && <div className="text-[10px] text-slate font-mono mt-1">Selesai: {formatDate(g.completion_date)}</div>}</div> 
     },
+    {
+      header: "Dokumentasi",
+      className: "text-center whitespace-nowrap",
+      render: (g) => {
+        const photos = g.photos || [];
+        if (photos.length === 0) return <span className="text-slate-2 text-xs">—</span>;
+        return (
+          <button
+            onClick={() => setViewingPhotos({ title: `${g.register_no} — ${g.complainant_name}`, photos, initialIndex: 0 })}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-forest bg-forest/10 hover:bg-forest/20 px-2 py-0.5 rounded-md border border-forest/20 transition-all cursor-pointer shadow-2xs"
+            title={`Lihat ${photos.length} foto dokumentasi`}
+          >
+            <Image size={12} className="text-forest" />
+            <span>{photos.length} Foto</span>
+          </button>
+        );
+      }
+    },
     { header: "Aksi", render: (g) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
@@ -435,7 +717,8 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       "Investigation": g.investigation || "",
       "Resolution": g.resolution || "",
       "Complainant Feedback": g.feedback || "",
-      "Remarks": g.remarks || ""
+      "Remarks": g.remarks || "",
+      "Jumlah Foto": g.photos?.length || 0
     }));
     onExport("Grievance", exportData);
   };
@@ -459,9 +742,10 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
         </div>
       </div>
       {showForm && <GrievanceForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
-      {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} showToast={showToast} />}
+      {editing && <GrievanceForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.register_no} showToast={showToast} onPhotosUpdated={fetchData} />}
       {toDelete && <DeleteConfirm label={`${toDelete.register_no} — ${toDelete.complainant_name}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id, toDelete.complainant_name); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={toRestore.complainant_name || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
+      {viewingPhotos && <PhotoLightboxModal title={viewingPhotos.title} photos={viewingPhotos.photos} initialIndex={viewingPhotos.initialIndex} onClose={() => setViewingPhotos(null)} />}
       <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="grievance" entityId={selectedHistoryId} />
     </div>
   );

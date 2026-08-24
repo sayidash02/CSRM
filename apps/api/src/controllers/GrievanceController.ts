@@ -1,10 +1,43 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
+import { createHash } from 'node:crypto';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 import { generateRegistrationNumber } from '../services/RegistrationNumberService';
 
 const SIGNIFICANCE_VALUES = new Set(['Low', 'Medium', 'High', 'Critical']);
 const GRIEVANCE_STATUSES = new Set(['Open', 'On Progress', 'Resolved', 'Closed']);
+
+const photoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const isAllowedExt = file.originalname.match(/\.(jpg|jpeg|png|webp)$/i);
+    const allowedMimeTypes = [
+      'image/jpeg', 'image/png', 'image/webp',
+    ];
+    if (!isAllowedExt || !allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error('Hanya file foto JPG/JPEG, PNG, atau WebP yang diperbolehkan'));
+    }
+    cb(null, true);
+  }
+});
+
+const parseId = (value: unknown): bigint => {
+  if (typeof value === 'bigint') return value;
+  if (typeof value !== 'string' && typeof value !== 'number') {
+    const error: any = new Error('ID referensi tidak valid');
+    error.status = 400;
+    throw error;
+  }
+  const text = String(value).trim();
+  if (!/^\d+$/.test(text)) {
+    const error: any = new Error('ID referensi tidak valid');
+    error.status = 400;
+    throw error;
+  }
+  return BigInt(text);
+};
 
 function parseRequiredDate(value: unknown): Date | null {
   if (typeof value !== 'string' && !(value instanceof Date)) return null;
@@ -73,10 +106,23 @@ export const getGrievances = catchAsync(async (req: Request, res: Response): Pro
     };
   }
   const grievances = await prisma.grievance.findMany({
-    where
+    where,
+    include: {
+      photos: {
+        where: { is_deleted: false },
+        select: { id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true },
+        orderBy: { sort_order: 'asc' }
+      }
+    },
+    orderBy: { log_date: 'desc' }
   });
   
-  res.status(200).json({ data: grievances });
+  const formatted = grievances.map((g: any) => ({
+    ...g,
+    photos: g.photos?.map((p: any) => ({ ...p, url: `/api/grievance/${g.id}/photos/${p.id}` })) || []
+  }));
+
+  res.status(200).json({ data: formatted });
 });
 
 export const updateGrievance = catchAsync(async (req: Request, res: Response): Promise<void> => {
@@ -144,4 +190,137 @@ export const restoreGrievance = catchAsync(async (req: Request, res: Response): 
     data: { is_deleted: false }
   });
   res.status(200).json({ data: result });
+});
+
+export const uploadGrievancePhoto = (req: Request, res: Response, next: NextFunction) => {
+  photoUpload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: 'Upload error: ' + err.message });
+    if (!req.file) return res.status(400).json({ error: 'File is required' });
+
+    try {
+      const grievanceId = parseId(req.params.id || req.body?.grievance_id);
+      const buffer = req.file.buffer;
+      const isJpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+      const isPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+      const isWebp = buffer.length >= 12 && buffer.subarray(0, 4).toString() === 'RIFF' && buffer.subarray(8, 12).toString() === 'WEBP';
+      const matchesMime = (req.file.mimetype === 'image/jpeg' && isJpeg) || (req.file.mimetype === 'image/png' && isPng) || (req.file.mimetype === 'image/webp' && isWebp);
+      if (!matchesMime) {
+        res.status(400).json({ error: 'Isi file tidak cocok dengan tipe gambar yang diklaim' });
+        return;
+      }
+
+      const grievance = await prisma.grievance.findFirst({
+        where: { id: grievanceId, is_deleted: false },
+        select: { id: true }
+      });
+      if (!grievance) {
+        res.status(404).json({ error: 'Pengaduan tidak ditemukan' });
+        return;
+      }
+
+      const lastPhoto = await prisma.grievance_photos.findFirst({
+        where: { grievance_id: grievanceId },
+        orderBy: { sort_order: 'desc' },
+        select: { sort_order: true }
+      });
+      const digest = createHash('sha256').update(buffer).digest('hex');
+
+      const existingPhoto = await prisma.grievance_photos.findFirst({
+        where: { grievance_id: grievanceId, sha256: digest }
+      });
+
+      if (existingPhoto) {
+        if (!existingPhoto.is_deleted) {
+          res.status(409).json({ error: 'Foto yang sama sudah terpasang pada pengaduan ini' });
+          return;
+        }
+
+        const restoredPhoto = await prisma.grievance_photos.update({
+          where: { id: existingPhoto.id },
+          data: {
+            is_deleted: false,
+            photo_data: buffer,
+            mime_type: req.file.mimetype,
+            original_name: req.file.originalname.slice(0, 255),
+            size_bytes: buffer.length,
+            sort_order: (lastPhoto?.sort_order ?? -1) + 1
+          },
+          select: { id: true, grievance_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
+        });
+        res.status(201).json({ data: { ...restoredPhoto, url: `/api/grievance/${grievanceId}/photos/${restoredPhoto.id}` } });
+        return;
+      }
+
+      const photo = await prisma.grievance_photos.create({
+        data: {
+          grievance_id: grievanceId,
+          photo_data: buffer,
+          mime_type: req.file.mimetype,
+          original_name: req.file.originalname.slice(0, 255),
+          size_bytes: buffer.length,
+          sha256: digest,
+          sort_order: (lastPhoto?.sort_order ?? -1) + 1
+        },
+        select: { id: true, grievance_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
+      });
+      res.status(201).json({ data: { ...photo, url: `/api/grievance/${grievanceId}/photos/${photo.id}` } });
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
+        res.status(409).json({ error: 'Foto yang sama sudah terpasang pada pengaduan ini' });
+        return;
+      }
+      next(error);
+    }
+  });
+};
+
+export const getGrievancePhoto = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const grievanceId = parseId(req.params.id);
+  const photoId = parseId(req.params.photoId);
+  const photo = await prisma.grievance_photos.findFirst({
+    where: { id: photoId, grievance_id: grievanceId, is_deleted: false },
+    select: { photo_data: true, mime_type: true, original_name: true, size_bytes: true }
+  });
+  if (!photo) {
+    res.status(404).json({ error: 'Foto tidak ditemukan' });
+    return;
+  }
+  res.setHeader('Content-Type', photo.mime_type);
+  res.setHeader('Content-Length', String(photo.size_bytes));
+  res.setHeader('Content-Disposition', `inline; filename="${photo.original_name.replace(/[^a-zA-Z0-9._-]/g, '_')}"`);
+  res.status(200).send(Buffer.from(photo.photo_data));
+});
+
+export const deleteGrievancePhoto = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const grievanceId = parseId(req.params.id);
+  const photoId = parseId(req.params.photoId);
+  const result = await prisma.grievance_photos.updateMany({
+    where: { id: photoId, grievance_id: grievanceId, is_deleted: false },
+    data: { is_deleted: true }
+  });
+  if (result.count === 0) {
+    res.status(404).json({ error: 'Foto tidak ditemukan' });
+    return;
+  }
+  res.status(204).send();
+});
+
+export const reorderGrievancePhotos = catchAsync(async (req: Request, res: Response): Promise<void> => {
+  const grievanceId = parseId(req.params.id);
+  const { photo_ids } = req.body;
+  if (!Array.isArray(photo_ids)) {
+    res.status(400).json({ error: 'photo_ids array is required' });
+    return;
+  }
+
+  await prisma.$transaction(
+    photo_ids.map((id: any, index: number) =>
+      prisma.grievance_photos.updateMany({
+        where: { id: parseId(id), grievance_id: grievanceId },
+        data: { sort_order: index }
+      })
+    )
+  );
+
+  res.status(200).json({ message: 'Order updated' });
 });
