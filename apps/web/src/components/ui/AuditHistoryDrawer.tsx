@@ -14,6 +14,17 @@ interface DrawerProps {
 export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, entityType, entityId, references }) => {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [localRefs, setLocalRefs] = useState<any>(references || null);
+
+  useEffect(() => {
+    if (references) {
+      setLocalRefs(references);
+    } else if (isOpen) {
+      apiClient.get('/references')
+        .then(res => setLocalRefs(res.data?.data || null))
+        .catch(e => console.error('Failed to load references for audit log:', e));
+    }
+  }, [isOpen, references]);
 
   useEffect(() => {
     if (isOpen && entityId) {
@@ -64,8 +75,8 @@ export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, ent
                 {log.changes && Object.entries(log.changes).map(([field, vals]: any) => (
                   <div key={field} className="mt-1.5 bg-paper/60 border border-line/60 p-2 rounded-lg text-[11px]">
                     <span className="font-semibold text-ink">{translateField(field)}</span>: 
-                    <span className="text-clay line-through mx-1">{translateValue(field, vals.old, references)}</span> ➔ 
-                    <span className="text-forest font-semibold mx-1">{translateValue(field, vals.new, references)}</span>
+                    <span className="text-clay line-through mx-1">{translateValue(field, vals.old, localRefs)}</span> ➔ 
+                    <span className="text-forest font-semibold mx-1">{translateValue(field, vals.new, localRefs)}</span>
                   </div>
                 ))}
               </div>

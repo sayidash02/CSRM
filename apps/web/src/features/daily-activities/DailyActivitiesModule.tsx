@@ -700,6 +700,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
           onClose={() => setHistoryDrawerOpen(false)}
           entityType="daily_activities"
           entityId={selectedHistoryId}
+          references={references}
         />
       )}
 

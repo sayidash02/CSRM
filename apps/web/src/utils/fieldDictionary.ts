@@ -73,20 +73,24 @@ export const translateValue = (field: string, value: any, references?: any): str
 
   // Relation lookups
   if (references) {
-    const numValue = Number(value);
-    
-    if (field === 'pic_id' && references.pics) {
-      const match = references.pics.find((p: any) => Number(p.id) === numValue);
+    if ((field === 'pic_id' || field === 'pic_ids') && references.pics) {
+      if (Array.isArray(value)) {
+        const names = value
+          .map((id: any) => references.pics.find((p: any) => String(p.id) === String(id))?.name)
+          .filter(Boolean);
+        if (names.length > 0) return names.join(', ');
+      }
+      const match = references.pics.find((p: any) => String(p.id) === String(value));
       if (match) return match.name;
     }
     
     if (field === 'category_id' && references.categories) {
-      const match = references.categories.find((c: any) => Number(c.id) === numValue);
+      const match = references.categories.find((c: any) => String(c.id) === String(value));
       if (match) return match.name;
     }
     
     if (field === 'sub_category_id' && references.sub_categories) {
-      const match = references.sub_categories.find((s: any) => Number(s.id) === numValue);
+      const match = references.sub_categories.find((s: any) => String(s.id) === String(value));
       if (match) return match.name;
     }
   }
