@@ -75,10 +75,10 @@ export function DailyActivityForm({
     const missing: string[] = (
       [
         [!f.activity_date, "Tanggal Kegiatan"],
-        [!f.activity, "Daily Title / Kegiatan"],
-        [!f.pic_ids || f.pic_ids.length === 0, "PIC"],
-        [!f.category_id, "Category"],
-        [!f.sub_category_id, "Sub Category"],
+        [!f.activity, "Nama Kegiatan"],
+        [!f.pic_ids || f.pic_ids.length === 0, "PIC (Tim CSR)"],
+        [!f.category_id, "Kategori"],
+        [!f.sub_category_id, "Sub Kategori"],
       ] as [boolean, string][]
     ).filter(([cond]) => cond).map(([, label]) => label);
 
@@ -107,21 +107,21 @@ export function DailyActivityForm({
   };
 
   return (
-    <Modal title={initial ? "Edit Kegiatan & Daily Notes" : "Tambah Kegiatan Baru"} onClose={onClose}>
+    <Modal title={initial ? "Edit Kegiatan & Notulensi (MOM)" : "Tambah Kegiatan Baru"} onClose={onClose}>
       <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[75vh] overflow-y-auto">
         <Field label="Tanggal Kegiatan" required><input type="date" value={f.activity_date ? String(f.activity_date).split('T')[0] : ""} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
-        <div className="col-span-2"><Field label="Daily Title / Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Judul / Deskripsi kegiatan" className={inputCls} /></Field></div>
+        <div className="col-span-2"><Field label="Nama Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Judul / Deskripsi kegiatan" className={inputCls} /></Field></div>
 
         <Field label="Lokasi (Desa / Wilayah)"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Contoh: Cilamaya Girang" className={inputCls} /></Field>
-        <Field label="Venue / Tempat"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Contoh: Rumah Bapak Asep" className={inputCls} /></Field>
-        <Field label="Fokus"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Topik / Fokus kegiatan" className={inputCls} /></Field>
+        <Field label="Tempat / Venue Pertemuan"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Contoh: Balai Desa / Rumah Warga" className={inputCls} /></Field>
+        <Field label="Fokus / Topik Kegiatan"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Topik / Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
 
-        <Field label="Category" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}><option value="">Pilih Category</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
-        <Field label="Sub Category" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Category</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
+        <Field label="Kategori" required><select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}><option value="">Pilih Kategori</option>{refs.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+        <Field label="Sub Kategori" required><select value={f.sub_category_id} onChange={e => set("sub_category_id", e.target.value)} className={inputCls}><option value="">Pilih Sub Kategori</option>{refs.sub_categories.filter(s => String(s.category_id) === String(f.category_id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></Field>
 
         <div className="col-span-3">
-          <Field label="PIC (Tim Internal JSP)" required>
+          <Field label="PIC (Tim Internal CSR)" required>
             <div className="flex gap-2 items-start">
               <div className="flex-1">
                 <div className="flex flex-wrap gap-1.5 p-2 bg-input-background border border-border rounded-md min-h-[42px]">
@@ -153,31 +153,31 @@ export function DailyActivityForm({
                   })}
                 </div>
               </div>
-              <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0" title="Atur PIC"><Settings size={14} /></button>
+              <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0 cursor-pointer" title="Atur Daftar PIC"><Settings size={14} /></button>
             </div>
           </Field>
         </div>
 
         <div className="col-span-3">
-          <Field label="Attendees Eksternal / Instansi" hint="Daftar peserta eksternal (dapat berupa teks baris baru atau penomoran 1., 2.)">
+          <Field label="Peserta Eksternal / Instansi Terkait (Attendees)" hint="Daftar peserta eksternal (dapat berupa teks baris baru atau penomoran 1., 2.)">
             <textarea
               rows={2}
               value={f.institution_group}
               onChange={e => set("institution_group", e.target.value)}
-              placeholder="Contoh:&#10;1. Anggota kelompok nelayan ex class action&#10;2. Tokoh masyarakat setempat"
+              placeholder="Contoh:&#10;1. Anggota kelompok nelayan&#10;2. Tokoh masyarakat setempat"
               className={`${inputCls} resize-none`}
             />
           </Field>
         </div>
 
         <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Keterangan Pertemuan"><textarea rows={3} value={f.keterangan} onChange={e => set("keterangan", e.target.value)} placeholder="Latar belakang / agenda pertemuan" className={`${inputCls} resize-none`} /></Field>
-          <Field label="Hasil Pertemuan"><textarea rows={3} value={f.hasil} onChange={e => set("hasil", e.target.value)} placeholder="Poin-poin pembahasan / hasil yang dicapai" className={`${inputCls} resize-none`} /></Field>
+          <Field label="Keterangan & Latar Belakang"><textarea rows={3} value={f.keterangan} onChange={e => set("keterangan", e.target.value)} placeholder="Latar belakang / agenda pertemuan" className={`${inputCls} resize-none`} /></Field>
+          <Field label="Hasil Pertemuan & Pembahasan"><textarea rows={3} value={f.hasil} onChange={e => set("hasil", e.target.value)} placeholder="Poin-poin pembahasan / hasil yang dicapai" className={`${inputCls} resize-none`} /></Field>
         </div>
 
         <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Kesimpulan"><textarea rows={2} value={f.kesimpulan} onChange={e => set("kesimpulan", e.target.value)} placeholder="Kesimpulan akhir dari pertemuan" className={`${inputCls} resize-none`} /></Field>
-          <Field label="Next Plan"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut / action items" className={`${inputCls} resize-none`} /></Field>
+          <Field label="Kesimpulan Pertemuan"><textarea rows={2} value={f.kesimpulan} onChange={e => set("kesimpulan", e.target.value)} placeholder="Kesimpulan akhir dari pertemuan" className={`${inputCls} resize-none`} /></Field>
+          <Field label="Rencana Tindak Lanjut (Next Plan)"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut / action items" className={`${inputCls} resize-none`} /></Field>
         </div>
 
         <div className="col-span-3">

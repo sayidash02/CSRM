@@ -54,12 +54,12 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const MODULE_BADGES: Record<string, { bg: string; text: string; label: string }> = {
-  daily: { bg: 'bg-forest/10', text: 'text-forest', label: 'Daily Activity' },
-  stakeholder: { bg: 'bg-ochre/15', text: 'text-ochre', label: 'Stakeholder' },
-  topissues: { bg: 'bg-clay/15', text: 'text-clay', label: 'Top Issue' },
+  daily: { bg: 'bg-forest/10', text: 'text-forest', label: 'Daily Activities' },
+  stakeholder: { bg: 'bg-ochre/15', text: 'text-ochre', label: 'Stakeholder Engagement' },
+  topissues: { bg: 'bg-clay/15', text: 'text-clay', label: 'Top Issues' },
   grievance: { bg: 'bg-clay/20', text: 'text-clay font-semibold', label: 'Grievance' },
-  proposals: { bg: 'bg-forest-2/15', text: 'text-forest-2', label: 'Proposal' },
-  csr: { bg: 'bg-forest/10', text: 'text-forest', label: 'CSR Project' },
+  proposals: { bg: 'bg-forest-2/15', text: 'text-forest-2', label: 'Proposals' },
+  csr: { bg: 'bg-forest/10', text: 'text-forest', label: 'CSR Projects' },
   lrp: { bg: 'bg-slate/15', text: 'text-slate', label: 'LRP' },
 };
 

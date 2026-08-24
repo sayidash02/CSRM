@@ -125,21 +125,21 @@ function TopBar({
         {/* Dedicated Direct MOM Button */}
         <button
           onClick={onExportMomWorkbook}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest hover:bg-forest-2 text-white font-medium rounded-lg transition-colors shadow-2xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest hover:bg-forest-2 text-white font-medium rounded-lg transition-colors shadow-2xs cursor-pointer"
           title="Unduh All-in-One Workbook (Rekap + Notulensi MOM tiap kegiatan)"
         >
           <FileSpreadsheet size={13} />
-          <span>Download MOM (Excel)</span>
+          <span>Unduh MOM (Excel)</span>
         </button>
 
         {/* Export Dropdown Menu */}
         <div className="relative" ref={menuRef}>
           <button 
             onClick={() => setShowExportMenu(!showExportMenu)} 
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"
           >
             <Download size={13} />
-            Export
+            Ekspor Data
             <ChevronDown size={12} className={`transition-transform duration-200 ${showExportMenu ? 'rotate-180' : ''}`} />
           </button>
 
@@ -147,20 +147,20 @@ function TopBar({
             <div className="absolute right-0 mt-1 w-64 bg-white border border-line rounded-xl shadow-xl z-50 py-1.5 text-[12px] animate-in fade-in-50 zoom-in-95">
               <button
                 onClick={() => { setShowExportMenu(false); onExportRekap?.(); }}
-                className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors"
+                className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors cursor-pointer"
               >
                 <span className="font-semibold text-ink flex items-center gap-1.5">
-                  <Download size={13} className="text-forest" /> Export Rekap Master (Excel)
+                  <Download size={13} className="text-forest" /> Ekspor Rekap Master (Excel)
                 </span>
-                <span className="text-[11px] text-slate mt-0.5">Tabel rekapitulasi semua kegiatan</span>
+                <span className="text-[11px] text-slate mt-0.5">Tabel rekapitulasi seluruh kegiatan</span>
               </button>
 
               <button
                 onClick={() => { setShowExportMenu(false); onExportMomWorkbook?.(); }}
-                className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
+                className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60 cursor-pointer"
               >
                 <span className="font-semibold text-ink flex items-center gap-1.5">
-                  <FileSpreadsheet size={13} className="text-forest" /> Export All-in-One (Rekap + MOMs)
+                  <FileSpreadsheet size={13} className="text-forest" /> Ekspor Rekap &amp; MOM (Excel)
                 </span>
                 <span className="text-[11px] text-slate mt-0.5">1 File Excel: Master sheet + Tab notulensi tiap kegiatan</span>
               </button>
@@ -168,22 +168,22 @@ function TopBar({
               {onExportMomDocx && (
                 <button
                   onClick={() => { setShowExportMenu(false); onExportMomDocx(); }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
+                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60 cursor-pointer"
                 >
                   <span className="font-semibold text-ink flex items-center gap-1.5">
-                    <FileText size={13} className="text-slate" /> Export MOM Gabungan (Word)
+                    <FileText size={13} className="text-slate" /> Ekspor Notulensi MOM (Word)
                   </span>
-                  <span className="text-[11px] text-slate mt-0.5">Dokumen DOCX dengan layout MOM yang sama</span>
+                  <span className="text-[11px] text-slate mt-0.5">Dokumen DOCX dengan layout resmi MOM</span>
                 </button>
               )}
 
               {onExportMomPdf && (
                 <button
                   onClick={() => { setShowExportMenu(false); onExportMomPdf(); }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
+                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60 cursor-pointer"
                 >
                   <span className="font-semibold text-ink flex items-center gap-1.5">
-                    <FileText size={13} className="text-clay" /> Export MOM Gabungan (PDF)
+                    <FileText size={13} className="text-clay" /> Ekspor Notulensi MOM (PDF)
                   </span>
                   <span className="text-[11px] text-slate mt-0.5">Dokumen PDF siap dibagikan atau diarsipkan</span>
                 </button>
@@ -192,10 +192,10 @@ function TopBar({
               {onExportFullWorkbook && (
                 <button
                   onClick={() => { setShowExportMenu(false); onExportFullWorkbook?.(); }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
+                  className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60 cursor-pointer"
                 >
                   <span className="font-semibold text-ink flex items-center gap-1.5">
-                    <Download size={13} className="text-forest" /> Export CSRM Full Workbook
+                    <Download size={13} className="text-forest" /> Ekspor CSRM Full Workbook
                   </span>
                   <span className="text-[11px] text-slate mt-0.5">Semua 7 modul operasional perusahaan</span>
                 </button>
@@ -207,10 +207,10 @@ function TopBar({
         {!showDeleted && onAdd && (
           <button
             onClick={onAdd}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium cursor-pointer"
           >
             <Plus size={13} />
-            {addLabel ?? "Tambah"}
+            {addLabel ?? "Tambah Kegiatan"}
           </button>
         )}
       </div>

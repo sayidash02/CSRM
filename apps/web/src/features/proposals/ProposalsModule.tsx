@@ -71,10 +71,10 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
               className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"><Download size={13} />Ekspor Data</button>
         {!showDeleted && onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
-            <Plus size={13} />{addLabel ?? "Tambah"}
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium cursor-pointer">
+            <Plus size={13} />{addLabel ?? "Tambah Proposal"}
           </button>
         )}
       </div>
@@ -136,9 +136,9 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
   const handleSave = () => {
     const missing: string[] = (
       [
-        [!f.date_received, "Tgl Terima"],
-        [!f.institution, "Institusi"],
-        [!f.status, "Status"],
+        [!f.date_received, "Tanggal Diterima"],
+        [!f.institution, "Lembaga / Pemohon"],
+        [!f.status, "Status Evaluasi"],
       ] as [boolean, string][]
     ).filter(([cond]) => cond).map(([, label]) => label);
 
@@ -154,30 +154,30 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
   };
 
   return (
-    <Modal title={initial ? "Edit Proposal" : "Tambah Proposal"} onClose={onClose}>
+    <Modal title={initial ? "Edit Data Proposal" : "Tambah Proposal Masuk Baru"} onClose={onClose}>
       <div className="space-y-4">
         <Field label="No. Registrasi">
           <input type="text" value={initial ? f.registration_no : nextRegNo} disabled className={`${inputCls} opacity-60 font-mono`} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tgl Terima" required>
+          <Field label="Tanggal Diterima" required>
             <input type="date" value={f.date_received} onChange={e => set("date_received", e.target.value)} className={inputCls} />
           </Field>
-          <Field label="Status" required>
+          <Field label="Status Evaluasi" required>
             <select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}>
-              <option value="Accept">Accept</option>
-              <option value="Decline">Decline</option>
+              <option value="Accept">Accept (Disetujui)</option>
+              <option value="Decline">Decline (Ditolak)</option>
             </select>
           </Field>
         </div>
-        <Field label="Institusi / Pemohon" required>
-          <input type="text" value={f.institution} onChange={e => set("institution", e.target.value)} placeholder="Nama lembaga / organisasi" className={inputCls} />
+        <Field label="Nama Lembaga / Pemohon" required>
+          <input type="text" value={f.institution} onChange={e => set("institution", e.target.value)} placeholder="Nama lembaga, kelompok, atau instansi pemohon" className={inputCls} />
         </Field>
-        <Field label="Alamat">
-          <input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Alamat pemohon" className={inputCls} />
+        <Field label="Alamat Lembaga">
+          <input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Alamat lengkap pemohon" className={inputCls} />
         </Field>
-        <Field label="Deskripsi Proposal">
-          <textarea rows={3} value={f.proposal_description} onChange={e => set("proposal_description", e.target.value)} placeholder="Rincian permohonan / bantuan" className={`${inputCls} resize-none`} />
+        <Field label="Deskripsi / Rincian Proposal">
+          <textarea rows={3} value={f.proposal_description} onChange={e => set("proposal_description", e.target.value)} placeholder="Rincian permohonan bantuan atau kerja sama" className={`${inputCls} resize-none`} />
         </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Proposal"} isEdit={!!initial} />
@@ -249,15 +249,15 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
 
   const columns: ColumnDef<Proposal>[] = useMemo(() => [
     { header: "No. Reg", accessor: "registration_no", sortable: true, render: (p) => <span className="text-xs font-mono font-medium text-forest">{p.registration_no}</span> },
-    { header: "Tgl Terima", accessor: "date_received", sortable: true, render: (p) => <span className="text-xs text-slate font-mono whitespace-nowrap">{formatDate(p.date_received)}</span> },
-    { header: "Institusi", accessor: "institution", sortable: true, render: (p) => <div><div className="text-[13px] font-medium text-ink truncate max-w-[170px]">{p.institution}</div><div className="text-xs text-slate mt-0.5 truncate max-w-[170px]">{p.address}</div></div> },
-    { header: "Keterangan", accessor: "proposal_description", sortable: true, render: (p) => <div className="text-xs text-slate max-w-xs leading-relaxed"><div className="line-clamp-2">{p.proposal_description}</div></div> },
+    { header: "Tanggal Terima", accessor: "date_received", sortable: true, render: (p) => <span className="text-xs text-slate font-mono whitespace-nowrap">{formatDate(p.date_received)}</span> },
+    { header: "Lembaga & Alamat", accessor: "institution", sortable: true, render: (p) => <div><div className="text-[13px] font-medium text-ink truncate max-w-[170px]">{p.institution}</div><div className="text-xs text-slate mt-0.5 truncate max-w-[170px]">{p.address}</div></div> },
+    { header: "Deskripsi Proposal", accessor: "proposal_description", sortable: true, render: (p) => <div className="text-xs text-slate max-w-xs leading-relaxed"><div className="line-clamp-2">{p.proposal_description}</div></div> },
     { 
       header: "Status", 
       accessor: "status", 
       sortable: true, 
       filterOptions: [
-        { label: "All Status", value: "all" },
+        { label: "Semua Status", value: "all" },
         { label: "Accept", value: "Accept" },
         { label: "Decline", value: "Decline" }
       ],
@@ -267,17 +267,17 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(p)} 
-          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw size={12} />
-          Restore
+          Pulihkan
         </button>
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
-        <button onClick={() => setEditing(p)} title="Edit Proposal" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => setToDelete(p)} title="Hapus Proposal" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors cursor-pointer"><History size={13} /></button>
+        <button onClick={() => setEditing(p)} title="Edit Proposal" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors cursor-pointer"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(p)} title="Hapus Proposal" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )}
   ], [showDeleted]);
@@ -296,7 +296,7 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-paper">
-      <TopBar title="Proposal" subtitle="Manajemen proposal masuk dari komunitas & mitra" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="Proposals" subtitle="Pencatatan, evaluasi kelayakan, dan status proposal masuk" addLabel="Tambah Proposal" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
         <div className="flex items-center gap-2 mr-2">
           <span className="text-[12px] font-medium text-slate">Data Terhapus:</span>
           <input 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
@@ -91,10 +91,10 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
               className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"><Download size={13} />Ekspor Data</button>
         {!showDeleted && onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
-            <Plus size={13} />{addLabel ?? "Tambah"}
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium cursor-pointer">
+            <Plus size={13} />{addLabel ?? "Tambah Program CSR"}
           </button>
         )}
       </div>
@@ -171,8 +171,8 @@ function CsrForm({
   const handleSave = () => {
     const missing: string[] = (
       [
-        [!f.program, "Program"],
-        [!f.status, "Status"],
+        [!f.program, "Nama Program"],
+        [!f.status, "Status Program"],
       ] as [boolean, string][]
     ).filter(([cond]) => cond).map(([, label]) => label);
 
@@ -201,54 +201,56 @@ function CsrForm({
   };
 
   return (
-    <Modal title={initial ? "Edit CSR Project" : "Tambah Program CSR"} onClose={onClose}>
+    <Modal title={initial ? "Edit Program CSR" : "Tambah Program CSR Baru"} onClose={onClose}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tahun" required>
+          <Field label="Tahun Pelaksanaan" required>
             <input type="number" value={f.project_year} onChange={e => set("project_year", e.target.value)} className={`${inputCls} font-mono`} />
           </Field>
-          <Field label="Status" required>
+          <Field label="Status Program" required>
             <select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}>
-              <option value="Planning">Planning</option>
-              <option value="On Going">On Going</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
+              <option value="Planning">Planning (Perencanaan)</option>
+              <option value="On Going">On Going (Sedang Berjalan)</option>
+              <option value="Completed">Completed (Selesai)</option>
+              <option value="Cancelled">Cancelled (Dibatalkan)</option>
             </select>
           </Field>
         </div>
-        <Field label="Program" required>
+        <Field label="Nama Program CSR" required>
           <input type="text" value={f.program} onChange={e => set("program", e.target.value)} placeholder="Nama program CSR" className={inputCls} />
         </Field>
-        <Field label="Kegiatan">
-          <input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Rincian kegiatan" className={inputCls} />
+        <Field label="Rincian Kegiatan">
+          <input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Rincian kegiatan operasional program" className={inputCls} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Bentuk Kegiatan">
-            <input type="text" value={f.type_of_activity} onChange={e => set("type_of_activity", e.target.value)} placeholder="Misal: Pelatihan / Bantuan" className={inputCls} />
+          <Field label="Jenis / Bentuk Kegiatan">
+            <input type="text" value={f.type_of_activity} onChange={e => set("type_of_activity", e.target.value)} placeholder="Misal: Pelatihan / Bantuan Fisik" className={inputCls} />
           </Field>
-          <Field label="Lokasi">
+          <Field label="Lokasi Kegiatan">
             <input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Desa / Kecamatan" className={inputCls} />
           </Field>
         </div>
-        <Field label="Target/Sasaran">
-          <input type="text" value={f.target_beneficiaries} onChange={e => set("target_beneficiaries", e.target.value)} placeholder="Kelompok masyarakat sasaran" className={inputCls} />
+        <Field label="Target Penerima Manfaat">
+          <input type="text" value={f.target_beneficiaries} onChange={e => set("target_beneficiaries", e.target.value)} placeholder="Kelompok sasaran masyarakat / desa" className={inputCls} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Budget / Anggaran">
+          <Field label="Pagu Anggaran (Rp)">
             <CurrencyInput value={f.budget} onChange={v => set("budget", v)} placeholder="Rp 0" className={inputCls} />
           </Field>
           <Field label="Periode Pelaksanaan">
-            <input type="text" value={f.implementation_period} onChange={e => set("implementation_period", e.target.value)} placeholder="Misal: Q1 2026 / Jan-Mar" className={inputCls} />
+            <input type="text" value={f.implementation_period} onChange={e => set("implementation_period", e.target.value)} placeholder="Misal: Q1 2026 / Jan - Mar" className={inputCls} />
           </Field>
         </div>
-        <Field label="Tujuan">
-          <textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan program" className={`${inputCls} resize-none`} />
+        <Field label="Tujuan &amp; Sasaran (Objective)">
+          <textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan dan dampak yang diharapkan dari program" className={`${inputCls} resize-none`} />
         </Field>
         <Field label="Terkait Pengaduan (Opsional)">
           <select value={f.grievance_id} onChange={e => set("grievance_id", e.target.value)} className={inputCls}>
             <option value="">— Tidak ada —</option>
             {grievances.map(g => (
-              <option key={g.id} value={g.id}>{g.register_no} — {g.complaint_issue}</option>
+              <option key={g.id} value={g.id}>
+                {g.register_no} - {g.complainant_name} ({g.category})
+              </option>
             ))}
           </select>
         </Field>
@@ -263,58 +265,64 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
   const [showDeleted, setShowDeleted] = useState(false);
   const [addDraft, setAddDraft] = useState({ ...emptyCsrDraft });
 
-  useEffect(() => {
-    fetchData();
-  }, [activeYear, showDeleted]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const yearParam = activeYear ? `year=${activeYear}` : '';
       const isDeletedParam = `is_deleted=${showDeleted}`;
       const queryParams = [yearParam, isDeletedParam].filter(Boolean).join('&');
       const res = await apiClient.get(`/csr-projects?${queryParams}`);
-      setItems(res.data.data || []);
+      setItems(res.data.data);
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal mengambil data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal memuat data program CSR", "error");
     }
-  };
+  }, [activeYear, showDeleted, showToast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAdd = async (d: Omit<CsrProject, "id">) => {
     try {
-      const year = parseInt(activeYear) || new Date().getFullYear();
-      await apiClient.post('/csr-projects', { ...d, project_year: d.project_year || year });
-      if (showToast) showToast(`Program '${d.program}' berhasil ditambahkan`, "success");
-      fetchData();
+      const res = await apiClient.post('/csr-projects', d);
+      if (res.data?.data) {
+        setItems(prev => [res.data.data, ...prev]);
+      } else {
+        fetchData();
+      }
+      showToast(`Program '${d.program}' berhasil ditambahkan`, "success");
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
   const handleEdit = async (id: string | number, d: Omit<CsrProject, "id">) => {
     try {
-      const year = parseInt(activeYear) || new Date().getFullYear();
-      await apiClient.put(`/csr-projects/${id}`, { ...d, project_year: d.project_year || year });
-      if (showToast) showToast(`Program '${d.program}' berhasil diperbarui`, "success");
-      fetchData();
+      const res = await apiClient.put(`/csr-projects/${id}`, d);
+      setItems(prev => prev.map(i => i.id === id ? res.data.data : i));
+      showToast(`Program '${d.program}' berhasil diperbarui`, "success");
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
-  const handleDelete = async (id: string | number, title?: string) => {
+  const handleDelete = async (id: string | number, program: string) => {
     try {
       await apiClient.delete(`/csr-projects/${id}`);
-      if (showToast) showToast(`Program '${title || ''}' berhasil dihapus`, "success");
-      fetchData();
+      setItems(prev => prev.filter(i => i.id !== id));
+      showToast(`Program '${program}' berhasil dihapus`, "success");
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal menghapus data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal menghapus data", "error");
     }
   };
 
   const handleRestore = async (id: string | number) => {
     try {
       await apiClient.patch(`/csr-projects/${id}/restore`);
-      if (showToast) showToast("Program berhasil dipulihkan", "success");
+      showToast("Data berhasil dipulihkan", "success");
       fetchData();
     } catch (e: any) {
       if (showToast) showToast(e.response?.data?.error || "Gagal memulihkan data", "error");
@@ -333,12 +341,12 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
 
   const columns: ColumnDef<CsrProject>[] = useMemo(() => [
     { header: "Tahun", accessor: "project_year", sortable: true, render: (p) => <div className="text-xs font-mono text-slate">{p.project_year}</div> },
-    { header: "Program", accessor: "program", sortable: true, render: (p) => <div className="text-[13px] font-semibold text-ink whitespace-normal">{p.program}</div> },
-    { header: "Kegiatan", accessor: "activity", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.activity || "—"}</div> },
-    { header: "Bentuk Kegiatan", accessor: "type_of_activity", sortable: true, render: (p) => <div className="text-xs text-slate">{p.type_of_activity || "—"}</div> },
+    { header: "Nama Program", accessor: "program", sortable: true, render: (p) => <div className="text-[13px] font-semibold text-ink whitespace-normal">{p.program}</div> },
+    { header: "Rincian Kegiatan", accessor: "activity", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.activity || "—"}</div> },
+    { header: "Jenis Kegiatan", accessor: "type_of_activity", sortable: true, render: (p) => <div className="text-xs text-slate">{p.type_of_activity || "—"}</div> },
     { header: "Lokasi", accessor: "location", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.location || "—"}</div> },
-    { header: "Target/Sasaran", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.target_beneficiaries || "—"}</div> },
-    { header: "Tujuan", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-slate italic leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-2">{p.objective || "—"}</div></div> },
+    { header: "Penerima Manfaat", accessor: "target_beneficiaries", sortable: true, render: (p) => <div className="text-xs text-slate whitespace-normal">{p.target_beneficiaries || "—"}</div> },
+    { header: "Tujuan (Objective)", accessor: "objective", sortable: true, render: (p) => <div className="text-xs text-slate italic leading-relaxed max-w-[200px] whitespace-normal"><div className="line-clamp-2">{p.objective || "—"}</div></div> },
     { 
       header: "Status", 
       accessor: "status", 
@@ -352,23 +360,23 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
       ],
       render: (p) => <StatusBadge status={p.status} /> 
     },
-    { header: "Realisasi", accessor: "budget", sortable: true, render: (p) => <div className="text-[13px] font-semibold font-mono text-ink whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
+    { header: "Anggaran", accessor: "budget", sortable: true, render: (p) => <div className="text-[13px] font-semibold font-mono text-ink whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
     { header: "Periode", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-slate whitespace-nowrap">{p.implementation_period || "—"}</div> },
     { header: "Aksi", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(p)} 
-          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw size={12} />
-          Restore
+          Pulihkan
         </button>
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
-        <button onClick={() => setEditing(p)} title="Edit Program" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => setToDelete(p)} title="Hapus Program" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors cursor-pointer"><History size={13} /></button>
+        <button onClick={() => setEditing(p)} title="Edit Program" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors cursor-pointer"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(p)} title="Hapus Program" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )}
   ], [showDeleted]);
@@ -391,7 +399,7 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-paper">
-      <TopBar title="CSR Project" subtitle="Program tanggung jawab sosial perusahaan tahun berjalan" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="CSR Projects" subtitle="Perencanaan, realisasi anggaran, dan implementasi program CSR" addLabel="Tambah Program CSR" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
         <div className="flex items-center gap-2 mr-2">
           <span className="text-[12px] font-medium text-slate">Data Terhapus:</span>
           <input 

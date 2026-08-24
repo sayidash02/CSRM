@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, Trash2, Search, Plus, Download, RotateCcw, History } from "lucide-react";
@@ -80,10 +80,10 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
               className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"><Download size={13} />Ekspor Data</button>
         {!showDeleted && onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
-            <Plus size={13} />{addLabel ?? "Tambah"}
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium cursor-pointer">
+            <Plus size={13} />{addLabel ?? "Catat Pengaduan Baru"}
           </button>
         )}
       </div>
@@ -174,7 +174,7 @@ function GrievanceForm({
   const handleSave = () => {
     const missing: string[] = (
       [
-        [!f.log_date, "Tgl Masuk"],
+        [!f.log_date, "Tanggal Masuk"],
         [!f.complainant_name, "Nama Pelapor"],
         [!f.category, "Kategori"],
         [!f.description, "Deskripsi"],
@@ -211,21 +211,21 @@ function GrievanceForm({
   };
 
   return (
-    <Modal title={initial ? "Edit Pengaduan" : "Registrasi Pengaduan (Grievance)"} onClose={onClose} size="lg">
+    <Modal title={initial ? "Edit Data Pengaduan (Grievance)" : "Registrasi Pengaduan Baru (Grievance)"} onClose={onClose} size="lg">
       <div className="space-y-4">
         <div className="grid grid-cols-3 gap-3">
           <Field label="No. Registrasi">
             <input type="text" value={initial ? f.register_no : nextRegNo} disabled className={`${inputCls} opacity-60 font-mono`} />
           </Field>
-          <Field label="Tgl Masuk" required>
+          <Field label="Tanggal Masuk" required>
             <input type="date" value={f.log_date} onChange={e => set("log_date", e.target.value)} className={inputCls} />
           </Field>
-          <Field label="Status" required>
+          <Field label="Status Penanganan" required>
             <select value={f.status} onChange={e => set("status", e.target.value)} className={inputCls}>
-              <option value="Open">Open</option>
-              <option value="On Progress">On Progress</option>
-              <option value="Resolved">Resolved</option>
-              <option value="Closed">Closed</option>
+              <option value="Open">Open (Terbuka)</option>
+              <option value="On Progress">On Progress (Sedang Ditangani)</option>
+              <option value="Resolved">Resolved (Terselesaikan)</option>
+              <option value="Closed">Closed (Ditutup)</option>
             </select>
           </Field>
         </div>
@@ -234,58 +234,64 @@ function GrievanceForm({
           <Field label="Nama Pelapor" required>
             <input type="text" value={f.complainant_name} onChange={e => set("complainant_name", e.target.value)} placeholder="Nama warga / pelapor" className={inputCls} />
           </Field>
-          <Field label="No. Telepon">
-            <input type="text" value={f.phone} onChange={e => set("phone", e.target.value)} placeholder="08..." className={inputCls} />
+          <Field label="Nomor Kontak / Telepon">
+            <input type="text" value={f.phone} onChange={e => set("phone", e.target.value)} placeholder="Contoh: 08123456789" className={inputCls} />
           </Field>
-          <Field label="Alamat">
-            <input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Dusun / Desa" className={inputCls} />
+          <Field label="Alamat Pelapor">
+            <input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Dusun / Desa pelapor" className={inputCls} />
           </Field>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Kategori" required>
-            <input type="text" value={f.category} onChange={e => set("category", e.target.value)} placeholder="Misal: Lingkungan, Sosial" className={inputCls} />
+          <Field label="Kategori Keluhan" required>
+            <input type="text" value={f.category} onChange={e => set("category", e.target.value)} placeholder="Misal: Lingkungan, Sosial, Akses" className={inputCls} />
           </Field>
-          <Field label="Signifikansi">
+          <Field label="Tingkat Signifikansi">
             <select value={f.significance} onChange={e => set("significance", e.target.value)} className={inputCls}>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
+              <option value="Low">Low (Rendah)</option>
+              <option value="Medium">Medium (Sedang)</option>
+              <option value="High">High (Tinggi)</option>
+              <option value="Critical">Critical (Kritis)</option>
             </select>
           </Field>
           <Field label="Lokasi Kejadian">
-            <input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Lokasi terkait" className={inputCls} />
+            <input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Titik lokasi masalah" className={inputCls} />
           </Field>
         </div>
 
-        <Field label="Deskripsi Pengaduan" required>
-          <textarea rows={2} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Rincian keluhan / masalah yang disampaikan" className={`${inputCls} resize-none`} />
+        <Field label="Deskripsi Detail Pengaduan" required>
+          <textarea rows={2} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Rincian keluhan atau masalah yang disampaikan warga" className={`${inputCls} resize-none`} />
         </Field>
 
-        <Field label="Hasil Investigasi">
-          <textarea rows={2} value={f.investigation} onChange={e => set("investigation", e.target.value)} placeholder="Fakta lapangan & hasil investigasi tim" className={`${inputCls} resize-none`} />
+        <Field label="Hasil Investigasi Lapangan">
+          <textarea rows={2} value={f.investigation} onChange={e => set("investigation", e.target.value)} placeholder="Fakta temuan lapangan dan hasil verifikasi tim CSR" className={`${inputCls} resize-none`} />
         </Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tindakan Resolusi">
-            <textarea rows={2} value={f.resolution} onChange={e => set("resolution", e.target.value)} placeholder="Tindakan penyelesaian" className={`${inputCls} resize-none`} />
+          <Field label="Tindakan Resolusi / Kesepakatan">
+            <textarea rows={2} value={f.resolution} onChange={e => set("resolution", e.target.value)} placeholder="Solusi atau tindakan tindak lanjut penyelesaian" className={`${inputCls} resize-none`} />
           </Field>
-          <Field label="Feedback Pelapor">
-            <textarea rows={2} value={f.feedback} onChange={e => set("feedback", e.target.value)} placeholder="Tanggapan dari pelapor setelah resolusi" className={`${inputCls} resize-none`} />
+          <Field label="Umpan Balik Pelapor (Feedback)">
+            <textarea rows={2} value={f.feedback} onChange={e => set("feedback", e.target.value)} placeholder="Tanggapan / konfirmasi dari pelapor atas penyelesaian" className={`${inputCls} resize-none`} />
           </Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Tgl Selesai">
+          <Field label="Tanggal Selesai Penanganan">
             <input type="date" value={f.completion_date} onChange={e => set("completion_date", e.target.value)} className={inputCls} />
           </Field>
-          <Field label="Catatan / Remarks">
-            <input type="text" value={f.remarks} onChange={e => set("remarks", e.target.value)} placeholder="Keterangan tambahan" className={inputCls} />
+          <Field label="Catatan Tambahan (Remarks)">
+            <input type="text" value={f.remarks} onChange={e => set("remarks", e.target.value)} placeholder="Catatan internal tim CSR" className={inputCls} />
           </Field>
         </div>
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Pengaduan"} isEdit={!!initial} />
+      <ModalFooter
+        onClose={onClose}
+        onSave={handleSave}
+        onClear={!initial ? handleClear : undefined}
+        saveLabel={initial ? "Simpan Perubahan" : "Simpan Pengaduan"}
+        isEdit={!!initial}
+      />
     </Modal>
   );
 }
@@ -295,11 +301,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
   const [showDeleted, setShowDeleted] = useState(false);
   const [addDraft, setAddDraft] = useState({ ...emptyGrievanceDraft });
 
-  useEffect(() => {
-    fetchData();
-  }, [activeYear, showDeleted]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const yearParam = activeYear ? `year=${activeYear}` : '';
       const isDeletedParam = `is_deleted=${showDeleted}`;
@@ -309,7 +311,11 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
     } catch (e: any) {
       if (showToast) showToast(e.response?.data?.error || "Gagal mengambil data", "error");
     }
-  };
+  }, [activeYear, showDeleted, showToast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAdd = async (d: Omit<Grievance, "id">) => {
     try {
@@ -381,11 +387,11 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
     { header: "Pelapor & Kontak", accessor: "complainant_name", sortable: true, render: (g) => <div><div className="text-[13px] font-medium text-ink">{g.complainant_name}</div><div className="text-xs text-slate mt-0.5">{g.phone}</div><div className="text-xs text-slate mt-0.5">{g.address}</div></div> },
     { header: "Tanggal & Kategori", accessor: "log_date", sortable: true, render: (g) => <div><div className="text-xs text-slate font-mono">{formatDate(g.log_date)}</div><div className="text-xs text-slate mt-0.5">{g.category}</div></div> },
     { header: "Deskripsi & Lokasi", accessor: "description", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal"><div className="text-xs text-ink leading-relaxed line-clamp-2">{g.description}</div><div className="text-xs text-slate mt-0.5 line-clamp-1">📍 {g.location}</div></div> },
-    { header: "Investigasi", accessor: "investigation", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-slate leading-relaxed line-clamp-2">{g.investigation || "—"}</div> },
-    { header: "Resolusi", accessor: "resolution", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-slate leading-relaxed line-clamp-2">{g.resolution || "—"}</div> },
-    { header: "Feedback", accessor: "feedback", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-slate leading-relaxed line-clamp-2">{g.feedback || "—"}</div> },
+    { header: "Investigasi Lapangan", accessor: "investigation", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-slate leading-relaxed line-clamp-2">{g.investigation || "—"}</div> },
+    { header: "Resolusi & Solusi", accessor: "resolution", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-slate leading-relaxed line-clamp-2">{g.resolution || "—"}</div> },
+    { header: "Feedback Pelapor", accessor: "feedback", sortable: true, render: (g) => <div className="max-w-[200px] whitespace-normal text-xs text-slate leading-relaxed line-clamp-2">{g.feedback || "—"}</div> },
     { 
-      header: "Status", 
+      header: "Status Penanganan", 
       accessor: "status", 
       sortable: true, 
       filterOptions: [
@@ -401,17 +407,17 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(g)} 
-          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw size={12} />
-          Restore
+          Pulihkan
         </button>
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(g.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
-        <button onClick={() => setEditing(g)} title="Edit Pengaduan" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => setToDelete(g)} title="Hapus Pengaduan" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { setSelectedHistoryId(g.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors cursor-pointer"><History size={13} /></button>
+        <button onClick={() => setEditing(g)} title="Edit Pengaduan" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors cursor-pointer"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(g)} title="Hapus Pengaduan" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )}
   ], [showDeleted, activeYear]);
@@ -436,7 +442,7 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-paper">
-      <TopBar title="Grievance Redress" subtitle="Penanganan pengaduan & keluhan dari masyarakat" addLabel="Tambah Pengaduan" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="Grievance" subtitle="Pencatatan, investigasi, dan resolusi keluhan masyarakat" addLabel="Catat Pengaduan Baru" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
         <div className="flex items-center gap-2 mr-2">
           <span className="text-[12px] font-medium text-slate">Data Terhapus:</span>
           <input 

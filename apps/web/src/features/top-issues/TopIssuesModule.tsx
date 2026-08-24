@@ -68,10 +68,10 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
               className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"><Download size={13} />Ekspor Data</button>
         {!showDeleted && onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
-            <Plus size={13} />{addLabel ?? "Tambah"}
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium cursor-pointer">
+            <Plus size={13} />{addLabel ?? "Tambah Isu Baru"}
           </button>
         )}
       </div>
@@ -145,22 +145,22 @@ function TopIssueForm({
   };
 
   return (
-    <Modal title={initial ? "Edit Isu Penting" : "Tambah Top Issue"} onClose={onClose}>
+    <Modal title={initial ? "Edit Isu Strategis" : "Tambah Isu Strategis Baru"} onClose={onClose}>
       <div className="space-y-4">
-        <Field label="Periode" required hint="Contoh: Juli 2026 : Tanggal 21-25">
-          <input type="text" value={f.period} onChange={e => set("period", e.target.value)} placeholder="Juli 2026 : Tanggal 21-25" className={inputCls} />
+        <Field label="Periode Waktu" required hint="Contoh: Juli 2026 : Tanggal 21-25">
+          <input type="text" value={f.period} onChange={e => set("period", e.target.value)} placeholder="Contoh: Juli 2026 : Tanggal 21-25" className={inputCls} />
         </Field>
-        <Field label="Isu" required>
-          <input type="text" value={f.issue} onChange={e => set("issue", e.target.value)} placeholder="Judul / nama isu" className={inputCls} />
+        <Field label="Judul / Pokok Isu" required>
+          <input type="text" value={f.issue} onChange={e => set("issue", e.target.value)} placeholder="Judul atau topik isu strategis" className={inputCls} />
         </Field>
-        <Field label="Deskripsi">
-          <textarea rows={3} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Penjelasan detail isu" className={`${inputCls} resize-none`} />
+        <Field label="Deskripsi Detail Isu">
+          <textarea rows={3} value={f.description} onChange={e => set("description", e.target.value)} placeholder="Penjelasan detail kondisi dan latar belakang isu" className={`${inputCls} resize-none`} />
         </Field>
-        <Field label="Follow Up">
-          <textarea rows={2} value={f.follow_up} onChange={e => set("follow_up", e.target.value)} placeholder="Tindakan yang sudah / sedang dilakukan" className={`${inputCls} resize-none`} />
+        <Field label="Tindak Lanjut yang Dilakukan (Follow Up)">
+          <textarea rows={2} value={f.follow_up} onChange={e => set("follow_up", e.target.value)} placeholder="Tindakan mitigasi yang sudah atau sedang berjalan" className={`${inputCls} resize-none`} />
         </Field>
-        <Field label="Next Plan">
-          <textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut berikutnya" className={`${inputCls} resize-none`} />
+        <Field label="Rencana Tindak Lanjut Berikutnya (Next Plan)">
+          <textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana langkah preventif atau mitigasi lanjutan" className={`${inputCls} resize-none`} />
         </Field>
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Isu"} isEdit={!!initial} />
@@ -180,51 +180,49 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
       const res = await apiClient.get(`/top-issues?${queryParams}`);
       setItems(res.data.data);
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal mengambil data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal memuat data isu strategis", "error");
     }
   }, [activeYear, showDeleted, showToast]);
 
   useEffect(() => {
     fetchData();
-  }, [activeYear, showDeleted, fetchData]);
+  }, [fetchData]);
 
   const handleAdd = async (d: Omit<TopIssue, "id">) => {
     try {
-      const year = parseInt(activeYear) || new Date().getFullYear();
-      const res = await apiClient.post('/top-issues', { ...d, year });
+      const res = await apiClient.post('/top-issues', d);
       if (res.data?.data) {
         setItems(prev => [res.data.data, ...prev]);
       } else {
         fetchData();
       }
-      if (showToast) showToast(`Isu '${d.issue}' berhasil ditambahkan`, "success");
+      showToast(`Isu '${d.issue}' berhasil ditambahkan`, "success");
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal menyimpan data", "error");
     }
   };
 
   const handleEdit = async (id: string | number, d: Omit<TopIssue, "id">) => {
     try {
-      const year = parseInt(activeYear) || new Date().getFullYear();
-      const res = await apiClient.put(`/top-issues/${id}`, { ...d, year });
-      if (res.data?.data) {
-        setItems(prev => prev.map(i => i.id === id ? res.data.data : i));
-      } else {
-        fetchData();
-      }
-      if (showToast) showToast(`Isu '${d.issue}' berhasil diperbarui`, "success");
+      const res = await apiClient.put(`/top-issues/${id}`, d);
+      setItems(prev => prev.map(i => i.id === id ? res.data.data : i));
+      showToast(`Isu '${d.issue}' berhasil diperbarui`, "success");
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
     }
   };
 
-  const handleDelete = async (id: string | number, title?: string) => {
+  const handleDelete = async (id: string | number, issue: string) => {
     try {
       await apiClient.delete(`/top-issues/${id}`);
       setItems(prev => prev.filter(i => i.id !== id));
-      if (showToast) showToast(`Isu '${title || ''}' berhasil dihapus`, "success");
+      showToast(`Isu '${issue}' berhasil dihapus`, "success");
     } catch (e: any) {
-      if (showToast) showToast(e.response?.data?.error || "Gagal menghapus data", "error");
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal menghapus data", "error");
     }
   };
 
@@ -253,24 +251,24 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
   const columns: ColumnDef<TopIssue>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs font-mono text-slate-2">{i + 1}</span> },
     { header: "Isu & Periode", accessor: "issue", sortable: true, render: (issue) => <div><div className="text-[13px] font-semibold text-ink whitespace-normal">{issue.issue}</div><div className="text-xs text-slate font-mono mt-0.5">{issue.period}</div></div> },
-    { header: "Deskripsi", accessor: "description", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.description}</div></div> },
-    { header: "Follow Up", accessor: "follow_up", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.follow_up}</div></div> },
-    { header: "Next Plan", accessor: "next_plan", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.next_plan}</div></div> },
+    { header: "Deskripsi Isu", accessor: "description", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.description}</div></div> },
+    { header: "Tindak Lanjut (Follow Up)", accessor: "follow_up", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.follow_up}</div></div> },
+    { header: "Rencana Lanjutan (Next Plan)", accessor: "next_plan", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.next_plan}</div></div> },
     { header: "Aksi", render: (issue) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(issue)} 
-          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw size={12} />
-          Restore
+          Pulihkan
         </button>
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(issue.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
-        <button onClick={() => setEditing(issue)} title="Edit Isu" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => setToDelete(issue)} title="Hapus Isu" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { setSelectedHistoryId(issue.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors cursor-pointer"><History size={13} /></button>
+        <button onClick={() => setEditing(issue)} title="Edit Isu" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors cursor-pointer"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(issue)} title="Hapus Isu" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )}
   ], [showDeleted, handleRestore]);
@@ -288,7 +286,7 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-paper">
-      <TopBar title="Top Issue" subtitle="Isu prioritas yang sedang dipantau dan ditindaklanjuti" addLabel="Tambah Isu" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="Top Issues" subtitle="Pemantauan isu strategis, mitigasi risiko &amp; tindak lanjut" addLabel="Tambah Isu Baru" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
         <div className="flex items-center gap-2 mr-2">
           <span className="text-[12px] font-medium text-slate">Data Terhapus:</span>
           <input 

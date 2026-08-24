@@ -36,9 +36,9 @@ export function DailyActivityTable({
   const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-slate-2 font-mono">{(meta.page - 1) * meta.limit + i + 1}</span> },
     { header: "Tanggal", accessor: "activity_date", sortable: true, render: (a) => <span className="text-xs text-slate font-mono whitespace-nowrap">{formatDate(a.activity_date)}</span> },
-    { header: "Daily Title / Kegiatan", accessor: "activity", sortable: true, render: (a) => <div className="text-[13px] font-medium text-ink whitespace-normal max-w-[220px]">{a.activity}</div> },
+    { header: "Nama Kegiatan", accessor: "activity", sortable: true, render: (a) => <div className="text-[13px] font-medium text-ink whitespace-normal max-w-[220px]">{a.activity}</div> },
     { header: "Fokus", accessor: "focus", sortable: true, render: (a) => <div className="text-xs text-slate whitespace-normal max-w-[130px]">{a.focus || <span className="text-slate-2/50">—</span>}</div> },
-    { header: "Attendees / Instansi & Venue", accessor: "institution_group", sortable: true, render: (a) => (
+    { header: "Instansi / Kelompok & Alamat", accessor: "institution_group", sortable: true, render: (a) => (
       <div className="max-w-[200px]">
         <div className="text-[13px] font-medium text-ink whitespace-normal line-clamp-2">{a.stakeholder?.name || a.institution_group || <span className="text-slate-2/50">—</span>}</div>
         {a.address && <div className="text-[11px] text-slate mt-0.5 whitespace-normal line-clamp-1">📍 {a.address}</div>}
@@ -46,9 +46,9 @@ export function DailyActivityTable({
     )},
     { header: "Lokasi", accessor: "location", sortable: true, render: (a) => <div className="text-xs text-slate max-w-[120px] whitespace-normal">{a.location || <span className="text-slate-2/50">—</span>}</div> },
     { header: "Biaya", accessor: "cost", sortable: true, render: (a) => <span className="text-xs font-mono text-ink whitespace-nowrap">{a.cost ? `Rp ${Number(a.cost).toLocaleString('id-ID')}` : '-'}</span> },
-    { header: "PIC (JSP)", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-ink whitespace-nowrap">{a.pics && a.pics.length > 0 ? a.pics.map((p: any) => p.name).join(', ') : '-'}</span> },
-    { header: "Category", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-slate whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
-    { header: "Sub Category", accessor: "sub_category.name", sortable: true, render: (a) => <span className="text-xs text-slate whitespace-nowrap">{a.sub_category?.name || a.sub_category_name || '-'}</span> },
+    { header: "PIC (Tim CSR)", accessor: "pics", sortable: true, render: (a) => <span className="text-xs text-ink whitespace-nowrap">{a.pics && a.pics.length > 0 ? a.pics.map((p: any) => p.name).join(', ') : '-'}</span> },
+    { header: "Kategori", accessor: "category.name", sortable: true, render: (a) => <span className="text-xs text-slate whitespace-nowrap">{a.category?.name || a.category_name || '-'}</span> },
+    { header: "Sub Kategori", accessor: "sub_category.name", sortable: true, render: (a) => <span className="text-xs text-slate whitespace-nowrap">{a.sub_category?.name || a.sub_category_name || '-'}</span> },
     { header: "Keterangan", accessor: "keterangan", sortable: true, render: (a) => <div className="text-xs text-slate whitespace-normal leading-relaxed max-w-[180px] line-clamp-3" title={a.keterangan || ''}>{a.keterangan || (!a.hasil ? a.description_result : null) || <span className="text-slate-2/50">—</span>}</div> },
     { header: "Hasil", accessor: "hasil", sortable: true, render: (a) => <div className="text-xs text-slate whitespace-normal leading-relaxed max-w-[180px] line-clamp-3" title={a.hasil || ''}>{a.hasil || <span className="text-slate-2/50">—</span>}</div> },
     { header: "Kesimpulan", accessor: "kesimpulan", sortable: true, render: (a) => <div className="text-xs text-slate whitespace-normal leading-relaxed max-w-[160px] line-clamp-3" title={a.kesimpulan || ''}>{a.kesimpulan || <span className="text-slate-2/50">—</span>}</div> },
@@ -67,14 +67,14 @@ export function DailyActivityTable({
       }
     },
     {
-      header: "Daily Notes (MOM)",
+      header: "Notulensi (MOM)",
       className: "text-center whitespace-nowrap",
       render: (a) => (
         <div className="inline-flex items-center gap-1.5">
           <button
             onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date, 'xlsx')}
             title={`Unduh MOM Excel: ${a.activity}`}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 transition-all shadow-2xs active:scale-95"
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 transition-all shadow-2xs active:scale-95 cursor-pointer"
           >
             <FileSpreadsheet size={12} className="text-forest" />
             <span>Excel</span>
@@ -82,7 +82,7 @@ export function DailyActivityTable({
           <button
             onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date, 'docx')}
             title={`Unduh MOM Word: ${a.activity}`}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-ink bg-paper-2 hover:bg-paper rounded-md border border-line transition-all shadow-2xs active:scale-95"
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-ink bg-paper-2 hover:bg-paper rounded-md border border-line transition-all shadow-2xs active:scale-95 cursor-pointer"
           >
             <FileText size={12} className="text-slate" />
             <span>Word</span>
@@ -90,7 +90,7 @@ export function DailyActivityTable({
           <button
             onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date, 'pdf')}
             title={`Unduh MOM PDF: ${a.activity}`}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-clay bg-clay/10 hover:bg-clay/20 rounded-md border border-clay/30 transition-all shadow-2xs active:scale-95"
+            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-clay bg-clay/10 hover:bg-clay/20 rounded-md border border-clay/30 transition-all shadow-2xs active:scale-95 cursor-pointer"
           >
             <FileText size={12} className="text-clay" />
             <span>PDF</span>
@@ -102,17 +102,17 @@ export function DailyActivityTable({
       <div className="flex items-center justify-end">
         <button
           onClick={() => onRestore(a)}
-          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw size={12} />
-          Restore
+          Pulihkan
         </button>
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { onHistory(a.id); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
-        <button onClick={() => onEdit(a)} title="Edit Kegiatan" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => onDelete(a)} title="Hapus Kegiatan" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { onHistory(a.id); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors cursor-pointer"><History size={13} /></button>
+        <button onClick={() => onEdit(a)} title="Edit Kegiatan" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors cursor-pointer"><Edit2 size={13} /></button>
+        <button onClick={() => onDelete(a)} title="Hapus Kegiatan" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )}
   ], [showDeleted, meta.page, meta.limit, onRestore, onHistory, onEdit, onDelete, onDownloadSingleMom]);

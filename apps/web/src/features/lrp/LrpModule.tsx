@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useGlobalSearch } from '../../hooks/useGlobalSearch';
 import { apiClient } from '../../lib/apiClient';
 import { Edit2, Trash2, Search, Plus, Download, AlertTriangle, RotateCcw, History } from "lucide-react";
@@ -67,10 +67,10 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
               className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"><Download size={13} />Ekspor Data</button>
         {!showDeleted && onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
-            <Plus size={13} />{addLabel ?? "Tambah"}
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium cursor-pointer">
+            <Plus size={13} />{addLabel ?? "Tambah Program LRP"}
           </button>
         )}
       </div>
@@ -123,14 +123,14 @@ function LrpForm({
   };
 
   return (
-    <Modal title={initial ? "Edit Program LRP" : "Tambah Program LRP"} onClose={onClose}>
+    <Modal title={initial ? "Edit Program LRP" : "Tambah Program LRP Baru"} onClose={onClose}>
       <div className="space-y-4">
-        <Field label="Nama Program" required hint="Program bantuan / pelatihan mata pencaharian">
+        <Field label="Nama Program LRP" required hint="Program bantuan / pelatihan pemulihan mata pencaharian">
           <input
             type="text"
             value={f.program}
             onChange={(e) => set("program", e.target.value)}
-            placeholder="Contoh: Budidaya Perikanan Air Tawar"
+            placeholder="Contoh: Pelatihan Budidaya Perikanan / Bantuan Usaha"
             className={inputCls}
           />
         </Field>
@@ -159,11 +159,7 @@ export default function LrpModule({
   const [showDeleted, setShowDeleted] = useState(false);
   const [addDraft, setAddDraft] = useState({ ...emptyLrpDraft });
 
-  useEffect(() => {
-    fetchData();
-  }, [activeYear, showDeleted]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const yearParam = activeYear ? `year=${activeYear}` : '';
       const isDeletedParam = `is_deleted=${showDeleted}`;
@@ -172,9 +168,13 @@ export default function LrpModule({
       setItems(res.data.data || []);
     } catch (e: any) {
       console.error(e);
-      showToast?.(e.response?.data?.error || "Gagal mengambil data", "error");
+      showToast?.(e.response?.data?.error || "Gagal memuat data program LRP", "error");
     }
-  };
+  }, [activeYear, showDeleted, showToast]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const { q, setQ, filtered } = useGlobalSearch(items);
   const [showForm, setShowForm] = useState(false);
@@ -232,25 +232,25 @@ export default function LrpModule({
   const columns: ColumnDef<LrpProgram>[] = useMemo(() => [
     { header: "No", render: (_, i) => <span className="text-xs text-slate-2 font-mono">{i + 1}</span> },
     { header: "Tahun", accessor: "year", sortable: true, render: (p) => <span className="text-xs font-mono text-slate">{p.year}</span> },
-    { header: "Nama Program", accessor: "program", sortable: true, render: (p) => <span className="text-[13px] font-medium text-ink">{p.program}</span> },
+    { header: "Nama Program LRP", accessor: "program", sortable: true, render: (p) => <span className="text-[13px] font-medium text-ink">{p.program}</span> },
     { header: "Aksi", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(p)} 
-          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw size={12} />
-          Restore
+          Pulihkan
         </button>
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
-        <button onClick={() => setEditing(p)} title="Edit Program" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => setToDelete(p)} title="Hapus Program" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { setSelectedHistoryId(p.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors cursor-pointer"><History size={13} /></button>
+        <button onClick={() => setEditing(p)} title="Edit Program" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors cursor-pointer"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(p)} title="Hapus Program" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )}
-  ], [showDeleted, handleRestore]);
+  ], [showDeleted]);
 
   const handleExportClick = () => {
     const exportData = filtered.map(p => ({
@@ -262,7 +262,7 @@ export default function LrpModule({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-paper">
-      <TopBar title="LRP — Livelihood Restoration Program" subtitle="Program community development & pemulihan mata pencaharian" addLabel="Tambah Program" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
+      <TopBar title="Livelihood Restoration (LRP)" subtitle="Program pemulihan mata pencaharian dan kemandirian warga" addLabel="Tambah Program LRP" onAdd={() => setShowForm(true)} showDeleted={showDeleted} showSearch searchValue={q} onSearch={setQ} onExport={handleExportClick}>
         <div className="flex items-center gap-2 mr-2">
           <span className="text-[12px] font-medium text-slate">Data Terhapus:</span>
           <input 

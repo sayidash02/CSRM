@@ -90,10 +90,10 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
               className="pl-8 pr-3 py-1.5 text-[12px] bg-paper/50 rounded-lg border border-line text-ink outline-none focus:border-forest focus:bg-white w-48 placeholder:text-slate-2" />
           </div>
         )}
-        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs"><Download size={13} />Export</button>
+        <button onClick={onExport} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-slate border border-line bg-white rounded-lg hover:bg-paper-2 hover:text-ink transition-colors shadow-2xs cursor-pointer"><Download size={13} />Ekspor Data</button>
         {!showDeleted && onAdd && (
-          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium">
-            <Plus size={13} />{addLabel ?? "Tambah"}
+          <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] bg-forest text-white rounded-lg hover:bg-forest-2 transition-colors shadow-2xs font-medium cursor-pointer">
+            <Plus size={13} />{addLabel ?? "Tambah Engagement"}
           </button>
         )}
       </div>
@@ -166,28 +166,57 @@ function StakeholderForm({
   };
   
   return (
-    <Modal title={initial ? "Edit Stakeholder Engagement" : "Tambah Stakeholder Engagement"} onClose={onClose}>
+    <Modal title={initial ? "Edit Stakeholder Engagement" : "Tambah Stakeholder Engagement Baru"} onClose={onClose}>
       <div className="px-6 py-4 space-y-4">
-        <Field label="Nama Stakeholder" required>
+        <Field label="Nama Stakeholder / Pemangku Kepentingan" required>
           <input
             type="text"
             value={f.stakeholder}
             onChange={e => set("stakeholder", e.target.value)}
-            placeholder="Nama stakeholder"
+            placeholder="Contoh: Kelompok Nelayan Pasir Putih / Kepala Desa"
             className={inputCls}
           />
         </Field>
         <div className="flex gap-4">
           <div className="flex-1">
-            <Field label="Tanggal"><input type="date" value={f.date} onChange={e => set("date", e.target.value)} className={inputCls} /></Field>
+            <Field label="Tanggal Pertemuan">
+              <input
+                type="date"
+                value={f.date}
+                onChange={e => set("date", e.target.value)}
+                className={inputCls}
+              />
+            </Field>
           </div>
           <div className="flex-1">
-            <Field label="Tempat"><input type="text" value={f.venue} onChange={e => set("venue", e.target.value)} placeholder="Contoh: Kantor Dinas..." className={inputCls} /></Field>
+            <Field label="Tempat / Venue Pertemuan">
+              <input
+                type="text"
+                value={f.venue}
+                onChange={e => set("venue", e.target.value)}
+                placeholder="Contoh: Balai Desa / Kantor JSP"
+                className={inputCls}
+              />
+            </Field>
           </div>
         </div>
-        <Field label="Concern / Isu yang Dibahas"><textarea rows={3} value={f.concern_issue} onChange={e => set("concern_issue", e.target.value)} placeholder="Topik atau isu yang dibahas dalam pertemuan" className={`${inputCls} resize-none`} /></Field>
+        <Field label="Isu / Pokok Pembahasan (Concern &amp; Issue)">
+          <textarea
+            rows={4}
+            value={f.concern_issue}
+            onChange={e => set("concern_issue", e.target.value)}
+            placeholder="Aspirasi, keluhan, atau topik utama yang dibahas bersama pemangku kepentingan"
+            className={`${inputCls} resize-none`}
+          />
+        </Field>
       </div>
-      <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan"} isEdit={!!initial} />
+      <ModalFooter
+        onClose={onClose}
+        onSave={handleSave}
+        onClear={!initial ? handleClear : undefined}
+        saveLabel={initial ? "Simpan Perubahan" : "Simpan Data"}
+        isEdit={!!initial}
+      />
     </Modal>
   );
 }
@@ -252,11 +281,17 @@ export default function StakeholdersModule({
     }
   };
 
-  const handleEdit = async (id: string, d: Omit<Stakeholder, "id">) => {
+  const handleUpdate = async (d: Omit<Stakeholder, "id">) => {
+    if (!editing) return;
     try {
-      const res = await apiClient.put(`/stakeholders/${id}`, d);
-      setItems(prev => prev.map(i => i.id === id ? res.data.data : i));
-      showToast(`Stakeholder '${d.stakeholder}' berhasil diperbarui`, "success");
+      const res = await apiClient.put(`/stakeholders/${editing.id}`, d);
+      if (res.data?.data) {
+        setItems(prev => prev.map(i => i.id === editing.id ? res.data.data : i));
+      } else {
+        fetchData();
+      }
+      showToast("Data stakeholder berhasil diperbarui", "success");
+      setEditing(null);
     } catch (e: any) {
       console.error(e);
       showToast(e.response?.data?.error || "Gagal memperbarui data", "error");
@@ -308,7 +343,7 @@ export default function StakeholdersModule({
       )
     },
     { 
-      header: "Date & Venue", 
+      header: "Tanggal & Tempat", 
       accessor: "date", 
       sortable: true, 
       render: (s) => {
@@ -320,22 +355,22 @@ export default function StakeholdersModule({
         );
       } 
     },
-    { header: "Concern / Issue", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
+    { header: "Isu & Aspirasi (Concern)", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
     { header: "Aksi", render: (s) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 
           onClick={() => setToRestore(s)} 
-          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1"
+          className="px-2.5 py-1 text-xs font-medium text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 flex items-center gap-1 cursor-pointer"
         >
           <RotateCcw size={12} />
-          Restore
+          Pulihkan
         </button>
       </div>
     ) : (
       <div className="flex items-center gap-1 justify-end">
-        <button onClick={() => { setSelectedHistoryId(s.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors"><History size={13} /></button>
-        <button onClick={() => setEditing(s)} title="Edit Data" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors"><Edit2 size={13} /></button>
-        <button onClick={() => setToDelete(s)} title="Hapus Data" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors"><Trash2 size={13} /></button>
+        <button onClick={() => { setSelectedHistoryId(s.id); setHistoryDrawerOpen(true); }} title="Riwayat Perubahan" className="p-1.5 rounded-md hover:bg-paper-2 text-slate-2 hover:text-ink transition-colors cursor-pointer"><History size={13} /></button>
+        <button onClick={() => setEditing(s)} title="Edit Data" className="p-1.5 rounded-md hover:bg-ochre/10 text-slate-2 hover:text-ochre transition-colors cursor-pointer"><Edit2 size={13} /></button>
+        <button onClick={() => setToDelete(s)} title="Hapus Data" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )},
   ], [showDeleted, handleRestore]);
@@ -380,7 +415,7 @@ export default function StakeholdersModule({
       </div>
 
       {showForm && <StakeholderForm onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} defaultValues={addDraft} onDraftChange={setAddDraft} />}
-      {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
+      {editing && <StakeholderForm initial={editing} onClose={() => setEditing(null)} onSave={handleUpdate} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={toDelete.stakeholder} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={toRestore.stakeholder || ''} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
       <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="stakeholder_engagement" entityId={selectedHistoryId} />
