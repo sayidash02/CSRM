@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Edit2, Trash2, RotateCcw, History, FileSpreadsheet, FileText, Image } from "lucide-react";
+import { Edit2, Trash2, RotateCcw, History, FileSpreadsheet, FileText, Image, Eye } from "lucide-react";
 import { DataTable, ColumnDef } from "../../components/ui/DataTable";
 import { Pagination } from "../../components/ui/Pagination";
 import type { DailyActivity } from "./DailyActivitiesModule";
@@ -13,6 +13,7 @@ interface DailyActivityTableProps {
   onRestore: (activity: DailyActivity) => void;
   onHistory: (id: string | number) => void;
   onDownloadSingleMom: (id: string | number, activity: string, date: string, format?: 'xlsx' | 'docx' | 'pdf') => void;
+  onViewMom?: (activity: DailyActivity) => void;
   onViewPhotos?: (activity: DailyActivity, initialIndex?: number) => void;
   page: number;
   limit: number;
@@ -31,7 +32,7 @@ const formatDate = (d?: string | Date | null) => {
 };
 
 export function DailyActivityTable({
-  items, meta, showDeleted, onEdit, onDelete, onRestore, onHistory, onDownloadSingleMom, onViewPhotos,
+  items, meta, showDeleted, onEdit, onDelete, onRestore, onHistory, onDownloadSingleMom, onViewMom, onViewPhotos,
   page, limit, onPageChange, onLimitChange, sortBy, sortDir, onSortChange
 }: DailyActivityTableProps) {
   const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
@@ -77,6 +78,14 @@ export function DailyActivityTable({
       render: (a) => (
         <div className="inline-flex items-center gap-1.5">
           <button
+            onClick={() => onViewMom?.(a)}
+            title={`Lihat Notulensi MOM: ${a.activity}`}
+            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-forest hover:bg-forest-2 rounded-md shadow-2xs transition-all active:scale-95 cursor-pointer"
+          >
+            <Eye size={12} />
+            <span>Lihat MOM</span>
+          </button>
+          <button
             onClick={() => onDownloadSingleMom(a.id, a.activity, a.activity_date, 'xlsx')}
             title={`Unduh MOM Excel: ${a.activity}`}
             className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-forest bg-forest/10 hover:bg-forest/20 rounded-md border border-forest/30 transition-all shadow-2xs active:scale-95 cursor-pointer"
@@ -120,7 +129,7 @@ export function DailyActivityTable({
         <button onClick={() => onDelete(a)} title="Hapus Kegiatan" className="p-1.5 rounded-md hover:bg-clay/10 text-slate-2 hover:text-clay transition-colors cursor-pointer"><Trash2 size={13} /></button>
       </div>
     )}
-  ], [showDeleted, meta.page, meta.limit, onRestore, onHistory, onEdit, onDelete, onDownloadSingleMom]);
+  ], [showDeleted, meta.page, meta.limit, onRestore, onHistory, onEdit, onDelete, onDownloadSingleMom, onViewMom, onViewPhotos]);
 
   return (
     <div className="flex-1 overflow-auto p-4 sm:p-5 flex flex-col gap-3">

@@ -9,6 +9,7 @@ import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter";
 import { AuditHistoryDrawer } from "../../components/ui/AuditHistoryDrawer";
+import { MomPreviewModal } from "./MomPreviewModal";
 
 function PhotoLightboxModal({ 
   title, 
@@ -331,6 +332,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
   const [viewingPhotos, setViewingPhotos] = useState<{ title: string; photos: Array<{ id: string | number; url: string; original_name?: string; mime_type?: string }>; initialIndex: number } | null>(null);
+  const [viewingMomActivity, setViewingMomActivity] = useState<DailyActivity | null>(null);
 
   // Debounce search & filters trigger fetchData
   useEffect(() => {
@@ -598,6 +600,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         onRestore={setToRestore}
         onHistory={(id) => { setSelectedHistoryId(id); setHistoryDrawerOpen(true); }}
         onDownloadSingleMom={handleDownloadSingleMom}
+        onViewMom={setViewingMomActivity}
         onViewPhotos={(a, idx) => setViewingPhotos({ title: `${formatDate(a.activity_date)} — ${a.activity}`, photos: a.photos || [], initialIndex: idx || 0 })}
         page={page}
         limit={limit}
@@ -627,6 +630,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
           refs={references} 
           onRefreshReferences={fetchReferences}
           showToast={showToast}
+          onViewMom={() => setViewingMomActivity(editing)}
           onDownloadMom={() => handleDownloadSingleMom(editing.id, editing.activity, editing.activity_date, 'xlsx')}
         />
       )}
@@ -660,6 +664,19 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
           photos={viewingPhotos.photos}
           initialIndex={viewingPhotos.initialIndex}
           onClose={() => setViewingPhotos(null)}
+        />
+      )}
+
+      {viewingMomActivity && (
+        <MomPreviewModal
+          activity={viewingMomActivity}
+          onClose={() => setViewingMomActivity(null)}
+          onDownloadMom={handleDownloadSingleMom}
+          onViewPhoto={(photos, idx) => setViewingPhotos({ 
+            title: `${formatDate(viewingMomActivity.activity_date)} — ${viewingMomActivity.activity}`, 
+            photos, 
+            initialIndex: idx 
+          })}
         />
       )}
 

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { FileSpreadsheet, Settings } from "lucide-react";
+import { FileSpreadsheet, Settings, Eye } from "lucide-react";
 import { CurrencyInput } from "../../components/ui/CurrencyInput";
 import { Modal } from "../../components/ui/Modal";
 import { PicManagementModal } from "./PicManagementModal";
@@ -25,13 +25,14 @@ export const emptyDailyDraft = {
 };
 
 export function DailyActivityForm({
-  initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast, onDownloadMom
+  initial, defaultValues, onDraftChange, onClose, onSave, refs, onRefreshReferences, showToast, onDownloadMom, onViewMom
 }: {
   initial?: DailyActivity; defaultValues?: typeof emptyDailyDraft; onDraftChange?: (v: typeof emptyDailyDraft) => void;
   onClose: () => void; onSave: (d: Omit<DailyActivity, "id">) => void;
   refs: { pics: any[], categories: any[], sub_categories: any[] };
   onRefreshReferences: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void;
   onDownloadMom?: () => void;
+  onViewMom?: () => void;
 }) {
   const [showPicManager, setShowPicManager] = useState(false);
 
@@ -199,7 +200,18 @@ export function DailyActivityForm({
         </div>
       </div>
       <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-gray-50/50">
-        <div>
+        <div className="flex items-center gap-2">
+          {initial && onViewMom && (
+            <button
+              type="button"
+              onClick={onViewMom}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-forest hover:bg-forest-2 rounded-md transition-colors shadow-2xs cursor-pointer"
+              title="Lihat lembar Notulensi (MOM) untuk kegiatan ini"
+            >
+              <Eye size={14} />
+              <span>Lihat MOM</span>
+            </button>
+          )}
           {initial && onDownloadMom && (
             <button
               type="button"
