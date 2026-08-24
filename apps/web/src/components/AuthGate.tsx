@@ -97,7 +97,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-slate">
             <Loader2 size={15} className="animate-spin text-forest" />
-            <span>Memeriksa sesi login CRMS...</span>
+            <span>Memeriksa sesi login CSRM...</span>
           </div>
         </div>
       </div>
@@ -119,11 +119,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
               <TreePine size={24} />
             </div>
             <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-forest">
-              Community Relations
+              CSR &amp; Relations
             </div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-ink">Masuk ke CRMS</h1>
+            <h1 className="mt-1 text-xl font-bold tracking-tight text-ink">Masuk ke CSRM</h1>
             <p className="mt-1.5 text-[13px] text-slate leading-relaxed">
-              Masukkan kredensial akun operasional CRS Anda untuk melanjutkan.
+              Masukkan kredensial akun operasional CSR Anda untuk melanjutkan.
             </p>
           </div>
 
@@ -131,7 +131,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             {/* Username Input */}
             <div>
               <label
-                htmlFor="crms-auth-username"
+                htmlFor="csrm-auth-username"
                 className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink"
               >
                 Username
@@ -141,7 +141,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   <User size={16} />
                 </div>
                 <input
-                  id="crms-auth-username"
+                  id="csrm-auth-username"
                   type="text"
                   autoComplete="username"
                   autoFocus
@@ -159,7 +159,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <label
-                  htmlFor="crms-auth-password"
+                  htmlFor="csrm-auth-password"
                   className="block text-xs font-semibold uppercase tracking-wider text-ink"
                 >
                   Kata Sandi
@@ -175,7 +175,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
                   <Lock size={16} />
                 </div>
                 <input
-                  id="crms-auth-password"
+                  id="csrm-auth-password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   value={password}

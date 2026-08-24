@@ -73,7 +73,7 @@ export function PhotoGalleryAttachmentInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const defaultWatermarkOptions: WatermarkOptions = {
-    organizationName: "CRS & COMMUNITY RELATIONS | ARSIP AUDIT",
+    organizationName: "CSR & COMMUNITY RELATIONS | ARSIP AUDIT",
     dateText: activityDate || "",
     locationText: location || "",
     activityTitle: activityTitle || "",

@@ -10,7 +10,7 @@ async function main(): Promise<void> {
   const password = await askSecret('Password baru (minimal 12 karakter): ');
   const confirmation = await ask(`Ketik ${adminRecoveryConfirmation()} untuk melanjutkan: `);
   await recoverAdminAccount(prisma, username, password, confirmation);
-  console.log(`Admin ${username} berhasil dipulihkan. Login melalui halaman CRMS.`);
+  console.log(`Admin ${username} berhasil dipulihkan. Login melalui halaman CSRM.`);
 }
 
 main()

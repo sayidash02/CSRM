@@ -270,9 +270,9 @@ const renderMomDocxBlocks = (model: MomDocumentModel): Array<Paragraph | Table> 
 };
 
 const createDocx = (blocks: Array<Paragraph | Table>): Document => new Document({
-  creator: 'CRMS - Jawa Satu Power',
+  creator: 'CSRM - Jawa Satu Power',
   title: 'Minutes of Meeting & Daily Activity Report',
-  description: 'CRMS MOM output generated from the database',
+  description: 'CSRM MOM output generated from the database',
   styles: {
     default: {
       document: {

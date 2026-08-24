@@ -12,7 +12,7 @@ async function main(): Promise<void> {
   if (password !== confirmation) throw new Error('Konfirmasi password tidak sama');
 
   const admin = await createInitialAdmin(prisma, username, password);
-  console.log(`Admin ${admin.username} berhasil dibuat. Login melalui halaman CRMS.`);
+  console.log(`Admin ${admin.username} berhasil dibuat. Login melalui halaman CSRM.`);
 }
 
 main()

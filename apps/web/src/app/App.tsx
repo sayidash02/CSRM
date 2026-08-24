@@ -108,8 +108,8 @@ function Sidebar({
           <TreePine size={18} />
         </div>
         <div>
-          <div className="text-[15px] font-semibold tracking-tight text-white">CRMS</div>
-          <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper/40">Community Relations</div>
+          <div className="text-[15px] font-semibold tracking-tight text-white">CSRM</div>
+          <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper/40">CSR &amp; Relations</div>
         </div>
         {onClose && (
           <button
@@ -191,7 +191,7 @@ function Sidebar({
 
 // ─── Main Workspace ──────────────────────────────────────────────────────────
 
-function CrmsWorkspace() {
+function CsrmWorkspace() {
   const { logout, user } = useAuth();
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
   const [navOpen, setNavOpen] = useState(false);
@@ -203,7 +203,7 @@ function CrmsWorkspace() {
   );
 
   const [activeYear, setActiveYear] = useState<string>(
-    () => localStorage.getItem("crms_active_year") ?? String(new Date().getFullYear())
+    () => localStorage.getItem("csrm_active_year") ?? localStorage.getItem("crms_active_year") ?? String(new Date().getFullYear())
   );
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
@@ -339,7 +339,7 @@ function CrmsWorkspace() {
               <Menu size={18} />
             </button>
             <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-slate-2 sm:inline">
-              CRMS
+              CSRM
             </span>
             <ChevronRight size={13} className="hidden text-slate-2 sm:inline" />
             <h1 className="truncate text-[15px] font-semibold tracking-tight text-ink">
@@ -374,7 +374,7 @@ function CrmsWorkspace() {
                 onChange={(e) => {
                   const y = e.target.value;
                   setActiveYear(y);
-                  localStorage.setItem("crms_active_year", y);
+                  localStorage.setItem("csrm_active_year", y);
                 }}
                 className="bg-transparent font-mono text-[12px] font-medium text-ink outline-none cursor-pointer"
               >
@@ -442,7 +442,7 @@ function CrmsWorkspace() {
 export default function App() {
   return (
     <AuthGate>
-      <CrmsWorkspace />
+      <CsrmWorkspace />
     </AuthGate>
   );
 }

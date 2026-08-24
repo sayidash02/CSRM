@@ -69,11 +69,11 @@ describe('MonthlyReportService Unit Tests', () => {
   it('should build executive report Excel workbook with Dashboard and Grievance sheets', async () => {
     const workbook = await service.generateReport(8, 2026);
 
-    expect(workbook.creator).toBe('CRMS System');
+    expect(workbook.creator).toBe('CSRM System');
     
     const dashboardSheet = workbook.getWorksheet('Dashboard');
     expect(dashboardSheet).toBeDefined();
-    expect(dashboardSheet?.getCell('A1').value).toBe('CRMS Monthly Executive Report');
+    expect(dashboardSheet?.getCell('A1').value).toBe('CSRM Monthly Executive Report');
     expect(dashboardSheet?.getCell('A2').value).toBe('Periode: 8/2026');
     expect(dashboardSheet?.getCell('B5').value).toBe(2); // Daily activities
     expect(dashboardSheet?.getCell('B6').value).toBe(1); // Stakeholders

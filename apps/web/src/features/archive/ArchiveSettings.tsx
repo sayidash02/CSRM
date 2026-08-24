@@ -134,7 +134,7 @@ export default function ArchiveSettings() {
             </h1>
           </div>
           <p className="text-[12px] text-slate mt-1">
-            Kelola arsip data tahunan untuk mengamankan data historis dan mengoptimalkan tampilan modul aktif CRMS.
+            Kelola arsip data tahunan untuk mengamankan data historis dan mengoptimalkan tampilan modul aktif CSRM.
           </p>
         </div>
       </div>
@@ -226,7 +226,7 @@ export default function ArchiveSettings() {
             </div>
             <p className="text-xs text-slate leading-relaxed">
               Mengarsipkan seluruh data transaksi pada tahun{" "}
-              <strong className="text-ink font-mono">{effectiveYear}</strong> meliputi 7 modul operasional CRMS.
+              <strong className="text-ink font-mono">{effectiveYear}</strong> meliputi 7 modul operasional CSRM.
             </p>
             <div className="bg-ochre/10 border border-ochre/25 rounded-xl p-3 text-xs text-ochre flex items-start gap-2">
               <AlertTriangle size={15} className="shrink-0 mt-0.5 text-ochre" />
@@ -258,7 +258,7 @@ export default function ArchiveSettings() {
             </div>
             <p className="text-xs text-slate leading-relaxed">
               Memulihkan data tahun{" "}
-              <strong className="text-ink font-mono">{effectiveYear}</strong> yang sebelumnya diarsipkan agar kembali muncul dan diakses di modul aktif CRMS.
+              <strong className="text-ink font-mono">{effectiveYear}</strong> yang sebelumnya diarsipkan agar kembali muncul dan diakses di modul aktif CSRM.
             </p>
             <div className="bg-forest/10 border border-forest/20 rounded-xl p-3 text-xs text-forest flex items-start gap-2">
               <Database size={15} className="shrink-0 mt-0.5 text-forest" />

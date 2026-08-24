@@ -152,8 +152,8 @@ export const buildMomDocumentModel = (activity: any): MomDocumentModel => {
       { title: 'V. RENCANA TINDAK LANJUT (NEXT PLAN / ACTION ITEMS)', body: cleanText(activity?.next_plan), minimumHeight: 50 },
     ],
     photos,
-    photoSummary: photos.length > 0 ? `Foto dokumentasi tersimpan di CRMS: ${photos.length} file` : 'Foto dokumentasi: -',
-    creatorName: picNames.join(', ') || 'Tim CRS / External Affairs',
+    photoSummary: photos.length > 0 ? `Foto dokumentasi tersimpan di CSRM: ${photos.length} file` : 'Foto dokumentasi: -',
+    creatorName: picNames.join(', ') || 'Tim CSR / External Affairs',
     approverName: 'External Affairs & CSR Manager',
   };
 };

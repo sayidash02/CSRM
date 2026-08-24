@@ -26,7 +26,7 @@ export function PhotoWatermarkModal({
   showToast,
 }: PhotoWatermarkModalProps) {
   const [options, setOptions] = useState<WatermarkOptions>({
-    organizationName: defaultOptions.organizationName || "CRS & COMMUNITY RELATIONS | ARSIP AUDIT",
+    organizationName: defaultOptions.organizationName || "CSR & COMMUNITY RELATIONS | ARSIP AUDIT",
     dateText: defaultOptions.dateText || "",
     locationText: defaultOptions.locationText || "",
     activityTitle: defaultOptions.activityTitle || "",
@@ -135,7 +135,7 @@ export function PhotoWatermarkModal({
               value={options.organizationName}
               onChange={(e) => setOptions({ ...options, organizationName: e.target.value })}
               className={inputCls}
-              placeholder="Contoh: CRS & COMMUNITY RELATIONS"
+              placeholder="Contoh: CSR & COMMUNITY RELATIONS"
             />
           </div>
 

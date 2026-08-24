@@ -194,7 +194,7 @@ export const searchOmni = catchAsync(async (req: Request, res: Response): Promis
       moduleLabel: 'Stakeholder Engagement',
       title: item.stakeholder || 'Stakeholder tanpa nama',
       subtitle: parts.join(' • ') || 'Engagement Pemangku Kepentingan',
-      date: item.date?.toISOString(),
+      date: item.date ? item.date.toISOString() : null,
       metadata: { venue: item.venue },
     });
   });

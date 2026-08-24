@@ -195,7 +195,7 @@ function TopBar({
                   className="w-full text-left px-3.5 py-2 hover:bg-paper/60 flex flex-col transition-colors border-t border-line/60"
                 >
                   <span className="font-semibold text-ink flex items-center gap-1.5">
-                    <Download size={13} className="text-forest" /> Export CRMS Full Workbook
+                    <Download size={13} className="text-forest" /> Export CSRM Full Workbook
                   </span>
                   <span className="text-[11px] text-slate mt-0.5">Semua 7 modul operasional perusahaan</span>
                 </button>
@@ -462,7 +462,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <TopBar 
-        title="Daily Activities" subtitle="Rekaman kegiatan harian & notulensi tim CRS" 
+        title="Daily Activities" subtitle="Rekaman kegiatan harian & notulensi tim CSR" 
         onAdd={!showDeleted ? () => setShowForm(true) : undefined} addLabel="Tambah Kegiatan" 
         showDeleted={showDeleted}
         showSearch searchValue={q} onSearch={(val) => { setQ(val); setPage(1); }} 
@@ -470,7 +470,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         onExportMomWorkbook={handleExportMomWorkbook}
         onExportMomDocx={handleExportMomDocx}
         onExportMomPdf={handleExportMomPdf}
-        onExportFullWorkbook={() => onExport("CRMS Full Workbook")}
+        onExportFullWorkbook={() => onExport("CSRM Full Workbook")}
         categories={references.categories}
         catFilter={catFilter}
         onCatFilterChange={(val) => { setCatFilter(val); setSubCatFilter("All"); setPage(1); }}

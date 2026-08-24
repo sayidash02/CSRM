@@ -4,7 +4,7 @@
  */
 
 export interface WatermarkOptions {
-  organizationName?: string; // e.g. "CRS & COMMUNITY RELATIONS"
+  organizationName?: string; // e.g. "CSR & COMMUNITY RELATIONS"
   activityTitle?: string; // e.g. "Koordinasi Kelompok Nelayan"
   dateText?: string; // e.g. "25/05/2026" or "25 Mei 2026"
   locationText?: string; // e.g. "Cilamaya Girang, Karawang"
@@ -71,7 +71,7 @@ export async function applyWatermarkToImage(
   const scale = Math.max(0.65, Math.min(canvas.width / 1200, 3.5));
 
   // Build rows of watermark text
-  const org = options.organizationName?.trim() || "CRS & COMMUNITY RELATIONS | DOKUMENTASI KEGIATAN";
+  const org = options.organizationName?.trim() || "CSR & COMMUNITY RELATIONS | DOKUMENTASI KEGIATAN";
   const rows: { icon: string; label: string; value: string }[] = [];
 
   if (options.dateText?.trim()) {

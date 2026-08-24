@@ -490,7 +490,7 @@ export class DailyActivityMomExportService {
     });
     const docCell = worksheet.getCell(`A${currentRow}`);
     if (photos.length > 0) {
-      docCell.value = `Foto dokumentasi tersimpan di CRMS: ${photos.length} file`;
+      docCell.value = `Foto dokumentasi tersimpan di CSRM: ${photos.length} file`;
       docCell.font = { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF1D4ED8' } };
       worksheet.getRow(currentRow).height = 26;
     } else {
@@ -575,7 +575,7 @@ export class DailyActivityMomExportService {
     }
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'CRMS - Jawa Satu Power';
+    workbook.creator = 'CSRM - Jawa Satu Power';
     workbook.created = new Date();
 
     const sheetName = 'Daily Notes';
@@ -667,7 +667,7 @@ export class DailyActivityMomExportService {
     });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'CRMS - Jawa Satu Power';
+    workbook.creator = 'CSRM - Jawa Satu Power';
     workbook.created = new Date();
 
     // Sheet 1: Master Rekap Table
