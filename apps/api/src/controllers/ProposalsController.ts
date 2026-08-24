@@ -13,7 +13,7 @@ function parseRequiredDate(value: unknown): Date | null {
 
 export const createProposal = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const {
-    registration_no: _registrationNo,
+    registration_no,
     date_received,
     institution,
     address,
@@ -27,11 +27,20 @@ export const createProposal = catchAsync(async (req: Request, res: Response): Pr
     return;
   }
 
-  const registrationNo = await generateRegistrationNumber('proposal', receivedDate);
+  const userRegistrationNo = typeof registration_no === 'string' && registration_no.trim() ? registration_no.trim() : null;
+  const finalRegistrationNo = userRegistrationNo || await generateRegistrationNumber('proposal', receivedDate);
+
+  const existing = await prisma.proposals.findFirst({
+    where: { registration_no: finalRegistrationNo, is_deleted: false }
+  });
+  if (existing) {
+    res.status(409).json({ error: `No. Registrasi '${finalRegistrationNo}' sudah digunakan.` });
+    return;
+  }
 
   const result = await prisma.proposals.create({
     data: {
-      registration_no: registrationNo,
+      registration_no: finalRegistrationNo,
       date_received: receivedDate,
       institution,
       address,
@@ -64,7 +73,7 @@ export const getProposals = catchAsync(async (req: Request, res: Response): Prom
 export const updateProposal = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const {
-    registration_no: _registrationNo,
+    registration_no,
     date_received,
     institution,
     address,
@@ -78,9 +87,22 @@ export const updateProposal = catchAsync(async (req: Request, res: Response): Pr
     return;
   }
 
+  const targetId = BigInt(id as string);
+  if (typeof registration_no === 'string' && registration_no.trim()) {
+    const trimmed = registration_no.trim();
+    const conflict = await prisma.proposals.findFirst({
+      where: { registration_no: trimmed, id: { not: targetId }, is_deleted: false }
+    });
+    if (conflict) {
+      res.status(409).json({ error: `No. Registrasi '${trimmed}' sudah digunakan oleh proposal lain.` });
+      return;
+    }
+  }
+
   const result = await prisma.proposals.update({
-    where: { id: BigInt(id as string) },
+    where: { id: targetId },
     data: {
+      ...(typeof registration_no === 'string' && registration_no.trim() ? { registration_no: registration_no.trim() } : {}),
       date_received: receivedDate,
       institution,
       address,

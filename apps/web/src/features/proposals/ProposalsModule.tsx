@@ -100,11 +100,10 @@ const emptyProposalDraft = {
   proposal_description: "", status: ""
 };
 
-function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultValues, onDraftChange }: {
+function ProposalForm({ initial, onClose, onSave, showToast, defaultValues, onDraftChange }: {
   initial?: Proposal;
   onClose: () => void;
   onSave: (d: Omit<Proposal, "id">) => void;
-  nextRegNo: string;
   showToast?: (msg: string, type?: "success"|"error"|"info") => void;
   defaultValues?: typeof emptyProposalDraft;
   onDraftChange?: (v: typeof emptyProposalDraft) => void;
@@ -136,6 +135,7 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
   const handleSave = () => {
     const missing: string[] = (
       [
+        [!f.registration_no?.trim(), "No. Registrasi"],
         [!f.date_received, "Tanggal Diterima"],
         [!f.institution, "Lembaga / Pemohon"],
         [!f.status, "Status Evaluasi"],
@@ -148,7 +148,10 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
       }
       return;
     }
-    onSave(f);
+    onSave({
+      ...f,
+      registration_no: f.registration_no.trim()
+    });
     if (!initial && onDraftChange) onDraftChange({ ...emptyProposalDraft });
     onClose();
   };
@@ -156,8 +159,14 @@ function ProposalForm({ initial, onClose, onSave, nextRegNo, showToast, defaultV
   return (
     <Modal title={initial ? "Edit Data Proposal" : "Tambah Proposal Masuk Baru"} onClose={onClose}>
       <div className="space-y-4">
-        <Field label="No. Registrasi">
-          <input type="text" value={initial ? f.registration_no : nextRegNo} disabled className={`${inputCls} opacity-60 font-mono`} />
+        <Field label="No. Registrasi" required hint="Contoh: 001/PROP/2026 atau PROP-2026-0001">
+          <input 
+            type="text" 
+            value={f.registration_no} 
+            onChange={e => set("registration_no", e.target.value)} 
+            placeholder="Masukkan No. Registrasi Proposal..." 
+            className={`${inputCls} font-mono`} 
+          />
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Tanggal Diterima" required>
@@ -245,7 +254,6 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
   
   const displayed = filtered;
-  const nextRegNo = "Akan dibuat server";
 
   const columns: ColumnDef<Proposal>[] = useMemo(() => [
     { header: "No. Reg", accessor: "registration_no", sortable: true, render: (p) => <span className="text-xs font-mono font-medium text-forest">{p.registration_no}</span> },
@@ -313,8 +321,8 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
         </div>
         <div className="mt-2 text-xs text-slate font-mono">Menampilkan {displayed.length} dari {items.length} proposal</div>
       </div>
-      {showForm && <ProposalForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} nextRegNo={nextRegNo} showToast={showToast} />}
-      {editing && <ProposalForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} nextRegNo={editing.registration_no} showToast={showToast} />}
+      {showForm && <ProposalForm defaultValues={addDraft} onDraftChange={setAddDraft} onClose={() => setShowForm(false)} onSave={handleAdd} showToast={showToast} />}
+      {editing && <ProposalForm initial={editing} onClose={() => setEditing(null)} onSave={d => { handleEdit(editing.id, d); setEditing(null); }} showToast={showToast} />}
       {toDelete && <DeleteConfirm label={`${toDelete.registration_no} — ${toDelete.institution}`} onCancel={() => setToDelete(null)} onConfirm={() => { handleDelete(toDelete.id); setToDelete(null); }} />}
       {toRestore && <RestoreConfirmModal label={`${toRestore.registration_no} — ${toRestore.institution}`} onCancel={() => setToRestore(null)} onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }} />}
       <AuditHistoryDrawer isOpen={historyDrawerOpen} onClose={() => setHistoryDrawerOpen(false)} entityType="proposals" entityId={selectedHistoryId} />
