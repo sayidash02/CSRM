@@ -124,7 +124,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
   const kpis = [
     {
       id: "daily",
-      label: "Aktivitas Lapangan",
+      label: "Daily Activities",
       value: stats.totals.daily,
       unit: "kegiatan",
       delta: stats.trends.weeklyTrend,
@@ -134,7 +134,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
     },
     {
       id: "stakeholder",
-      label: "Engagement Pemangku Kepentingan",
+      label: "Stakeholder Engagement",
       value: stats.totals.stakeholder,
       unit: "sesi",
       delta: stats.trends.dailyTrend,
@@ -144,9 +144,9 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
     },
     {
       id: "grievance",
-      label: "Keluhan Terbuka",
+      label: "Grievance",
       value: stats.totals.grievance,
-      unit: "kasus",
+      unit: `${stats.actionable.grievanceHighOpen} prioritas tinggi`,
       delta: stats.actionable.grievanceHighOpen > 0 ? stats.actionable.grievanceHighOpen : 0,
       isIssue: true,
       color: "var(--color-clay)",
@@ -155,9 +155,9 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
     },
     {
       id: "csr",
-      label: "Program CSR Aktif",
+      label: "CSR Projects",
       value: stats.totals.csr,
-      unit: `${stats.actionable.csrOnGoing} berjalan`,
+      unit: `${stats.actionable.csrOnGoing} on going`,
       delta: 0,
       color: "var(--color-forest-2)",
       module: "csr",
@@ -166,9 +166,9 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
   ];
 
   const secondaryKpis = [
-    { label: "Isu Dipantau", value: stats.totals.issues, module: "topissues", icon: <AlertTriangle size={15} /> },
-    { label: "Proposal Masuk", value: stats.totals.proposals, module: "proposals", icon: <FileText size={15} /> },
-    { label: "LRP Program", value: stats.totals.lrp, module: "lrp", icon: <TreePine size={15} /> },
+    { label: "Top Issues", value: stats.totals.issues, module: "topissues", icon: <AlertTriangle size={15} /> },
+    { label: "Proposals", value: stats.totals.proposals, module: "proposals", icon: <FileText size={15} /> },
+    { label: "Livelihood Restoration (LRP)", value: stats.totals.lrp, module: "lrp", icon: <TreePine size={15} /> },
   ];
 
   return (
@@ -176,12 +176,12 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       {/* Header Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-[17px] font-semibold tracking-tight text-ink">Ringkasan Operasional</h2>
-          <p className="text-[12px] text-slate mt-0.5">Statistik dan aktivitas terkini program CSR & Community Relations</p>
+          <h2 className="text-[17px] font-semibold tracking-tight text-ink">Ringkasan 7 Modul CSRM</h2>
+          <p className="text-[12px] text-slate mt-0.5">Statistik dan aktivitas terkini seluruh modul operasional CSR &amp; Relations</p>
         </div>
         <button
           onClick={() => setShowImportWizard(true)}
-          className="inline-flex items-center gap-2 px-3.5 py-2 bg-forest hover:bg-forest-2 text-white rounded-lg text-[13px] font-medium shadow-xs transition-colors"
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-forest hover:bg-forest-2 text-white rounded-lg text-[13px] font-medium shadow-xs transition-colors cursor-pointer"
         >
           <UploadCloud size={15} /> Import Master Excel
         </button>
@@ -193,7 +193,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
           <div className="flex items-center gap-2.5 text-[13px] text-clay font-medium">
             <AlertCircle size={17} className="shrink-0" />
             <span>
-              Terdapat <strong>{stats.actionable.untouchedGrievances}</strong> keluhan (grievance) prioritas tinggi yang perlu segera ditindaklanjuti.
+              Terdapat <strong>{stats.actionable.untouchedGrievances}</strong> tiket <strong>Grievance</strong> prioritas tinggi yang perlu segera ditindaklanjuti.
             </span>
           </div>
           <button
@@ -268,14 +268,14 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
         <section className="rounded-xl border border-line bg-white p-5 xl:col-span-3">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-[14px] font-semibold tracking-tight text-ink">Aktivitas per Sub-Kategori</h3>
-              <p className="text-[12px] text-slate">Distribusi jenis kegiatan operasional</p>
+              <h3 className="text-[14px] font-semibold tracking-tight text-ink">Daily Activities per Sub-Kategori</h3>
+              <p className="text-[12px] text-slate">Distribusi rekam kegiatan harian tim CSR</p>
             </div>
             <button
               onClick={() => onNav("daily")}
               className="inline-flex items-center gap-1 text-[12px] font-medium text-forest hover:text-forest-2"
             >
-              Lihat Detail <ChevronRight size={13} />
+              Buka Daily Activities <ChevronRight size={13} />
             </button>
           </div>
 
@@ -335,7 +335,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-[12px] text-slate">
-                Belum ada data aktivitas tercatat
+                Belum ada data Daily Activities tercatat
               </div>
             )}
           </div>
@@ -345,14 +345,14 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
         <section className="rounded-xl border border-line bg-white p-5 xl:col-span-2 flex flex-col">
           <div className="mb-2 flex items-center justify-between">
             <div>
-              <h3 className="text-[14px] font-semibold tracking-tight text-ink">Status Proposal</h3>
-              <p className="text-[12px] text-slate">Komposisi evaluasi proposal masuk</p>
+              <h3 className="text-[14px] font-semibold tracking-tight text-ink">Status Proposals</h3>
+              <p className="text-[12px] text-slate">Komposisi evaluasi pengajuan proposal</p>
             </div>
             <button
               onClick={() => onNav("proposals")}
               className="inline-flex items-center gap-1 text-[12px] font-medium text-forest hover:text-forest-2"
             >
-              Detail <ChevronRight size={13} />
+              Buka Proposals <ChevronRight size={13} />
             </button>
           </div>
 
@@ -389,12 +389,12 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
         {/* Left: Kegiatan Terbaru Table */}
         <section className="rounded-xl border border-line bg-white xl:col-span-3">
           <div className="flex items-center justify-between px-5 py-4 border-b border-line">
-            <h3 className="text-[14px] font-semibold tracking-tight text-ink">Aktivitas Terbaru</h3>
+            <h3 className="text-[14px] font-semibold tracking-tight text-ink">Daily Activities Terbaru</h3>
             <button
               onClick={() => onNav("daily")}
               className="inline-flex items-center gap-1 text-[12px] font-medium text-forest hover:text-forest-2"
             >
-              Lihat semua <ChevronRight size={13} />
+              Buka Daily Activities <ChevronRight size={13} />
             </button>
           </div>
 
@@ -417,7 +417,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                 </div>
               ))
             ) : (
-              <div className="p-8 text-center text-[13px] text-slate">Belum ada kegiatan terbaru</div>
+              <div className="p-8 text-center text-[13px] text-slate">Belum ada Daily Activities terbaru</div>
             )}
           </div>
         </section>
@@ -441,7 +441,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                       onClick={() => onNav("grievance")}
                       className="mt-2 text-[11px] text-clay font-semibold hover:underline inline-flex items-center gap-1"
                     >
-                      Tinjau Keluhan <ChevronRight size={11} />
+                      Tinjau Grievance <ChevronRight size={11} />
                     </button>
                   </div>
                 </div>
@@ -453,8 +453,8 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                 <Check size={15} />
               </div>
               <div>
-                <div className="text-[13px] font-semibold text-ink">Tidak ada grievance mendesak</div>
-                <div className="text-[11px] text-slate mt-0.5">Semua keluhan saat ini dalam penanganan wajar.</div>
+                <div className="text-[13px] font-semibold text-ink">Tidak ada tiket Grievance mendesak</div>
+                <div className="text-[11px] text-slate mt-0.5">Semua tiket Grievance saat ini dalam penanganan wajar.</div>
               </div>
             </div>
           )}
@@ -463,13 +463,13 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
           <section className="bg-white border border-line rounded-xl p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-[11px] font-semibold text-slate uppercase tracking-wider font-mono">
-                CSR Budget (On Going)
+                CSR Projects (On Going)
               </div>
               <button
                 onClick={() => onNav("csr")}
                 className="text-[11px] text-forest font-medium hover:underline"
               >
-                Lihat Proyek →
+                Buka CSR Projects →
               </button>
             </div>
             {stats.recent.onGoingCsr.length > 0 ? (
@@ -488,7 +488,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                 </div>
               ))
             ) : (
-              <div className="text-[12px] text-slate py-2">Tidak ada program CSR berjalan</div>
+              <div className="text-[12px] text-slate py-2">Tidak ada CSR Projects berjalan</div>
             )}
           </section>
         </div>
