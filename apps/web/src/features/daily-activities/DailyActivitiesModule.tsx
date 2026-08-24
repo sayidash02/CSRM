@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Search, Plus, Download, FileSpreadsheet, FileText, ChevronDown } from "lucide-react";
+import { Search, Plus, Download, FileSpreadsheet, FileText, ChevronDown, X, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { ImportExcelModal } from "./ImportExcelModal";
 import { DailyActivityForm, emptyDailyDraft } from "./DailyActivityForm";
 import { PhotoGalleryAttachmentInput } from "./PhotoGalleryAttachmentInput";
@@ -9,6 +9,96 @@ import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter";
 import { AuditHistoryDrawer } from "../../components/ui/AuditHistoryDrawer";
+
+function PhotoLightboxModal({ 
+  title, 
+  photos, 
+  initialIndex = 0, 
+  onClose 
+}: { 
+  title: string; 
+  photos: Array<{ id: string | number; url: string; original_name?: string; mime_type?: string }>; 
+  initialIndex?: number; 
+  onClose: () => void 
+}) {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const current = photos[currentIndex];
+
+  if (!current) return null;
+
+  return (
+    <div className="fixed inset-0 bg-ink/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4" onClick={onClose}>
+      <div className="relative max-w-4xl w-full bg-white rounded-2xl border border-line overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 bg-paper/80 border-b border-line">
+          <div>
+            <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
+            <p className="text-xs text-slate mt-0.5 font-mono">
+              Foto {currentIndex + 1} dari {photos.length} • {current.original_name || 'Dokumentasi'}
+            </p>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="p-1.5 text-slate hover:text-ink hover:bg-paper-2 rounded-lg transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Image Display */}
+        <div className="relative flex-1 bg-black/95 flex items-center justify-center p-4 min-h-[360px] max-h-[65vh] overflow-hidden select-none">
+          <img 
+            src={current.url} 
+            alt={current.original_name || "Dokumentasi"} 
+            className="max-h-[60vh] max-w-full object-contain rounded shadow-lg"
+          />
+
+          {photos.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white transition-all shadow-md cursor-pointer"
+                title="Foto Sebelumnya"
+              >
+                <ChevronLeft size={22} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex((prev) => (prev < photos.length - 1 ? prev + 1 : 0));
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/80 text-white transition-all shadow-md cursor-pointer"
+                title="Foto Selanjutnya"
+              >
+                <ChevronRight size={22} />
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Thumbnails Footer */}
+        {photos.length > 1 && (
+          <div className="flex items-center gap-2 p-3 bg-paper border-t border-line overflow-x-auto">
+            {photos.map((p, idx) => (
+              <button
+                key={p.id || idx}
+                onClick={() => setCurrentIndex(idx)}
+                className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 cursor-pointer ${
+                  currentIndex === idx ? "border-forest shadow-sm scale-105" : "border-line opacity-60 hover:opacity-100"
+                }`}
+              >
+                <img src={p.url} alt="thumbnail" className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // Types
 
@@ -240,6 +330,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
   const [toRestore, setToRestore] = useState<DailyActivity | null>(null);
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | number | null>(null);
+  const [viewingPhotos, setViewingPhotos] = useState<{ title: string; photos: Array<{ id: string | number; url: string; original_name?: string; mime_type?: string }>; initialIndex: number } | null>(null);
 
   // Debounce search & filters trigger fetchData
   useEffect(() => {
@@ -507,6 +598,7 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
         onRestore={setToRestore}
         onHistory={(id) => { setSelectedHistoryId(id); setHistoryDrawerOpen(true); }}
         onDownloadSingleMom={handleDownloadSingleMom}
+        onViewPhotos={(a, idx) => setViewingPhotos({ title: `${formatDate(a.activity_date)} — ${a.activity}`, photos: a.photos || [], initialIndex: idx || 0 })}
         page={page}
         limit={limit}
         onPageChange={setPage}
@@ -559,6 +651,15 @@ export default function DailyActivitiesModule({ activeYear, onExport, showToast 
            label={`${toRestore.activity}`}
            onConfirm={() => { handleRestore(toRestore.id); setToRestore(null); }}
            onCancel={() => setToRestore(null)}
+        />
+      )}
+
+      {viewingPhotos && (
+        <PhotoLightboxModal
+          title={viewingPhotos.title}
+          photos={viewingPhotos.photos}
+          initialIndex={viewingPhotos.initialIndex}
+          onClose={() => setViewingPhotos(null)}
         />
       )}
 

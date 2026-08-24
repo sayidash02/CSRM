@@ -13,6 +13,7 @@ interface DailyActivityTableProps {
   onRestore: (activity: DailyActivity) => void;
   onHistory: (id: string | number) => void;
   onDownloadSingleMom: (id: string | number, activity: string, date: string, format?: 'xlsx' | 'docx' | 'pdf') => void;
+  onViewPhotos?: (activity: DailyActivity, initialIndex?: number) => void;
   page: number;
   limit: number;
   onPageChange: (page: number) => void;
@@ -30,7 +31,7 @@ const formatDate = (d?: string | Date | null) => {
 };
 
 export function DailyActivityTable({
-  items, meta, showDeleted, onEdit, onDelete, onRestore, onHistory, onDownloadSingleMom,
+  items, meta, showDeleted, onEdit, onDelete, onRestore, onHistory, onDownloadSingleMom, onViewPhotos,
   page, limit, onPageChange, onLimitChange, sortBy, sortDir, onSortChange
 }: DailyActivityTableProps) {
   const columns: ColumnDef<DailyActivity>[] = useMemo(() => [
@@ -59,10 +60,14 @@ export function DailyActivityTable({
         const photos = a.photos || [];
         if (photos.length === 0) return <span className="text-slate-2 text-xs">—</span>;
         return (
-          <div className="inline-flex items-center gap-1 text-[11px] font-medium text-forest bg-forest/10 px-2 py-0.5 rounded-md border border-forest/20" title={`${photos.length} foto dokumentasi terlampir`}>
+          <button
+            onClick={() => onViewPhotos?.(a, 0)}
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-forest bg-forest/10 hover:bg-forest/20 px-2 py-0.5 rounded-md border border-forest/20 transition-all cursor-pointer shadow-2xs"
+            title={`Lihat ${photos.length} foto dokumentasi`}
+          >
             <Image size={12} className="text-forest" />
             <span>{photos.length} Foto</span>
-          </div>
+          </button>
         );
       }
     },

@@ -227,6 +227,25 @@ export class ExcelImportService {
       const sheetType = detection.sheetType;
 
       if (sheetType === 'dailyActivities') {
+        const sheetImages = worksheet.getImages ? worksheet.getImages() : [];
+        const rowImagesMap = new Map<number, Array<{ buffer: Buffer; extension: string; original_name: string; mime_type: string }>>();
+        for (const img of sheetImages) {
+          const rowIdx = (img.range?.tl?.nativeRow ?? -1) + 1;
+          if (rowIdx <= 0) continue;
+          const media = workbook.getImage(Number(img.imageId));
+          if (media && media.buffer) {
+            const ext = media.extension || 'jpg';
+            const mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+            if (!rowImagesMap.has(rowIdx)) rowImagesMap.set(rowIdx, []);
+            rowImagesMap.get(rowIdx)!.push({
+              buffer: Buffer.from(media.buffer as any),
+              extension: ext,
+              original_name: media.name || `photo_${rowIdx}_${rowImagesMap.get(rowIdx)!.length + 1}.${ext}`,
+              mime_type: mime
+            });
+          }
+        }
+
         const dateCol = findColIndex(colMap, ['tanggal', 'date', 'activity_date']);
         const actCol = findColIndex(colMap, ['kegiatan', 'activity', 'nama kegiatan']);
         const instCol = findColIndex(colMap, ['instansi', 'institution_group', 'institution', 'kelompok instansi', 'kelompok']);
@@ -277,6 +296,7 @@ export class ExcelImportService {
           } else {
             description_result = [keterangan, hasil].filter(Boolean).join(' - ') || null;
           }
+          const photos = rowImagesMap.get(r) || [];
 
           rawDailyActivities.push({
             activity_date,
@@ -294,7 +314,8 @@ export class ExcelImportService {
             document_link,
             pic_names,
             category_name,
-            sub_category_name
+            sub_category_name,
+            photos
           });
         }
       } else if (sheetType === 'stakeholders') {

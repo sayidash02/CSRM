@@ -224,29 +224,81 @@ export async function commitWorkbookRows(input: WorkbookCommitInput): Promise<vo
         getExistingIdentities: row => [
           makeDailyActivityIdentity(row, row.category_id, row.sub_category_id, row.daily_activity_pics.map((pic: any) => pic.pic_id))
         ],
-        create: async row => await tx.daily_activities.create({
-          data: {
-            activity_date: row.item.activity_date,
-            activity: row.item.activity,
-            institution_group: row.item.institution_group ? truncStr(row.item.institution_group, 255) : null,
-            address: row.item.address,
-            focus: row.item.focus,
-            location: row.item.location,
-            keterangan: row.item.keterangan,
-            hasil: row.item.hasil,
-            kesimpulan: row.item.kesimpulan || null,
-            next_plan: row.item.next_plan || null,
-            description_result: row.item.description_result,
-            category_id: row.categoryId,
-            sub_category_id: row.subCategoryId,
-            cost: row.item.cost,
-            daily_activity_pics: {
-              create: row.picIds.map((id: bigint) => ({ pic_id: id }))
+        create: async row => {
+          const created = await tx.daily_activities.create({
+            data: {
+              activity_date: row.item.activity_date,
+              activity: row.item.activity,
+              institution_group: row.item.institution_group ? truncStr(row.item.institution_group, 255) : null,
+              address: row.item.address,
+              focus: row.item.focus,
+              location: row.item.location,
+              keterangan: row.item.keterangan,
+              hasil: row.item.hasil,
+              kesimpulan: row.item.kesimpulan || null,
+              next_plan: row.item.next_plan || null,
+              description_result: row.item.description_result,
+              category_id: row.categoryId,
+              sub_category_id: row.subCategoryId,
+              cost: row.item.cost,
+              daily_activity_pics: {
+                create: row.picIds.map((id: bigint) => ({ pic_id: id }))
+              }
+            },
+            include: { daily_activity_pics: { select: { pic_id: true } } }
+          }) as any;
+
+          const rawPhotos = (row.item as any).photos;
+          if (rawPhotos && rawPhotos.length > 0) {
+            const seenDigests = new Set<string>();
+            let sortOrder = 0;
+            for (const p of rawPhotos) {
+              if (p.buffer.length > 5 * 1024 * 1024) continue;
+              const sha = createHash('sha256').update(p.buffer).digest('hex');
+              if (seenDigests.has(sha)) continue;
+              seenDigests.add(sha);
+              await tx.daily_activity_photos.create({
+                data: {
+                  activity_id: created.id,
+                  photo_data: p.buffer,
+                  mime_type: p.mime_type || (p.extension === 'png' ? 'image/png' : 'image/jpeg'),
+                  original_name: p.original_name || `photo_${sortOrder + 1}.${p.extension || 'jpg'}`,
+                  size_bytes: p.buffer.length,
+                  sha256: sha,
+                  sort_order: sortOrder++
+                }
+              });
             }
-          },
-          include: { daily_activity_pics: { select: { pic_id: true } } }
-        }) as any,
-        mergeExisting: async () => undefined
+          }
+          return created;
+        },
+        mergeExisting: async (existingActivity, incomingRow) => {
+          const rawPhotos = (incomingRow.item as any).photos;
+          if (rawPhotos && rawPhotos.length > 0) {
+            const existingPhotos = await tx.daily_activity_photos.findMany({
+              where: { activity_id: existingActivity.id }
+            });
+            const existingSha = new Set(existingPhotos.map(p => p.sha256));
+            let sortOrder = existingPhotos.length;
+            for (const p of rawPhotos) {
+              if (p.buffer.length > 5 * 1024 * 1024) continue;
+              const sha = createHash('sha256').update(p.buffer).digest('hex');
+              if (existingSha.has(sha)) continue;
+              existingSha.add(sha);
+              await tx.daily_activity_photos.create({
+                data: {
+                  activity_id: existingActivity.id,
+                  photo_data: p.buffer,
+                  mime_type: p.mime_type || (p.extension === 'png' ? 'image/png' : 'image/jpeg'),
+                  original_name: p.original_name || `photo_${sortOrder + 1}.${p.extension || 'jpg'}`,
+                  size_bytes: p.buffer.length,
+                  sha256: sha,
+                  sort_order: sortOrder++
+                }
+              });
+            }
+          }
+        }
       });
 
       // 5. Insert Stakeholders Engagement
