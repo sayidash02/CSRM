@@ -334,6 +334,9 @@ export const getDashboardStats = catchAsync(async (req: Request, res: Response):
         grievanceOnProgress,
         grievanceResolutionRate,
         proposalAcceptanceRate,
+        proposalAccept: acceptCount,
+        proposalDecline: declineCount,
+        proposalReview: reviewCount,
         totalCsrBudget,
         onGoingBudget
       },

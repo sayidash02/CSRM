@@ -101,7 +101,7 @@ function Sidebar({
   const initials = getInitials(username);
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-ink text-paper/70 border-r border-white/[0.06]">
+    <aside className="flex h-full w-[268px] shrink-0 flex-col bg-ink text-paper/70 border-r border-white/[0.06]">
       {/* Brand Header */}
       <div className="flex items-center gap-3 px-4 py-3 min-h-[72px] border-b border-white/[0.06]">
         <div className="rounded-lg bg-white p-1.5 shadow-sm shrink-0 flex items-center justify-center">
@@ -157,7 +157,7 @@ function Sidebar({
                     <span className={on ? "text-forest-2" : "text-paper/40 group-hover:text-forest-2"}>
                       {item.icon}
                     </span>
-                    <span className="flex-1 truncate text-[13px]">{item.label}</span>
+                    <span className="flex-1 truncate text-[12.5px] font-medium">{item.label}</span>
                     {counts[item.id] !== undefined && (
                       <span
                         className={`font-mono text-[10px] tabular-nums px-1.5 py-0.5 rounded ${
@@ -364,7 +364,7 @@ function CsrmWorkspace() {
               title="Pencarian Global (Ctrl + K)"
             >
               <Search size={14} className="text-forest group-hover:scale-110 transition-transform" />
-              <span className="hidden md:inline">Cari data di semua modul...</span>
+              <span className="hidden md:inline">Cari data...</span>
               <span className="inline md:hidden">Cari</span>
               <kbd className="hidden sm:inline-flex items-center rounded bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-2 border border-line">
                 ⌘K
