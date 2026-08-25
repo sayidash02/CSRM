@@ -92,6 +92,8 @@ export const getDashboardStats = catchAsync(async (req: Request, res: Response):
     prisma.daily_activities.count({ where: { ...dailyWhere, activity_date: { ...(dailyWhere.activity_date as object || {}), gte: fourteenDaysAgo, lt: sevenDaysAgo } } }),
     
     prisma.stakeholder_engagement.count({ where: stakeholderWhere }),
+    prisma.stakeholder_engagement.count({ where: { ...stakeholderWhere, date: { ...(stakeholderWhere.date as object || {}), gte: firstDayThisMonth } } }),
+    prisma.stakeholder_engagement.count({ where: { ...stakeholderWhere, date: { ...(stakeholderWhere.date as object || {}), gte: firstDayLastMonth, lte: lastDayLastMonth } } }),
     prisma.top_issues.count({ where: topIssueWhere }),
     prisma.proposals.count({ where: proposalWhere }),
     
@@ -165,6 +167,7 @@ export const getDashboardStats = catchAsync(async (req: Request, res: Response):
 
   const dailyTrend = lastMonthDaily === 0 ? (thisMonthDaily > 0 ? 100 : 0) : Math.round(((thisMonthDaily - lastMonthDaily) / lastMonthDaily) * 100);
   const weeklyTrend = lastWeekDaily === 0 ? (thisWeekDaily > 0 ? 100 : 0) : Math.round(((thisWeekDaily - lastWeekDaily) / lastWeekDaily) * 100);
+  const stakeholderTrend = lastMonthStakeholder === 0 ? (thisMonthStakeholder > 0 ? 100 : 0) : Math.round(((thisMonthStakeholder - lastMonthStakeholder) / lastMonthStakeholder) * 100);
 
   // 1. Subcategory distribution
   const categoryCounts: Record<string, number> = {};
@@ -313,6 +316,9 @@ export const getDashboardStats = catchAsync(async (req: Request, res: Response):
         weeklyThisWeek: thisWeekDaily,
         weeklyLastWeek: lastWeekDaily,
         weeklyTrend,
+        stakeholderThisMonth,
+        stakeholderLastMonth,
+        stakeholderTrend,
         monthlyTimeline
       },
       actionable: {

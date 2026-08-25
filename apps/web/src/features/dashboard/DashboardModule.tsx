@@ -59,6 +59,9 @@ export interface DashboardStats {
     weeklyThisWeek: number;
     weeklyLastWeek: number;
     weeklyTrend: number;
+    stakeholderThisMonth?: number;
+    stakeholderLastMonth?: number;
+    stakeholderTrend?: number;
     monthlyTimeline?: Array<{
       month: string;
       monthIndex: number;
@@ -188,7 +191,11 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       value: stats.totals.daily,
       unit: "kegiatan",
       badge: stats.totals.photos !== undefined ? `${stats.totals.photos} foto arsip` : undefined,
-      delta: stats.trends.weeklyTrend,
+      trendText: stats.trends.weeklyTrend !== 0
+        ? `${stats.trends.weeklyTrend > 0 ? "+" : ""}${stats.trends.weeklyTrend.toFixed(1)}% vs 7 hr lalu`
+        : (stats.trends.dailyThisMonth > 0 ? `${stats.trends.dailyThisMonth} bln ini` : "Stabil"),
+      trendTooltip: "Tren jumlah kegiatan 7 hari terakhir dibandingkan 7 hari sebelumnya",
+      trendDelta: stats.trends.weeklyTrend,
       color: "var(--color-forest)",
       module: "daily",
       icon: <Calendar size={16} />,
@@ -199,7 +206,11 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       value: stats.totals.stakeholder,
       unit: "sesi pertemuan",
       badge: "External Relations",
-      delta: stats.trends.dailyTrend,
+      trendText: (stats.trends.stakeholderTrend !== undefined && stats.trends.stakeholderTrend !== 0)
+        ? `${stats.trends.stakeholderTrend > 0 ? "+" : ""}${stats.trends.stakeholderTrend.toFixed(1)}% vs bln lalu`
+        : ((stats.trends.stakeholderThisMonth ?? 0) > 0 ? `${stats.trends.stakeholderThisMonth} sesi bln ini` : "Stabil"),
+      trendTooltip: "Perubahan jumlah sesi pertemuan stakeholder bulan ini dibandingkan bulan lalu",
+      trendDelta: stats.trends.stakeholderTrend || 0,
       color: "var(--color-ochre)",
       module: "stakeholder",
       icon: <Users size={16} />,
@@ -211,7 +222,11 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       unit: "tiket pengaduan",
       badge: `${resolutionRate}% terselesaikan`,
       badgeColor: resolutionRate >= 80 ? "bg-forest/10 text-forest" : "bg-ochre/15 text-ochre",
-      delta: stats.actionable.grievanceHighOpen > 0 ? stats.actionable.grievanceHighOpen : 0,
+      trendText: stats.actionable.untouchedGrievances > 0 
+        ? `${stats.actionable.untouchedGrievances} perlu respon`
+        : "Terkendali",
+      trendTooltip: "Jumlah tiket keluhan prioritas tinggi yang memerlukan tindak lanjut segera",
+      trendDelta: stats.actionable.untouchedGrievances > 0 ? -1 : 1,
       isIssue: true,
       color: "var(--color-clay)",
       module: "grievance",
@@ -222,9 +237,11 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       label: "CSR Projects",
       value: stats.totals.csr,
       unit: "program kerja",
-      badge: totalBudget > 0 ? formatIDRCompact(totalBudget) : `${stats.actionable.csrOnGoing} on going`,
+      badge: totalBudget > 0 ? formatIDRCompact(totalBudget) : "Program CSR",
       badgeColor: "bg-forest/10 text-forest",
-      delta: 0,
+      trendText: `${stats.actionable.csrOnGoing} On Going`,
+      trendTooltip: "Jumlah program CSR yang sedang aktif berjalan di lapangan",
+      trendDelta: 0,
       color: "var(--color-forest-2)",
       module: "csr",
       icon: <Leaf size={16} />,
@@ -299,57 +316,77 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       )}
 
       {/* Primary KPI Metric Cards (Top 4 Modules) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((k) => {
-          const up = k.delta >= 0;
-          const good = k.isIssue ? !up : up;
+      <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {kpis.map((k) => {
+            const isPositive = k.trendDelta > 0;
+            const isNegative = k.trendDelta < 0;
+            const isGood = k.isIssue ? !isPositive : isPositive;
 
-          return (
-            <button
-              key={k.id}
-              onClick={() => onNav(k.module)}
-              className="group rounded-2xl border border-line bg-white p-5 text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="p-2 rounded-xl bg-paper-2 text-ink group-hover:bg-forest/10 group-hover:text-forest transition-colors">
-                      {k.icon}
-                    </span>
-                    <span className="text-[13px] leading-tight text-ink font-semibold">{k.label}</span>
+            return (
+              <button
+                key={k.id}
+                onClick={() => onNav(k.module)}
+                className="group rounded-2xl border border-line bg-white p-5 text-left transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-2 rounded-xl bg-paper-2 text-ink group-hover:bg-forest/10 group-hover:text-forest transition-colors">
+                        {k.icon}
+                      </span>
+                      <span className="text-[13px] leading-tight text-ink font-semibold">{k.label}</span>
+                    </div>
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: k.color }} />
                   </div>
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: k.color }} />
+
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-3xl font-bold tabular-nums tracking-tight text-ink">{k.value}</span>
+                    <span className="text-[12px] text-slate">{k.unit}</span>
+                  </div>
                 </div>
 
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-3xl font-bold tabular-nums tracking-tight text-ink">{k.value}</span>
-                  <span className="text-[12px] text-slate">{k.unit}</span>
+                <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between gap-2 text-xs flex-wrap">
+                  {k.badge ? (
+                    <span className={`font-mono text-[11px] font-medium px-2 py-0.5 rounded-md ${k.badgeColor || "bg-paper-2 text-slate"}`}>
+                      {k.badge}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-slate-2">7 Modul CSRM</span>
+                  )}
+
+                  {k.trendText && (
+                    <span
+                      title={k.trendTooltip}
+                      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-mono text-[11px] font-medium tabular-nums ${
+                        k.trendDelta !== 0
+                          ? isGood 
+                            ? "bg-forest/10 text-forest" 
+                            : "bg-clay/10 text-clay"
+                          : "bg-paper-2 text-slate"
+                      }`}
+                    >
+                      {isPositive ? (
+                        <ArrowUpRight size={12} className="shrink-0" />
+                      ) : isNegative ? (
+                        <ArrowDownRight size={12} className="shrink-0" />
+                      ) : null}
+                      <span>{k.trendText}</span>
+                    </span>
+                  )}
                 </div>
-              </div>
+              </button>
+            );
+          })}
+        </div>
 
-              <div className="mt-4 pt-3 border-t border-line/60 flex items-center justify-between gap-2 text-xs">
-                {k.badge ? (
-                  <span className={`font-mono text-[11px] font-medium px-2 py-0.5 rounded-md ${k.badgeColor || "bg-paper-2 text-slate"}`}>
-                    {k.badge}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-slate-2">7 Modul CSRM</span>
-                )}
-
-                {k.delta !== 0 && (
-                  <span
-                    className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums ${
-                      good ? "bg-forest/10 text-forest" : "bg-clay/10 text-clay"
-                    }`}
-                  >
-                    {up ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                    {Math.abs(k.delta).toFixed(1)}%
-                  </span>
-                )}
-              </div>
-            </button>
-          );
-        })}
+        {/* Informative Trend Micro-Guide */}
+        <div className="flex items-center gap-1.5 px-1 pt-1 text-[11px] text-slate font-medium">
+          <Activity size={12} className="text-forest shrink-0" />
+          <span>
+            <strong>Panduan Indikator:</strong> Tag tren (<span className="text-forest font-semibold">↑ Hijau</span> / <span className="text-clay font-semibold">↓ Merah</span>) menunjukkan pertumbuhan frekuensi kegiatan mingguan (Daily) &amp; bulanan (Stakeholder) terhadap periode sebelumnya.
+          </span>
+        </div>
       </div>
 
       {/* Secondary KPI Bar (Top Issues, Proposals, LRP) */}
