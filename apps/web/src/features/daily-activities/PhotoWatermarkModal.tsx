@@ -180,19 +180,46 @@ export function PhotoWatermarkModal({
 
           <div>
             <label className="text-[11px] font-medium text-slate block mb-1">
-              Posisi Watermark
+              Petugas / PIC Tim CSR
             </label>
-            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+            <input
+              type="text"
+              value={options.picName || ""}
+              onChange={(e) => setOptions({ ...options, picName: e.target.value })}
+              className={inputCls}
+              placeholder="Contoh: Pak Maryono, Ziyadu"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium text-slate block mb-1">
+              Catatan Lapangan (Opsional)
+            </label>
+            <input
+              type="text"
+              value={options.note || ""}
+              onChange={(e) => setOptions({ ...options, note: e.target.value })}
+              className={inputCls}
+              placeholder="Contoh: Penyerahan Bantuan Bibit"
+            />
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium text-slate block mb-1">
+              Gaya &amp; Posisi Watermark
+            </label>
+            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
               {[
-                { id: "bottom-left", label: "Bawah Kiri" },
-                { id: "bottom-right", label: "Bawah Kanan" },
-                { id: "bottom-strip", label: "Pita Bawah" },
+                { id: "bottom-left", label: "Badge Kiri Bawah" },
+                { id: "bottom-right", label: "Badge Kanan Bawah" },
+                { id: "bottom-strip", label: "Banner Bawah Resmi" },
+                { id: "camera-stamp", label: "Cap Kamera GPS" },
               ].map((pos) => (
                 <button
                   key={pos.id}
                   type="button"
                   onClick={() => setOptions({ ...options, position: pos.id as any })}
-                  className={`py-1 px-2 rounded-md border text-center transition-colors font-medium ${
+                  className={`py-1.5 px-2 rounded-md border text-center transition-colors font-medium cursor-pointer ${
                     options.position === pos.id
                       ? "bg-forest text-white border-forest shadow-2xs"
                       : "bg-white text-slate border-line hover:bg-paper"
@@ -206,19 +233,20 @@ export function PhotoWatermarkModal({
 
           <div>
             <label className="text-[11px] font-medium text-slate block mb-1">
-              Tema Tampilan Badge
+              Warna Tema Aksen
             </label>
-            <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+            <div className="grid grid-cols-4 gap-1.5 text-[11px]">
               {[
-                { id: "slate", label: "Slate Dark" },
-                { id: "navy", label: "Navy Blue" },
                 { id: "emerald", label: "Emerald" },
+                { id: "navy", label: "Navy" },
+                { id: "slate", label: "Slate" },
+                { id: "amber", label: "Amber" },
               ].map((theme) => (
                 <button
                   key={theme.id}
                   type="button"
                   onClick={() => setOptions({ ...options, badgeTheme: theme.id as any })}
-                  className={`py-1 px-2 rounded-md border text-center transition-colors font-medium ${
+                  className={`py-1.5 px-1.5 rounded-md border text-center transition-colors font-medium cursor-pointer ${
                     options.badgeTheme === theme.id
                       ? "bg-forest text-white border-forest shadow-2xs"
                       : "bg-white text-slate border-line hover:bg-paper"
