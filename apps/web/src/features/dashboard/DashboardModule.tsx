@@ -861,7 +861,9 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                 {stats.recent.topIssues.slice(0, 3).map((issue) => (
                   <div key={issue.id} className="p-2.5 rounded-xl bg-ochre/5 border border-ochre/20 text-xs">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="font-mono text-[10px] font-semibold text-ochre uppercase">{issue.period} ({issue.year})</span>
+                      <span className="font-mono text-[10px] font-semibold text-ochre uppercase">
+                        {issue.period?.includes(String(issue.year)) ? issue.period : `${issue.period} (${issue.year})`}
+                      </span>
                     </div>
                     <div className="font-semibold text-ink line-clamp-1">{issue.issue}</div>
                     {issue.follow_up && (
