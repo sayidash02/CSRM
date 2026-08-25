@@ -40,6 +40,7 @@ interface PhotoGalleryAttachmentInputProps {
   activityDate?: string;
   location?: string;
   activityTitle?: string;
+  picName?: string;
   onDateExtracted?: (dateIso: string) => void;
   value: AttachedPhoto[];
   onChange: (photos: AttachedPhoto[]) => void;
@@ -52,6 +53,7 @@ export function PhotoGalleryAttachmentInput({
   activityDate,
   location,
   activityTitle,
+  picName,
   onDateExtracted,
   value,
   onChange,
@@ -194,7 +196,7 @@ export function PhotoGalleryAttachmentInput({
     }
   };
 
-  const handleApplyWatermarkToDraft = (
+  const handleApplyWatermark = async (
     index: number,
     watermarkedFile: File,
     newPreviewUrl: string
@@ -221,6 +223,42 @@ export function PhotoGalleryAttachmentInput({
       setPendingPreviews(updated);
       onChange([...value, ...updated]);
       onPendingFilesChange?.(updated.map((p) => p.file!).filter(Boolean));
+      showToast?.("Watermark foto draft berhasil diperbarui", "success");
+    } else if (target.id && activityId) {
+      try {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append("file", watermarkedFile);
+
+        const res = await apiClient.put(
+          `/daily-activities/${activityId}/photos/${target.id}`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } }
+        );
+
+        if (res.data?.data) {
+          const timestamp = Date.now();
+          const updatedValue = value.map((p) => {
+            if (p.id === target.id) {
+              return {
+                ...p,
+                ...res.data.data,
+                url: `/api/daily-activities/${activityId}/photos/${target.id}?t=${timestamp}`,
+                previewUrl: newPreviewUrl,
+                isWatermarked: true,
+              };
+            }
+            return p;
+          });
+          onChange(updatedValue);
+          showToast?.("Watermark foto tersimpan berhasil diperbarui", "success");
+        }
+      } catch (err: any) {
+        console.error("Gagal memperbarui watermark foto tersimpan:", err);
+        showToast?.(err?.response?.data?.error || "Gagal memperbarui watermark foto tersimpan", "error");
+      } finally {
+        setUploading(false);
+      }
     }
   };
 
@@ -335,16 +373,14 @@ export function PhotoGalleryAttachmentInput({
                     >
                       <Info size={13} className="text-forest" />
                     </button>
-                    {photo.isPending && (
-                      <button
-                        type="button"
-                        onClick={() => setWatermarkingPhoto({ photo, index })}
-                        className="p-1.5 bg-white text-ink rounded-full shadow-sm hover:bg-paper hover:scale-105 transition-all"
-                        title="Atur / Bubuhi Watermark Audit"
-                      >
-                        <Stamp size={13} className="text-forest" />
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setWatermarkingPhoto({ photo, index })}
+                      className="p-1.5 bg-white text-ink rounded-full shadow-sm hover:bg-paper hover:scale-105 transition-all cursor-pointer"
+                      title="Edit / Bubuhi Watermark Audit"
+                    >
+                      <Stamp size={13} className="text-forest" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => setPreviewModalUrl(src || null)}
@@ -436,10 +472,11 @@ export function PhotoGalleryAttachmentInput({
             dateText: activityDate || watermarkingPhoto.photo.exif?.dateTakenIso || "",
             locationText: location || "",
             activityTitle: activityTitle || "",
+            picName: picName || "",
           }}
           onClose={() => setWatermarkingPhoto(null)}
           onApply={(file, previewUrl) =>
-            handleApplyWatermarkToDraft(watermarkingPhoto.index, file, previewUrl)
+            handleApplyWatermark(watermarkingPhoto.index, file, previewUrl)
           }
           showToast={showToast}
         />

@@ -11,6 +11,7 @@ import {
   exportMomWorkbook,
   uploadPhoto,
   getPhoto,
+  updatePhoto,
   deletePhoto
 } from '../controllers/DailyActivitiesController';
 
@@ -20,6 +21,7 @@ router.post('/import/parse', importParseExcel);
 router.post('/import/commit', importCommitExcel);
 router.get('/export/mom-workbook', exportMomWorkbook);
 router.get('/:id/photos/:photoId', getPhoto);
+router.put('/:id/photos/:photoId', updatePhoto);
 router.delete('/:id/photos/:photoId', deletePhoto);
 router.get('/:id/mom', exportSingleMom);
 router.post('/', createDailyActivity);

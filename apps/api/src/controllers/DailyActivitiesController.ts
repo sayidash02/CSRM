@@ -679,3 +679,55 @@ export const deletePhoto = catchAsync(async (req: Request, res: Response): Promi
   if (result.count === 0) { res.status(404).json({ error: 'Foto tidak ditemukan' }); return; }
   res.status(204).send();
 });
+
+export const updatePhoto = (req: Request, res: Response, next: NextFunction) => {
+  photoUpload.single('file')(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: 'Upload error: ' + err.message });
+    if (!req.file) return res.status(400).json({ error: 'File is required' });
+
+    try {
+      const activityId = parseId(req.params.id);
+      const photoId = parseId(req.params.photoId);
+      const buffer = req.file.buffer;
+      const isJpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+      const isPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+      const matchesMime = (req.file.mimetype === 'image/jpeg' && isJpeg) || (req.file.mimetype === 'image/png' && isPng);
+      if (!matchesMime) {
+        res.status(400).json({ error: 'Isi file tidak cocok dengan tipe gambar yang diklaim' });
+        return;
+      }
+
+      const existingPhoto = await prisma.daily_activity_photos.findFirst({
+        where: { id: photoId, activity_id: activityId, is_deleted: false },
+        select: { id: true }
+      });
+      if (!existingPhoto) {
+        res.status(404).json({ error: 'Foto tidak ditemukan' });
+        return;
+      }
+
+      const digest = createHash('sha256').update(buffer).digest('hex');
+
+      const updatedPhoto = await prisma.daily_activity_photos.update({
+        where: { id: photoId },
+        data: {
+          photo_data: buffer,
+          mime_type: req.file.mimetype,
+          original_name: req.file.originalname.slice(0, 255),
+          size_bytes: buffer.length,
+          sha256: digest
+        },
+        select: { id: true, activity_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
+      });
+
+      res.status(200).json({
+        data: {
+          ...updatedPhoto,
+          url: `/api/daily-activities/${activityId}/photos/${updatedPhoto.id}`
+        }
+      });
+    } catch (error: any) {
+      next(error);
+    }
+  });
+};

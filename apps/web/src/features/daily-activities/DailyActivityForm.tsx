@@ -209,6 +209,7 @@ export function DailyActivityForm({
             activityDate={f.activity_date ? String(f.activity_date).split('T')[0] : ""}
             location={f.location || f.address || ""}
             activityTitle={f.activity || ""}
+            picName={refs.pics.filter(p => f.pic_ids.map(String).includes(String(p.id))).map(p => p.name).join(', ')}
             onDateExtracted={(dateIso) => {
               if (!f.activity_date) {
                 set("activity_date", dateIso);
