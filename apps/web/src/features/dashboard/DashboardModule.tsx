@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   Layers,
   ArrowRight,
-  Sparkles,
   Info,
 } from "lucide-react";
 import {
@@ -367,102 +366,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
         </div>
       </div>
 
-      {/* 2. Decision-Oriented "Perlu Perhatian Hari Ini" (Daily Focus Strip) */}
-      <div className="rounded-xl border border-line bg-white p-3 shadow-2xs space-y-2">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold text-ink uppercase tracking-wider">
-            <Sparkles size={13} className="text-forest" />
-            <span>Fokus &amp; Perhatian Hari Ini</span>
-          </div>
-          <span className="text-[10px] text-slate font-medium">
-            Insight Pengambilan Keputusan
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-          {/* Action 1: Grievance Urgent */}
-          <button
-            onClick={() => onNav("grievance")}
-            className={`p-2.5 rounded-lg border text-left transition-all flex items-center justify-between gap-2 cursor-pointer ${
-              stats.actionable.untouchedGrievances > 0
-                ? "bg-clay/10 border-clay/30 hover:bg-clay/15 text-clay"
-                : "bg-paper/40 border-line hover:bg-paper text-slate hover:text-ink"
-            }`}
-          >
-            <div className="min-w-0">
-              <div className="text-[11px] font-semibold truncate flex items-center gap-1.5">
-                <MessageSquareWarning size={12} className="shrink-0" />
-                <span>Grievance Prioritas</span>
-              </div>
-              <div className="text-[11px] mt-0.5 truncate">
-                {stats.actionable.untouchedGrievances > 0
-                  ? `${stats.actionable.untouchedGrievances} perlu investigasi segera`
-                  : "Semua keluhan terkendali"}
-              </div>
-            </div>
-            <ChevronRight size={13} className="shrink-0 opacity-60" />
-          </button>
-
-          {/* Action 2: Proposals Pending */}
-          <button
-            onClick={() => onNav("proposals")}
-            className="p-2.5 rounded-lg border border-line bg-paper/40 hover:bg-paper text-slate hover:text-ink text-left transition-all flex items-center justify-between gap-2 cursor-pointer"
-          >
-            <div className="min-w-0">
-              <div className="text-[11px] font-semibold truncate flex items-center gap-1.5">
-                <FileText size={12} className="shrink-0 text-forest" />
-                <span>Evaluasi Proposal</span>
-              </div>
-              <div className="text-[11px] mt-0.5 truncate">
-                {stats.actionable.proposalReview && stats.actionable.proposalReview > 0
-                  ? `${stats.actionable.proposalReview} proposal menunggu review`
-                  : `${stats.actionable.proposalAccept ?? stats.totals.proposals} proposal disetujui`}
-              </div>
-            </div>
-            <ChevronRight size={13} className="shrink-0 opacity-60" />
-          </button>
-
-          {/* Action 3: Active CSR Projects */}
-          <button
-            onClick={() => onNav("csr")}
-            className="p-2.5 rounded-lg border border-line bg-paper/40 hover:bg-paper text-slate hover:text-ink text-left transition-all flex items-center justify-between gap-2 cursor-pointer"
-          >
-            <div className="min-w-0">
-              <div className="text-[11px] font-semibold truncate flex items-center gap-1.5">
-                <Leaf size={12} className="shrink-0 text-forest" />
-                <span>Program CSR Lapangan</span>
-              </div>
-              <div className="text-[11px] mt-0.5 truncate">
-                {stats.actionable.csrOnGoing > 0
-                  ? `${stats.actionable.csrOnGoing} program aktif berjalan`
-                  : "Perencanaan program kerja"}
-              </div>
-            </div>
-            <ChevronRight size={13} className="shrink-0 opacity-60" />
-          </button>
-
-          {/* Action 4: Top Issues Monitoring */}
-          <button
-            onClick={() => onNav("topissues")}
-            className="p-2.5 rounded-lg border border-line bg-paper/40 hover:bg-paper text-slate hover:text-ink text-left transition-all flex items-center justify-between gap-2 cursor-pointer"
-          >
-            <div className="min-w-0">
-              <div className="text-[11px] font-semibold truncate flex items-center gap-1.5">
-                <AlertTriangle size={12} className="shrink-0 text-ochre" />
-                <span>Isu Strategis &amp; Mitigasi</span>
-              </div>
-              <div className="text-[11px] mt-0.5 truncate">
-                {stats.totals.issues > 0
-                  ? `${stats.totals.issues} isu dalam mitigasi`
-                  : "Tidak ada isu kritis"}
-              </div>
-            </div>
-            <ChevronRight size={13} className="shrink-0 opacity-60" />
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Primary KPI Metric Cards (Top 4 Modules) */}
+      {/* Primary KPI Metric Cards (Top 4 Modules) */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-[13px] font-bold text-ink uppercase tracking-wider">
