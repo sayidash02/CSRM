@@ -79,11 +79,11 @@ export function MomPreviewModal({
             {/* Quick Export Actions */}
             <button
               onClick={() => onDownloadMom(activity.id, activity.activity, activity.activity_date, 'pdf')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-clay bg-clay/10 hover:bg-clay/20 rounded-lg border border-clay/30 transition-all cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-clay bg-clay/10 hover:bg-clay/20 rounded-lg border border-clay/30 transition-all cursor-pointer shadow-2xs"
               title="Unduh format PDF resmi"
             >
               <FileText size={13} className="text-clay" />
-              <span>Unduh PDF</span>
+              <span>PDF</span>
             </button>
 
             <button
