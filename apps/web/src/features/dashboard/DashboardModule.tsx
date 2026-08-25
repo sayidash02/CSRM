@@ -288,27 +288,72 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
 
   return (
     <div className="space-y-6">
-      {/* Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-[18px] font-bold tracking-tight text-ink">Ringkasan 7 Modul CSRM</h2>
-            {stats.filters?.targetYear && (
-              <span className="font-mono text-[11px] font-semibold bg-forest/10 text-forest px-2 py-0.5 rounded-md">
-                Tahun {stats.filters.targetYear}
+      {/* Hero Banner: PT Jawa Satu Power — Departemen CSR */}
+      <div className="relative overflow-hidden rounded-3xl border border-line shadow-sm bg-ink text-white">
+        {/* Background Site Aerial Image with Overlay */}
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity scale-105 transition-transform duration-700 hover:scale-100 pointer-events-none"
+          style={{ backgroundImage: "url('/site_jawasatupower.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-ink via-ink/90 to-ink/40 pointer-events-none" />
+
+        {/* Banner Content */}
+        <div className="relative z-10 p-6 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            {/* Top Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="bg-white px-2.5 py-1 rounded-lg shadow-sm shrink-0 flex items-center">
+                <img
+                  src="/logo_jawasatupower.png"
+                  alt="PT Jawa Satu Power"
+                  className="h-5 w-auto object-contain"
+                />
+              </div>
+              <span className="font-mono text-[10px] uppercase tracking-[0.14em] bg-white/10 text-paper/90 px-2.5 py-1 rounded-lg backdrop-blur-xs font-semibold">
+                Departemen CSR
               </span>
-            )}
+              <span className="font-mono text-[10px] text-forest-2 bg-forest/25 px-2.5 py-0.5 rounded-md flex items-center gap-1.5 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-forest-2 animate-pulse" /> Operasional Aktif
+              </span>
+            </div>
+
+            {/* Title & Description */}
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                CSR Management System (CSRM)
+              </h1>
+              <p className="text-xs sm:text-[13px] text-paper/70 mt-1 leading-relaxed">
+                Pusat data operasional dan pemantauan 7 modul CSR PT Jawa Satu Power untuk mendukung keharmonisan masyarakat, pemangku kepentingan, dan keberlanjutan sekitar fasilitas PLTGU Jawa-1 Cilamaya.
+              </p>
+            </div>
+
+            {/* Facility & Location Tags */}
+            <div className="flex items-center gap-2 text-[11px] font-mono text-paper/60 flex-wrap pt-1">
+              <span className="bg-white/5 px-2 py-0.5 rounded border border-white/10">PLTGU Jawa-1 (1.760 MW)</span>
+              <span className="text-paper/30">·</span>
+              <span className="bg-white/5 px-2 py-0.5 rounded border border-white/10">Kec. Cilamaya Wetan &amp; Sekitarnya</span>
+              {stats.filters?.targetYear && (
+                <>
+                  <span className="text-paper/30">·</span>
+                  <span className="bg-forest/30 text-white px-2 py-0.5 rounded font-semibold">Tahun {stats.filters.targetYear}</span>
+                </>
+              )}
+            </div>
           </div>
-          <p className="text-[12px] text-slate mt-0.5">
-            Monitoring komprehensif metrik operasional, tren bulanan kegiatan, resolusi keluhan, dan realisasi program CSR
-          </p>
+
+          {/* Quick Action Button */}
+          <div className="shrink-0 flex items-center md:flex-col md:items-end justify-between gap-3">
+            <button
+              onClick={() => setShowImportWizard(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-forest hover:bg-forest-2 text-white rounded-xl text-[13px] font-medium shadow-md transition-all cursor-pointer hover:scale-[1.02]"
+            >
+              <UploadCloud size={16} /> Import Master Excel
+            </button>
+            <span className="text-[10px] font-mono text-paper/50">
+              Versi Produksi · Single Operator
+            </span>
+          </div>
         </div>
-        <button
-          onClick={() => setShowImportWizard(true)}
-          className="inline-flex items-center gap-2 px-3.5 py-2 bg-forest hover:bg-forest-2 text-white rounded-xl text-[13px] font-medium shadow-2xs transition-colors cursor-pointer"
-        >
-          <UploadCloud size={15} /> Import Master Excel
-        </button>
       </div>
 
       {/* Alert Banner for Urgent Action Items */}

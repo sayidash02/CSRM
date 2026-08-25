@@ -114,16 +114,22 @@ export function AuthGate({ children }: { children: ReactNode }) {
         {/* Login Card */}
         <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-line bg-white p-7 shadow-[0_16px_40px_-12px_rgba(20,32,27,0.08)] sm:p-8 transition-all">
           {/* Brand Header */}
-          <div className="mb-7 text-center">
-            <div className="mx-auto mb-3.5 grid h-12 w-12 place-items-center rounded-xl bg-forest text-white shadow-sm ring-4 ring-forest/10">
-              <TreePine size={24} />
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 flex items-center justify-center p-2 rounded-xl bg-white border border-line shadow-xs max-w-[200px]">
+              <img
+                src="/logo_jawasatupower.png"
+                alt="PT Jawa Satu Power"
+                className="h-7 w-auto object-contain"
+              />
             </div>
-            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-forest">
-              CSR &amp; Relations
+            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-forest">
+              PT JAWA SATU POWER
             </div>
-            <h1 className="mt-1 text-xl font-bold tracking-tight text-ink">Masuk ke CSRM</h1>
-            <p className="mt-1.5 text-[13px] text-slate leading-relaxed">
-              Masukkan kredensial akun operasional CSR Anda untuk melanjutkan.
+            <h1 className="mt-1 text-lg font-bold tracking-tight text-ink">
+              CSR Management System (CSRM)
+            </h1>
+            <p className="mt-1 text-xs text-slate leading-relaxed">
+              Departemen Corporate Social Responsibility · Silakan masuk untuk mengakses sistem.
             </p>
           </div>
 

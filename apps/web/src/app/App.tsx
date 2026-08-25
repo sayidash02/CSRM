@@ -103,13 +103,21 @@ function Sidebar({
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col bg-ink text-paper/70 border-r border-white/[0.06]">
       {/* Brand Header */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-white/[0.06]">
-        <div className="grid h-9 w-9 place-items-center rounded-lg bg-forest text-white shadow-inner">
-          <TreePine size={18} />
+      <div className="flex items-center gap-3 px-4 py-3 min-h-[72px] border-b border-white/[0.06]">
+        <div className="rounded-lg bg-white p-1.5 shadow-sm shrink-0 flex items-center justify-center">
+          <img
+            src="/logo_jawasatupower.png"
+            alt="PT Jawa Satu Power"
+            className="h-6 w-auto max-w-[90px] object-contain"
+          />
         </div>
-        <div>
-          <div className="text-[15px] font-semibold tracking-tight text-white">CSRM</div>
-          <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper/40">CSR &amp; Relations</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-bold tracking-tight text-white leading-tight truncate">
+            JAWA SATU POWER
+          </div>
+          <div className="font-mono text-[9px] uppercase tracking-[0.14em] text-paper/50 truncate mt-0.5">
+            Departemen CSR
+          </div>
         </div>
         {onClose && (
           <button
@@ -338,8 +346,8 @@ function CsrmWorkspace() {
             >
               <Menu size={18} />
             </button>
-            <span className="hidden font-mono text-[10px] uppercase tracking-[0.18em] text-slate-2 sm:inline">
-              CSRM
+            <span className="hidden font-mono text-[10px] uppercase tracking-[0.14em] text-slate font-medium sm:inline">
+              PT Jawa Satu Power · CSRM
             </span>
             <ChevronRight size={13} className="hidden text-slate-2 sm:inline" />
             <h1 className="truncate text-[15px] font-semibold tracking-tight text-ink">
