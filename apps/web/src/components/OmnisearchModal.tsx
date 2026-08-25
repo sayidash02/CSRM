@@ -8,7 +8,7 @@ import {
   FileText,
   Leaf,
   MessageSquareWarning,
-  TreePine,
+  Sprout,
   ArrowRight,
   Loader2,
   CornerDownLeft,
@@ -50,7 +50,7 @@ const MODULE_ICONS: Record<string, React.ReactNode> = {
   grievance: <MessageSquareWarning size={15} className="text-clay" />,
   proposals: <FileText size={15} className="text-forest-2" />,
   csr: <Leaf size={15} className="text-forest" />,
-  lrp: <TreePine size={15} className="text-slate" />,
+  lrp: <Sprout size={15} className="text-slate" />,
 };
 
 const MODULE_BADGES: Record<string, { bg: string; text: string; label: string }> = {

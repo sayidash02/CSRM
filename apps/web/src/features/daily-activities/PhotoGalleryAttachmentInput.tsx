@@ -7,7 +7,6 @@ import {
   Plus,
   Stamp,
   Info,
-  Sparkles,
   MapPin,
   Calendar,
   Check,

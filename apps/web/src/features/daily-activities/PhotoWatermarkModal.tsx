@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Stamp, Sparkles, Check, RefreshCw } from "lucide-react";
+import { Stamp, Check, RefreshCw } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import {
   applyWatermarkToImage,
@@ -90,11 +90,11 @@ export function PhotoWatermarkModal({
         <div className="md:col-span-7 flex flex-col gap-2">
           <div className="flex items-center justify-between text-xs text-slate">
             <span className="font-semibold text-ink flex items-center gap-1.5">
-              <Sparkles size={14} className="text-forest" />
-              Live Preview Watermark
+              <Stamp size={14} className="text-forest" />
+              Pratinjau Watermark
             </span>
             {processing && (
-              <span className="flex items-center gap-1 text-forest animate-pulse font-mono text-[11px]">
+              <span className="flex items-center gap-1 text-forest font-mono text-[11px]">
                 <RefreshCw size={12} className="animate-spin" /> Memperbarui...
               </span>
             )}

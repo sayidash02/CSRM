@@ -9,7 +9,6 @@ import {
   useState,
 } from 'react';
 import {
-  TreePine,
   Lock,
   User,
   AlertCircle,
@@ -92,8 +91,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-paper px-4 text-ink">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="relative grid h-14 w-14 place-items-center rounded-2xl bg-forest text-white shadow-md">
-            <TreePine size={28} className="animate-pulse" />
+          <div className="p-3 rounded-2xl bg-white border border-line shadow-xs">
+            <img
+              src="/logo_jawasatupower.png"
+              alt="PT Jawa Satu Power"
+              className="h-8 w-auto object-contain"
+            />
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-slate">
             <Loader2 size={15} className="animate-spin text-forest" />
@@ -106,13 +109,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   if (status === 'unauthenticated') {
     return (
-      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-paper px-4 py-10 text-ink selection:bg-forest/20 selection:text-ink">
-        {/* Subtle Ambient Background Elements */}
-        <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-forest/8 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-ochre/8 blur-3xl" />
-
+      <main className="relative flex min-h-screen items-center justify-center bg-paper px-4 py-10 text-ink selection:bg-forest/20 selection:text-ink">
         {/* Login Card */}
-        <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-line bg-white p-7 shadow-[0_16px_40px_-12px_rgba(20,32,27,0.08)] sm:p-8 transition-all">
+        <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-line bg-white p-7 shadow-sm sm:p-8 transition-all">
           {/* Brand Header */}
           <div className="mb-6 text-center">
             <div className="mx-auto mb-3 flex items-center justify-center p-2 rounded-xl bg-white border border-line shadow-xs max-w-[200px]">

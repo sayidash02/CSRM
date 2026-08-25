@@ -6,7 +6,7 @@ import {
   FileText,
   Leaf,
   MessageSquareWarning,
-  TreePine,
+  Sprout,
   ChevronRight,
   Check,
   ArrowUpRight,
@@ -300,7 +300,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       unit: "program pemulihan",
       actionText: "Fase implementasi mata pencaharian",
       module: "lrp", 
-      icon: <TreePine size={15} /> 
+      icon: <Sprout size={15} /> 
     },
   ];
 
@@ -331,7 +331,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                 Departemen CSR
               </span>
               <span className="text-[10px] text-forest-2 bg-forest/25 px-2 py-0.5 rounded flex items-center gap-1 font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-forest-2 animate-pulse" /> Operasional Aktif
+                <span className="w-1.5 h-1.5 rounded-full bg-forest-2" /> Operasional Aktif
               </span>
               {stats.filters?.targetYear && (
                 <span className="text-[10px] bg-forest/30 text-white px-2 py-0.5 rounded font-mono font-medium">

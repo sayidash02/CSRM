@@ -1,7 +1,6 @@
 /**
  * Professional Field Documentation Watermark Utility for CSRM.
- * Emits ultra-crisp, audit-grade watermarked images using HTML5 Canvas.
- * Designed specifically to look authentic, official, and industrial (NOT cartoonish / AI-generated).
+ * Emits crisp, audit-grade industrial field documentation watermarks using HTML5 Canvas.
  */
 
 export interface WatermarkOptions {

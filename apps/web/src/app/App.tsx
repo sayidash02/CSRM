@@ -7,7 +7,7 @@ import {
   FileText,
   Leaf,
   MessageSquareWarning,
-  TreePine,
+  Sprout,
   Download,
   Archive,
   UserCog,
@@ -62,7 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "grievance", label: "Grievance", short: "CASES", icon: <MessageSquareWarning size={15} />, group: "Operasional" },
   { id: "proposals", label: "Proposals", short: "DOCS", icon: <FileText size={15} />, group: "Program" },
   { id: "csr", label: "CSR Projects", short: "CSR", icon: <Leaf size={15} />, group: "Program" },
-  { id: "lrp", label: "Livelihood Restoration", short: "LRP", icon: <TreePine size={15} />, group: "Program" },
+  { id: "lrp", label: "Livelihood Restoration", short: "LRP", icon: <Sprout size={15} />, group: "Program" },
   { id: "archive", label: "Pengaturan Arsip", short: "ARCHIVE", icon: <Archive size={15} />, group: "Sistem" },
   { id: "admin-users", label: "Kelola Akun", short: "ADMIN", icon: <UserCog size={15} />, group: "Sistem", adminOnly: true },
 ];

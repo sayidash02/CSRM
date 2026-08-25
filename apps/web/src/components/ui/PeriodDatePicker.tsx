@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar as CalendarIcon, CalendarRange, Clock, Sparkles } from "lucide-react";
+import { Calendar as CalendarIcon, CalendarRange, Clock } from "lucide-react";
 
 interface PeriodDatePickerProps {
   value: string;
