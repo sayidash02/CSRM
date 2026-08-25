@@ -224,9 +224,9 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       badgeColor: resolutionRate >= 80 ? "bg-forest/10 text-forest" : "bg-ochre/15 text-ochre",
       trendText: stats.actionable.untouchedGrievances > 0 
         ? `${stats.actionable.untouchedGrievances} perlu respon`
-        : "Terkendali",
+        : undefined,
       trendTooltip: "Jumlah tiket keluhan prioritas tinggi yang memerlukan tindak lanjut segera",
-      trendDelta: stats.actionable.untouchedGrievances > 0 ? -1 : 1,
+      trendDelta: stats.actionable.untouchedGrievances > 0 ? -1 : 0,
       isIssue: true,
       color: "var(--color-clay)",
       module: "grievance",
