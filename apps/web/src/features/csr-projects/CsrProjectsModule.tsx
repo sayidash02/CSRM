@@ -7,6 +7,7 @@ import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
+import { PeriodDatePicker } from '../../components/ui/PeriodDatePicker';
 
 export interface CsrProject {
   id: number | string;
@@ -233,14 +234,17 @@ function CsrForm({
         <Field label="Target Penerima Manfaat">
           <input type="text" value={f.target_beneficiaries} onChange={e => set("target_beneficiaries", e.target.value)} placeholder="Kelompok sasaran masyarakat / desa" className={inputCls} />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Pagu Anggaran (Rp)">
-            <CurrencyInput value={f.budget} onChange={v => set("budget", v)} placeholder="Rp 0" className={inputCls} />
-          </Field>
-          <Field label="Periode Pelaksanaan">
-            <input type="text" value={f.implementation_period} onChange={e => set("implementation_period", e.target.value)} placeholder="Misal: Q1 2026 / Jan - Mar" className={inputCls} />
-          </Field>
-        </div>
+        <Field label="Pagu Anggaran (Rp)">
+          <CurrencyInput value={f.budget} onChange={v => set("budget", v)} placeholder="Rp 0" className={inputCls} />
+        </Field>
+        <Field label="Periode Pelaksanaan" hint="Pilih rentang tanggal kalender atau sesuaikan teks periode">
+          <PeriodDatePicker
+            value={f.implementation_period || ""}
+            placeholder="Pilih rentang tanggal atau masukkan periode pelaksanaan"
+            defaultYear={parseInt(f.project_year) || new Date().getFullYear()}
+            onChange={(formattedText) => set("implementation_period", formattedText)}
+          />
+        </Field>
         <Field label="Tujuan &amp; Sasaran (Objective)">
           <textarea rows={2} value={f.objective} onChange={e => set("objective", e.target.value)} placeholder="Tujuan dan dampak yang diharapkan dari program" className={`${inputCls} resize-none`} />
         </Field>

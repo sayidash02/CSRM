@@ -6,6 +6,7 @@ import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
+import { PeriodDatePicker } from '../../components/ui/PeriodDatePicker';
 
 export interface TopIssue {
   id: number | string;
@@ -147,8 +148,12 @@ function TopIssueForm({
   return (
     <Modal title={initial ? "Edit Isu Strategis" : "Tambah Isu Strategis Baru"} onClose={onClose}>
       <div className="space-y-4">
-        <Field label="Periode Waktu" required hint="Contoh: Juli 2026 : Tanggal 21-25">
-          <input type="text" value={f.period} onChange={e => set("period", e.target.value)} placeholder="Contoh: Juli 2026 : Tanggal 21-25" className={inputCls} />
+        <Field label="Periode Waktu" required hint="Pilih rentang tanggal kalender atau sesuaikan teks periode di bawah">
+          <PeriodDatePicker
+            value={f.period}
+            placeholder="Pilih rentang tanggal atau masukkan periode"
+            onChange={(formattedText) => set("period", formattedText)}
+          />
         </Field>
         <Field label="Judul / Pokok Isu" required>
           <input type="text" value={f.issue} onChange={e => set("issue", e.target.value)} placeholder="Judul atau topik isu strategis" className={inputCls} />
