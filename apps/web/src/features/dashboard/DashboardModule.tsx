@@ -139,21 +139,35 @@ interface DashboardModuleProps {
 
 const PALETTE = ["#2F6B4F", "#3D8A66", "#C47F2A", "#B4552F", "#6F6A5C", "#14201B", "#8A8577"];
 
-const formatIDR = (n: number) =>
-  new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
+const formatIDR = (n: number | null | undefined) => {
+  if (n === null || n === undefined || isNaN(Number(n))) return "Rp 0";
+  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(Number(n));
+};
 
-const formatIDRCompact = (n: number) => {
-  if (n >= 1_000_000_000) {
-    return `Rp ${(n / 1_000_000_000).toFixed(1)} M`;
+const formatIDRCompact = (n: number | null | undefined) => {
+  const val = Number(n) || 0;
+  if (val >= 1_000_000_000) {
+    return `Rp ${(val / 1_000_000_000).toFixed(1)} M`;
   }
-  if (n >= 1_000_000) {
-    return `Rp ${(n / 1_000_000).toFixed(0)} Jt`;
+  if (val >= 1_000_000) {
+    return `Rp ${(val / 1_000_000).toFixed(0)} Jt`;
   }
-  return formatIDR(n);
+  return formatIDR(val);
 };
 
 const formatDate = (d: string) => {
   if (!d) return "-";
+  const dateOnly = String(d).split("T")[0];
+  const parts = dateOnly.split("-");
+  if (parts.length === 3) {
+    const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+    const day = parseInt(parts[2], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parts[0];
+    if (month >= 0 && month < 12) {
+      return `${day} ${months[month]} ${year}`;
+    }
+  }
   return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 };
 
@@ -828,7 +842,15 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
                     <div className="h-1.5 bg-paper-2 rounded-full overflow-hidden">
                       <div
                         className="h-full bg-forest rounded-full"
-                        style={{ width: `${Math.min(100, (c.budget / 500000000) * 100)}%` }}
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.max(
+                              12,
+                              ((c.budget || 0) / Math.max(...stats.recent.onGoingCsr.map((x) => x.budget || 0), 1)) * 100
+                            )
+                          )}%`,
+                        }}
                       />
                     </div>
                   </div>
