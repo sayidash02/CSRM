@@ -1,6 +1,5 @@
-import React, { useRef } from "react";
+import React from "react";
 import { 
-  Printer, 
   Download, 
   FileSpreadsheet, 
   FileText, 
@@ -47,8 +46,6 @@ export function MomPreviewModal({
   onDownloadMom,
   onViewPhoto
 }: MomPreviewModalProps) {
-  const printAreaRef = useRef<HTMLDivElement>(null);
-
   const pics = activity.pics && activity.pics.length > 0 
     ? activity.pics.map((p: any) => p.name).join(', ')
     : (activity.pic?.name || '-');
@@ -62,16 +59,12 @@ export function MomPreviewModal({
 
   const photos = activity.photos || [];
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <div className="fixed inset-0 bg-ink/70 backdrop-blur-xs flex items-center justify-center z-[65] p-3 sm:p-6 overflow-y-auto">
       <div className="bg-white rounded-2xl border border-line shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* TOP ACTION BAR */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-paper border-b border-line shrink-0 gap-3 flex-wrap no-print">
+        <div className="flex items-center justify-between px-5 py-3.5 bg-paper border-b border-line shrink-0 gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-forest/10 flex items-center justify-center text-forest">
               <FileCheck2 size={18} />
@@ -86,11 +79,11 @@ export function MomPreviewModal({
             {/* Quick Export Actions */}
             <button
               onClick={() => onDownloadMom(activity.id, activity.activity, activity.activity_date, 'pdf')}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-clay bg-clay/10 hover:bg-clay/20 rounded-lg border border-clay/30 transition-all cursor-pointer shadow-2xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-clay bg-clay/10 hover:bg-clay/20 rounded-lg border border-clay/30 transition-all cursor-pointer shadow-2xs"
               title="Unduh format PDF resmi"
             >
               <FileText size={13} className="text-clay" />
-              <span>PDF</span>
+              <span>Unduh PDF</span>
             </button>
 
             <button
@@ -111,17 +104,6 @@ export function MomPreviewModal({
               <span>Excel</span>
             </button>
 
-            <div className="h-4 w-px bg-line mx-1" />
-
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-forest hover:bg-forest-2 rounded-lg transition-all cursor-pointer shadow-2xs"
-              title="Cetak dokumen notulensi"
-            >
-              <Printer size={13} />
-              <span>Cetak MOM</span>
-            </button>
-
             <button
               onClick={onClose}
               className="p-1.5 text-slate hover:text-ink hover:bg-paper-2 rounded-lg transition-colors cursor-pointer ml-1"
@@ -132,11 +114,10 @@ export function MomPreviewModal({
           </div>
         </div>
 
-        {/* DOCUMENT PREVIEW BODY (PRINTABLE PAPER LAYOUT) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-paper/40 flex justify-center print:p-0 print:bg-white">
+        {/* DOCUMENT PREVIEW BODY (PAPER LAYOUT) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-paper/40 flex justify-center">
           <div 
-            ref={printAreaRef}
-            className="w-full max-w-3xl bg-white rounded-xl border border-line shadow-sm p-6 sm:p-10 text-ink space-y-6 print:border-none print:shadow-none print:p-0 print:max-w-none"
+            className="w-full max-w-3xl bg-white rounded-xl border border-line shadow-sm p-6 sm:p-10 text-ink space-y-6"
           >
             {/* OFFICIAL DOCUMENT HEADER */}
             <div className="border-b-2 border-forest pb-4 flex items-start justify-between gap-4">
@@ -334,8 +315,8 @@ export function MomPreviewModal({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="px-6 py-3 bg-paper border-t border-line flex items-center justify-between text-xs text-slate shrink-0 no-print">
-          <span>Tekan tombol <strong>Cetak MOM</strong> untuk mencetak dokumen atau simpan langsung ke PDF browser.</span>
+        <div className="px-6 py-3 bg-paper border-t border-line flex items-center justify-between text-xs text-slate shrink-0">
+          <span>Gunakan tombol unduhan di atas (PDF, Word, atau Excel) untuk mengekspor dokumen notulensi ini.</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-paper-2 hover:bg-paper text-ink font-medium rounded-lg border border-line transition-colors cursor-pointer"
