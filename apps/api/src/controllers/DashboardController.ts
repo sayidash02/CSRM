@@ -64,6 +64,8 @@ export const getDashboardStats = catchAsync(async (req: Request, res: Response):
     thisWeekDaily,
     lastWeekDaily,
     totalStakeholders,
+    stakeholderThisMonth,
+    stakeholderLastMonth,
     totalIssues,
     totalProposals,
     totalCsr,
@@ -167,7 +169,7 @@ export const getDashboardStats = catchAsync(async (req: Request, res: Response):
 
   const dailyTrend = lastMonthDaily === 0 ? (thisMonthDaily > 0 ? 100 : 0) : Math.round(((thisMonthDaily - lastMonthDaily) / lastMonthDaily) * 100);
   const weeklyTrend = lastWeekDaily === 0 ? (thisWeekDaily > 0 ? 100 : 0) : Math.round(((thisWeekDaily - lastWeekDaily) / lastWeekDaily) * 100);
-  const stakeholderTrend = lastMonthStakeholder === 0 ? (thisMonthStakeholder > 0 ? 100 : 0) : Math.round(((thisMonthStakeholder - lastMonthStakeholder) / lastMonthStakeholder) * 100);
+  const stakeholderTrend = stakeholderLastMonth === 0 ? (stakeholderThisMonth > 0 ? 100 : 0) : Math.round(((stakeholderThisMonth - stakeholderLastMonth) / stakeholderLastMonth) * 100);
 
   // 1. Subcategory distribution
   const categoryCounts: Record<string, number> = {};
