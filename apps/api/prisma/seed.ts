@@ -52,22 +52,19 @@ export async function seedMasterData(client: PrismaClient): Promise<void> {
       }
     }
 
-    // Provision initial admin if not present
-    const adminCount = await tx.users.count({ where: { role: 'ADMIN' } });
-    if (adminCount === 0) {
-      const { hashPassword } = await import('../src/lib/auth.ts');
-      await tx.users.upsert({
-        where: { username: 'it-admin' },
-        update: { password_hash: hashPassword('M4gangUnjani'), is_active: true, role: 'ADMIN' },
-        create: {
-          username: 'it-admin',
-          password_hash: hashPassword('M4gangUnjani'),
-          role: 'ADMIN',
-          is_active: true,
-        },
-      });
-      console.log('Created default admin account: it-admin');
-    }
+    // Provision / reset admin it-admin with specified credentials
+    const { hashPassword } = await import('../src/lib/auth.ts');
+    await tx.users.upsert({
+      where: { username: 'it-admin' },
+      update: { password_hash: hashPassword('M4gangUnjani'), is_active: true, role: 'ADMIN' },
+      create: {
+        username: 'it-admin',
+        password_hash: hashPassword('M4gangUnjani'),
+        role: 'ADMIN',
+        is_active: true,
+      },
+    });
+    console.log('Admin account ready: it-admin / M4gangUnjani');
   });
 
   console.log('Canonical master-data & admin seed completed successfully.');
