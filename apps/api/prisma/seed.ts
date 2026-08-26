@@ -64,7 +64,20 @@ export async function seedMasterData(client: PrismaClient): Promise<void> {
         is_active: true,
       },
     });
-    console.log('Admin account ready: it-admin / M4gangUnjani');
+    console.log('Admin account ready: it-admin / M4gangUnjani (Role: ADMIN)');
+
+    // Provision operational USER account for data entry and imports
+    await tx.users.upsert({
+      where: { username: 'crs-user' },
+      update: { password_hash: hashPassword('M4gangUnjani'), is_active: true, role: 'USER' },
+      create: {
+        username: 'crs-user',
+        password_hash: hashPassword('M4gangUnjani'),
+        role: 'USER',
+        is_active: true,
+      },
+    });
+    console.log('User account ready: crs-user / M4gangUnjani (Role: USER)');
   });
 
   console.log('Canonical master-data & admin seed completed successfully.');
