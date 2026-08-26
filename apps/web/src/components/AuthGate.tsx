@@ -74,8 +74,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
       setUser(response.data.data.user);
       setStatus('authenticated');
     } catch (requestError: any) {
-      const message = requestError?.response?.data?.error?.message;
-      setError(message || 'Login gagal. Periksa kembali username dan kata sandi Anda.');
+      console.error('Login error:', requestError);
+      const errorObj = requestError?.response?.data?.error;
+      const message = typeof errorObj === 'string' ? errorObj : errorObj?.message;
+      const networkError = !requestError?.response ? 'Gagal terhubung ke server API backend. Pastikan server aktif.' : undefined;
+      setError(message || networkError || 'Login gagal. Periksa kembali username dan kata sandi Anda.');
     } finally {
       setLoading(false);
     }

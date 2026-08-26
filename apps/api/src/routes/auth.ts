@@ -12,7 +12,7 @@ import {
 
 const router = Router();
 const attempts = new Map<string, { count: number; resetAt: number }>();
-const MAX_ATTEMPTS = 10;
+const MAX_ATTEMPTS = 50;
 const WINDOW_MS = 15 * 60 * 1000;
 
 function isRateLimited(key: string, now = Date.now()): boolean {
@@ -28,18 +28,20 @@ function recordFailedAttempt(key: string, now = Date.now()): void {
 
 router.post('/login', async (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
-  const key = req.ip || 'unknown';
-  if (isRateLimited(key)) { res.status(429).json({ error: { code: 'AUTH_RATE_LIMITED', message: 'Too many login attempts' } }); return; }
+  const username = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
+  const password = typeof req.body?.password === 'string' ? req.body.password : '';
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+  const key = `${username || 'anon'}:${clientIp}`;
+
+  if (isRateLimited(key)) { res.status(429).json({ error: { code: 'AUTH_RATE_LIMITED', message: 'Terlalu banyak percobaan login. Silakan tunggu beberapa saat.' } }); return; }
   if (!isAuthConfigured()) { res.status(503).json({ error: { code: 'AUTH_NOT_CONFIGURED', message: 'Authentication is not configured' } }); return; }
 
   try {
-    const username = typeof req.body?.username === 'string' ? req.body.username : '';
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
     let user = username && password ? await authenticateCredentials(username, password) : null;
 
     if (!user) {
       recordFailedAttempt(key);
-      res.status(401).json({ error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' } });
+      res.status(401).json({ error: { code: 'INVALID_CREDENTIALS', message: 'Username atau kata sandi salah' } });
       return;
     }
     attempts.delete(key);
