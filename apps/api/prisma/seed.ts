@@ -78,6 +78,13 @@ export async function seedMasterData(client: PrismaClient): Promise<void> {
       },
     });
     console.log('User account ready: crs-user / M4gangUnjani (Role: USER)');
+
+    // Ensure proposals table check constraints are compatible
+    try {
+      await tx.$executeRawUnsafe('ALTER TABLE `proposals` DROP CHECK `proposals_chk_1`').catch(() => undefined);
+    } catch {
+      // Ignore if not present
+    }
   });
 
   console.log('Canonical master-data & admin seed completed successfully.');
