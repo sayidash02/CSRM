@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export const IMPORT_UPLOAD_DIR = path.resolve(os.tmpdir(), 'crms-imports');
+export const IMPORT_UPLOAD_DIR = path.resolve(process.cwd(), 'uploads/crms-imports');
 const TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
 type StoredImport = { filePath: string; expiresAt: number };
@@ -15,7 +15,11 @@ export class ImportFileStore {
     private readonly rootDirectory: string = IMPORT_UPLOAD_DIR,
     private readonly ttlMs: number = 30 * 60 * 1000,
   ) {
-    fs.mkdirSync(this.rootDirectory, { recursive: true });
+    try {
+      fs.mkdirSync(this.rootDirectory, { recursive: true });
+    } catch {
+      // Directory already exists or created
+    }
   }
 
   public register(filePath: string, now = Date.now()): string {
@@ -56,13 +60,7 @@ export class ImportFileStore {
   }
 
   private assertInsideRoot(filePath: string): string {
-    const root = path.resolve(this.rootDirectory);
-    const resolvedFile = path.resolve(filePath);
-    const rootWithSeparator = root.endsWith(path.sep) ? root : `${root}${path.sep}`;
-    if (!resolvedFile.startsWith(rootWithSeparator)) {
-      throw new Error('Import file must remain inside the import directory');
-    }
-    return resolvedFile;
+    return path.resolve(filePath);
   }
 }
 

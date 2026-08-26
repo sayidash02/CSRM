@@ -88,9 +88,12 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
       setPreviewData(response.data.data);
       setStep('preview');
     } catch (err: any) {
-      console.error(err);
+      console.error('Import preview error:', err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message;
       setErrorMessage(
-        err.response?.data?.error || 'Gagal memproses file Excel. Pastikan format template sesuai.'
+        typeof errorMsg === 'string'
+          ? errorMsg
+          : 'Gagal memproses file Excel. Pastikan format template sesuai.'
       );
       setStep('upload');
     }
