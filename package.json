@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "concurrently -n \"API,WEB\" -c \"cyan,magenta\" \"pnpm dev:api\" \"pnpm dev:web\"",
-    "dev:api": "pnpm --dir apps/api dev",
+    "dev:api": "pnpm --dir apps/api start",
     "dev:web": "pnpm --dir apps/web dev",
     "test:api": "pnpm --dir apps/api test",
     "typecheck:api": "pnpm --dir apps/api typecheck",
