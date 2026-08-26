@@ -22,7 +22,7 @@ export function parseCellDate(val: any): Date | null {
 
   // If multi-line (e.g. "Senin, 15/04/2024\nDepan Housing"), take the first line
   if (str.includes('\n')) {
-    str = str.split('\n')[0].trim();
+    str = str.split('\n')[0]?.trim() || '';
   }
 
   // Remove Indonesian day names at start (e.g., "Senin, ", "Selasa ", etc.)
@@ -46,9 +46,9 @@ export function parseCellDate(val: any): Date | null {
   // Try parsing ISO YYYY-MM-DD or YYYY/MM/DD (e.g., "2026-08-15", "2024/04/15")
   const yyyymmddMatch = str.match(/\b(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})\b/);
   if (yyyymmddMatch) {
-    const year = parseInt(yyyymmddMatch[1], 10);
-    const month = parseInt(yyyymmddMatch[2], 10) - 1;
-    const day = parseInt(yyyymmddMatch[3], 10);
+    const year = parseInt(yyyymmddMatch[1] || '0', 10);
+    const month = parseInt(yyyymmddMatch[2] || '0', 10) - 1;
+    const day = parseInt(yyyymmddMatch[3] || '0', 10);
     if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
       const d = new Date(Date.UTC(year, month, day));
       if (!isNaN(d.getTime())) return d;
@@ -58,9 +58,9 @@ export function parseCellDate(val: any): Date | null {
   // Try parsing DD/MM/YYYY or DD-MM-YYYY (e.g., "15/04/2024", "15-04-2024", "15/4/2024")
   const ddmmyyyyMatch = str.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
   if (ddmmyyyyMatch) {
-    const day = parseInt(ddmmyyyyMatch[1], 10);
-    const month = parseInt(ddmmyyyyMatch[2], 10) - 1;
-    let year = parseInt(ddmmyyyyMatch[3], 10);
+    const day = parseInt(ddmmyyyyMatch[1] || '0', 10);
+    const month = parseInt(ddmmyyyyMatch[2] || '0', 10) - 1;
+    let year = parseInt(ddmmyyyyMatch[3] || '0', 10);
     if (year < 100) year += 2000;
     if (month >= 0 && month <= 11 && day >= 1 && day <= 31) {
       const d = new Date(Date.UTC(year, month, day));

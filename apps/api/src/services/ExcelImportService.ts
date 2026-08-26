@@ -132,6 +132,7 @@ export class ExcelImportService {
       pic_names: string[];
       category_name: string;
       sub_category_name: string;
+      photos?: any[];
     }> = [];
 
     const rawStakeholders: Array<{
@@ -202,6 +203,7 @@ export class ExcelImportService {
       status: string;
       remarks: string | null;
       supporting_files: string | null;
+      photos?: any[];
     }> = [];
 
     const existingProposals = await prisma.proposals.findMany({ select: { registration_no: true } });
@@ -240,7 +242,7 @@ export class ExcelImportService {
             rowImagesMap.get(rowIdx)!.push({
               buffer: Buffer.from(media.buffer as any),
               extension: ext,
-              original_name: media.name || `photo_${rowIdx}_${rowImagesMap.get(rowIdx)!.length + 1}.${ext}`,
+              original_name: (media as any).name || `photo_${rowIdx}_${rowImagesMap.get(rowIdx)!.length + 1}.${ext}`,
               mime_type: mime
             });
           }
@@ -506,7 +508,7 @@ export class ExcelImportService {
             rowImagesMap.get(rowIdx)!.push({
               buffer: Buffer.from(media.buffer as any),
               extension: ext,
-              original_name: media.name || `doc_${rowIdx}_${rowImagesMap.get(rowIdx)!.length + 1}.${ext}`,
+              original_name: (media as any).name || `doc_${rowIdx}_${rowImagesMap.get(rowIdx)!.length + 1}.${ext}`,
               mime_type: mime
             });
           }
