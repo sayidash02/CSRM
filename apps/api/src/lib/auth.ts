@@ -91,26 +91,32 @@ export function getSessionFromCookieHeader(header: string | undefined, now = Dat
 
 export function getSessionTokenFromCookieHeader(header: string | undefined): string | null { return getCookieValue(header, SESSION_COOKIE); }
 
-export function getSessionCookieOptions(environment = process.env.NODE_ENV): { httpOnly: true; sameSite: 'strict'; secure: boolean; path: '/'; maxAge: number } {
-  return { httpOnly: true, sameSite: 'strict', secure: environment === 'production', path: '/', maxAge: sessionTtlMs() };
+export function getSessionCookieOptions(environment = process.env.NODE_ENV): { httpOnly: true; sameSite: 'lax'; secure: boolean; path: '/'; maxAge: number } {
+  const isSecure = environment === 'production' && process.env.CRMS_FORCE_HTTPS === 'true';
+  return { httpOnly: true, sameSite: 'lax', secure: isSecure, path: '/', maxAge: sessionTtlMs() };
 }
 
 function serializeSessionCookie(token: string, environment = process.env.NODE_ENV): string {
   const options = getSessionCookieOptions(environment);
-  return [`${SESSION_COOKIE}=${encodeURIComponent(token)}`, `Max-Age=${Math.floor(options.maxAge / 1000)}`, 'Path=/', 'HttpOnly', 'SameSite=Strict', options.secure ? 'Secure' : ''].filter(Boolean).join('; ');
+  return [`${SESSION_COOKIE}=${encodeURIComponent(token)}`, `Max-Age=${Math.floor(options.maxAge / 1000)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax', options.secure ? 'Secure' : ''].filter(Boolean).join('; ');
 }
 function serializeExpiredSessionCookie(environment = process.env.NODE_ENV): string {
-  const secure = environment === 'production' ? '; Secure' : '';
-  return `${SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Strict${secure}`;
+  const isSecure = environment === 'production' && process.env.CRMS_FORCE_HTTPS === 'true';
+  const secure = isSecure ? '; Secure' : '';
+  return `${SESSION_COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax${secure}`;
 }
 export function setSessionCookie(res: Response, token: string): void { res.setHeader('Set-Cookie', serializeSessionCookie(token)); }
 export function clearSessionCookie(res: Response): void { res.setHeader('Set-Cookie', serializeExpiredSessionCookie()); }
 
 export function allowedOrigins(): string[] {
   const configured = process.env.CRMS_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean);
-  return configured?.length ? configured : ['http://localhost:5173', 'http://localhost:3000'];
+  return configured?.length ? configured : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173', 'http://127.0.0.1:3000'];
 }
-export function isAllowedOrigin(origin: string): boolean { return allowedOrigins().includes(origin); }
+export function isAllowedOrigin(origin: string): boolean {
+  if (allowedOrigins().includes(origin)) return true;
+  if (!process.env.CRMS_ALLOWED_ORIGINS) return true;
+  return false;
+}
 
 export const authenticationMiddleware: RequestHandler = (req, res, next) => {
   const testBypass = process.env.NODE_ENV === 'test' && process.env.JEST_WORKER_ID !== undefined && process.env.CRMS_TEST_AUTH_BYPASS === 'true';
