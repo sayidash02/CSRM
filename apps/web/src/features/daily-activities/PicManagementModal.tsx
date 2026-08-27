@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, Trash2, Check, X, Plus } from "lucide-react";
+import { Edit2, UserX, Check, X, Plus } from "lucide-react";
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 px-3 py-2 text-ink outline-none focus:border-forest focus:bg-white transition-all";
@@ -66,17 +66,17 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDeactivate = async (id: string) => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       await apiClient.delete(`/pics/${id}`);
-      showToast("PIC berhasil dihapus", "success");
+      showToast("PIC berhasil dinonaktifkan", "success");
       loadPics();
       setPicToDelete(null);
     } catch (e: any) {
       console.error(e);
-      showToast(e.response?.data?.error || "Gagal menghapus PIC", "error");
+      showToast(e.response?.data?.error || "Gagal menonaktifkan PIC", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -161,7 +161,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           <button
                             disabled={isSubmitting}
                             onClick={() => { setEditingId(p.id); setEditName(p.name); }}
-                            title="Edit PIC"
+                            title="Edit Nama PIC"
                             className="p-1.5 text-slate-2 hover:text-ochre hover:bg-ochre/10 rounded-md transition-colors"
                           >
                             <Edit2 size={13} />
@@ -169,10 +169,10 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           <button
                             disabled={isSubmitting}
                             onClick={() => setPicToDelete(p)}
-                            title="Hapus PIC"
+                            title="Nonaktifkan PIC"
                             className="p-1.5 text-slate-2 hover:text-clay hover:bg-clay/10 rounded-md transition-colors"
                           >
-                            <Trash2 size={13} />
+                            <UserX size={14} />
                           </button>
                         </div>
                       )}
@@ -191,8 +191,11 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
       {picToDelete && (
         <DeleteConfirmModal
           label={picToDelete.name}
+          title="Konfirmasi Nonaktifkan PIC"
+          description={`PIC "${picToDelete.name}" akan dinonaktifkan. Data kegiatan masa lalu tetap aman dan utuh, namun PIC ini tidak akan muncul lagi di formulir input kegiatan baru.`}
+          confirmButtonText="Nonaktifkan"
           onCancel={() => setPicToDelete(null)}
-          onConfirm={() => handleDelete(picToDelete.id)}
+          onConfirm={() => handleDeactivate(picToDelete.id)}
         />
       )}
     </div>
