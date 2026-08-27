@@ -26,9 +26,9 @@ export interface SanitizedImportWorkbookArchive {
   removedDefinedNameCount: number;
 }
 
-const MAX_ARCHIVE_ENTRY_COUNT = 512;
-const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 50 * 1024 * 1024;
-const MAX_WORKBOOK_XML_BYTES = 2 * 1024 * 1024;
+const MAX_ARCHIVE_ENTRY_COUNT = 4096;
+const MAX_ARCHIVE_UNCOMPRESSED_BYTES = 500 * 1024 * 1024;
+const MAX_WORKBOOK_XML_BYTES = 20 * 1024 * 1024;
 
 const DEFINED_NAME_PATTERN = /<(?:[A-Za-z_][\w.-]*:)?definedName\b/gi;
 const DEFINED_NAMES_BLOCK_PATTERN = /<(?:[A-Za-z_][\w.-]*:)?definedNames\b[^>]*>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?definedNames\s*>/gi;
