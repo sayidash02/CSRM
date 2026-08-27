@@ -5,7 +5,7 @@ import { IMPORT_UPLOAD_DIR } from '../services/ImportFileStore';
 import { AppError, sendPublicError } from '../lib/errorHandler';
 
 const uploadDir = IMPORT_UPLOAD_DIR;
-const MAX_IMPORT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_IMPORT_FILE_SIZE_BYTES = 100 * 1024 * 1024;
 
 const upload = multer({
   dest: uploadDir,
@@ -33,7 +33,7 @@ router.post('/preview', (req: Request, res: Response, next: NextFunction) => {
   upload.single('file')(req, res, (err: unknown) => {
     if (err) {
       if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-        sendPublicError(res, 400, 'FILE_UPLOAD_ERROR', 'Ukuran file Excel melebihi batas 5 MB');
+        sendPublicError(res, 400, 'FILE_UPLOAD_ERROR', 'Ukuran file Excel melebihi batas 100 MB');
         return;
       }
       if (err instanceof AppError) {

@@ -31,14 +31,16 @@ describe('single-user authentication boundary', () => {
     expect(getSessionFromCookieHeader(undefined)).toBe(false);
   });
 
-  it('uses an httpOnly, same-site cookie and secure cookies in production', () => {
+  it('uses an httpOnly, same-site cookie and secure cookies in production when HTTPS is enabled', () => {
+    process.env.CRMS_FORCE_HTTPS = 'true';
     expect(getSessionCookieOptions('production')).toEqual(
       expect.objectContaining({
         httpOnly: true,
-        sameSite: 'strict',
+        sameSite: 'lax',
         secure: true,
       }),
     );
+    delete process.env.CRMS_FORCE_HTTPS;
   });
 
   it('hashes passwords with a salted verifier and rejects wrong passwords', () => {

@@ -3,7 +3,7 @@ import request from 'supertest';
 import { importParseExcel } from '../../src/controllers/DailyActivitiesController';
 import importRouter from '../../src/routes/import';
 
-const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+const MAX_IMPORT_BYTES = 100 * 1024 * 1024;
 const EXCEL_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 function createTestApp() {
@@ -20,7 +20,7 @@ describe('Excel import upload limits', () => {
   it.each([
     ['/import/preview', 'master.xlsx'],
     ['/daily-import', 'daily.xlsx'],
-  ])('rejects a workbook larger than 5 MB at %s before parsing', async (route, filename) => {
+  ])('rejects a workbook larger than 100 MB at %s before parsing', async (route, filename) => {
     const response = await request(createTestApp())
       .post(route)
       .attach('file', Buffer.alloc(MAX_IMPORT_BYTES + 1), {
@@ -30,7 +30,7 @@ describe('Excel import upload limits', () => {
 
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
-      error: 'Ukuran file Excel melebihi batas 5 MB',
+      error: 'Ukuran file Excel melebihi batas 100 MB',
       code: 'FILE_UPLOAD_ERROR',
     });
   });

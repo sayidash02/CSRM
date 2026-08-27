@@ -12,7 +12,7 @@ import { mergeImportedRows } from '../services/excel/ImportDuplicateGuard';
 import { AppError, sendPublicError } from '../lib/errorHandler';
 
 const upload = multer({
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const isExcelExt = file.originalname.match(/\.(xlsx|xls)$/i);
     const validMimeTypes = [
@@ -383,7 +383,7 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
 export const importParseExcel = (req: Request, res: Response, next: NextFunction) => {
   upload.single('file')(req, res, async (err) => {
     if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
-      sendPublicError(res, 400, 'FILE_UPLOAD_ERROR', 'Ukuran file Excel melebihi batas 5 MB');
+      sendPublicError(res, 400, 'FILE_UPLOAD_ERROR', 'Ukuran file Excel melebihi batas 100 MB');
       return;
     }
     if (err instanceof AppError) {

@@ -226,7 +226,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                     Klik untuk memilih file atau seret file ke sini
                   </p>
                   <p className="text-[11px] text-slate mt-1">
-                    Format file yang didukung: <strong className="font-mono text-ink">.xlsx / .xls</strong> (Maksimal 5MB)
+                    Format file yang didukung: <strong className="font-mono text-ink">.xlsx / .xls</strong> (Maksimal 100MB)
                   </p>
                 </div>
               </label>
