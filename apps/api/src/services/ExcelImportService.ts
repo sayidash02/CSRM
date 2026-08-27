@@ -1,5 +1,4 @@
 import fs from 'fs';
-import ExcelJS from 'exceljs';
 import prisma from '../lib/prisma';
 import { extractCellString } from './excel/ExcelCellUtils';
 import { commitWorkbookRows } from './excel/ExcelWorkbookCommitService';
@@ -29,6 +28,7 @@ import {
   validateWorkbook
 } from './excel/ExcelWorkbookValidator';
 import { previewWorkbook } from './excel/ExcelWorkbookPreviewService';
+import { readImportWorkbookFile } from './excel/ImportWorkbookReader';
 
 // Preserve the existing service-level exports for callers and tests.
 export { parseCellDate, parseCellNumber };
@@ -104,8 +104,7 @@ export class ExcelImportService {
       throw new Error(`Import file not found: ${fileId}`);
     }
 
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(fileId);
+    const workbook = await readImportWorkbookFile(fileId, 'confirm');
     const validation = await validateWorkbook(workbook);
     const blockingConflicts = validation.conflicts.filter((conflict) => conflict.blocking);
     if (blockingConflicts.length > 0) {

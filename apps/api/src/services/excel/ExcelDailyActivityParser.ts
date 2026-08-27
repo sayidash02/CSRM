@@ -1,12 +1,11 @@
-import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
 import { extractCellString } from './ExcelCellUtils';
+import { readImportWorkbookBuffer } from './ImportWorkbookReader';
 import { normalizeCategoryName, normalizePicName, normalizeSubCategoryName } from './ExcelWorkbookValidator';
 import type { ExcelImportErrorRow, ExcelImportResult, ParsedDailyActivityRow } from '../ExcelImportService';
 
 export async function parseDailyActivitiesWorkbook(buffer: Buffer): Promise<ExcelImportResult> {
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(buffer as any);
+  const wb = await readImportWorkbookBuffer(buffer, 'daily');
   const ws = wb.worksheets[0];
   if (!ws) throw new Error("Excel file is empty");
 

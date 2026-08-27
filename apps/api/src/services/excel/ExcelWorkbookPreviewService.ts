@@ -1,12 +1,11 @@
-import ExcelJS from 'exceljs';
 import prisma from '../../lib/prisma';
 import { extractCellString } from './ExcelCellUtils';
 import { detectSheetHeader, isRowNonEmpty, normalizeCategoryName, normalizePicName, shouldReadDataRow, validateWorkbook } from './ExcelWorkbookValidator';
+import { readImportWorkbookFile } from './ImportWorkbookReader';
 import type { ImportPreviewResult, ImportPreviewSummary } from '../ExcelImportService';
 
 export async function previewWorkbook(filePath: string): Promise<ImportPreviewResult> {
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(filePath);
+    const workbook = await readImportWorkbookFile(filePath, 'preview');
 
     const report = await validateWorkbook(workbook);
     const summary: ImportPreviewSummary = {
