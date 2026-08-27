@@ -118,14 +118,20 @@ export function isAllowedOrigin(origin: string): boolean {
   return false;
 }
 
+import { userContext } from './asyncContext.ts';
+
 export const authenticationMiddleware: RequestHandler = (req, res, next) => {
   const testBypass = process.env.NODE_ENV === 'test' && process.env.JEST_WORKER_ID !== undefined && process.env.CRMS_TEST_AUTH_BYPASS === 'true';
-  if (testBypass) { req.crmsUser = { id: 0n, username: 'test', role: 'USER' }; next(); return; }
+  if (testBypass) {
+    req.crmsUser = { id: 0n, username: 'test', role: 'USER' };
+    userContext.run(req.crmsUser, () => next());
+    return;
+  }
   if (!isAuthConfigured()) { res.status(503).json({ error: { code: 'AUTH_NOT_CONFIGURED', message: 'Authentication is not configured' } }); return; }
   const user = getSessionUserFromCookieHeader(req.headers.cookie);
   if (!user) { res.status(401).json({ error: { code: 'AUTH_REQUIRED', message: 'Authentication required' } }); return; }
   req.crmsUser = user;
-  next();
+  userContext.run(user, () => next());
 };
 
 export const requireRole = (...roles: string[]): RequestHandler => (req, res, next) => {

@@ -15,6 +15,15 @@ export const getAuditLogs = async (req: Request, res: Response): Promise<void> =
         entity_type: entityType as string,
         entity_id: BigInt(entityId as string)
       },
+      include: {
+        actor: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+          }
+        }
+      },
       orderBy: { created_at: 'desc' }
     });
 

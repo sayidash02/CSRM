@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { translateField, translateValue } from '../../utils/fieldDictionary';
 import { apiClient } from '../../lib/apiClient';
-import { X, History } from 'lucide-react';
+import { X, History, User } from 'lucide-react';
 
 interface DrawerProps {
   isOpen: boolean;
@@ -49,7 +49,7 @@ export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, ent
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-paper-2 text-slate hover:text-ink transition-colors"
+            className="p-1 rounded-lg hover:bg-paper-2 text-slate hover:text-ink transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
@@ -61,14 +61,29 @@ export const AuditHistoryDrawer: React.FC<DrawerProps> = ({ isOpen, onClose, ent
             <p className="text-xs text-slate">Belum ada catatan riwayat perubahan pada data ini.</p>
           ) : (
             logs.map((log: any) => (
-              <div key={log.id} className="border border-line p-3.5 rounded-xl shadow-2xs text-[12px] bg-white space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-semibold ${
-                    log.action === 'UPDATE' ? 'bg-ochre/15 text-ochre' : log.action === 'DELETE' ? 'bg-clay/15 text-clay' : 'bg-forest/15 text-forest'
-                  }`}>
-                    {log.action === 'UPDATE' ? 'Diedit' : log.action === 'DELETE' ? 'Dihapus' : 'Dibuat'}
-                  </span>
-                  <span className="text-[11px] text-slate-2 font-mono">
+              <div key={log.id} className="border border-line p-3.5 rounded-xl shadow-2xs text-[12px] bg-white space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-semibold ${
+                      log.action === 'UPDATE' ? 'bg-ochre/15 text-ochre' : log.action === 'DELETE' ? 'bg-clay/15 text-clay' : 'bg-forest/15 text-forest'
+                    }`}>
+                      {log.action === 'UPDATE' ? 'Diedit' : log.action === 'DELETE' ? 'Dihapus' : 'Dibuat'}
+                    </span>
+                    {log.actor ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-ink bg-paper px-2 py-0.5 rounded-md border border-line/60">
+                        <User size={11} className="text-forest" />
+                        <span className="font-semibold">{log.actor.username}</span>
+                        <span className="text-[9px] px-1 py-0.2 rounded bg-slate/10 text-slate font-mono uppercase">
+                          {log.actor.role}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate font-mono italic px-1.5 py-0.5 rounded bg-paper">
+                        Sistem / Impor
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-slate-2 font-mono shrink-0">
                     {new Date(log.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                   </span>
                 </div>
