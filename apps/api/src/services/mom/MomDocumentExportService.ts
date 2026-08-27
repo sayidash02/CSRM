@@ -199,8 +199,7 @@ const renderMomDocxBlocks = (model: MomDocumentModel): Array<Paragraph | Table> 
 
   blocks.push(docxTable([
     docxRow([
-      docxCell([docxParagraph('PT JAWA SATU POWER — EXTERNAL AFFAIRS & CSR', { size: 20, bold: true, color: COLORS.white })], { width: DOCX_WIDTHS[0] + DOCX_WIDTHS[1] + DOCX_WIDTHS[2], columnSpan: 3, fill: COLORS.navy, verticalAlign: VerticalAlignTable.CENTER }),
-      docxCell([docxParagraph(`DOC ID: ${model.docId}`, { size: 18, bold: true, color: COLORS.white, align: AlignmentType.RIGHT })], { width: DOCX_WIDTHS[3], fill: COLORS.navy, verticalAlign: VerticalAlignTable.CENTER }),
+      docxCell([docxParagraph('PT JAWA SATU POWER — EXTERNAL AFFAIRS & CSR', { size: 20, bold: true, color: COLORS.white, align: AlignmentType.CENTER })], { width: DOCX_TOTAL_WIDTH, columnSpan: 4, fill: COLORS.navy, verticalAlign: VerticalAlignTable.CENTER }),
     ], 480),
   ]));
   blocks.push(docxTable([mergedDocxRow('MINUTES OF MEETING & DAILY ACTIVITY REPORT', COLORS.softBlue, { size: 26, bold: true, color: COLORS.navy, align: AlignmentType.CENTER }, 560)]));
@@ -438,8 +437,7 @@ class PdfMomRenderer {
     await this.startPage();
     const widths = COLUMN_RATIOS.map((ratio) => PDF_CONTENT_WIDTH * ratio / COLUMN_RATIO_TOTAL);
     this.drawCells([
-      { text: 'PT JAWA SATU POWER — EXTERNAL AFFAIRS & CSR', width: widths[0]! + widths[1]! + widths[2]!, fill: COLORS.navy, size: 9, bold: true, color: COLORS.white },
-      { text: `DOC ID: ${model.docId}`, width: widths[3]!, fill: COLORS.navy, size: 8, bold: true, color: COLORS.white, align: 'right' },
+      { text: 'PT JAWA SATU POWER — EXTERNAL AFFAIRS & CSR', width: PDF_CONTENT_WIDTH, fill: COLORS.navy, size: 9.5, bold: true, color: COLORS.white, align: 'center' },
     ], 24);
     await this.drawMerged('MINUTES OF MEETING & DAILY ACTIVITY REPORT', 28, { fill: COLORS.softBlue, size: 13, bold: true, color: COLORS.navy, align: 'center' });
     await this.drawMerged(`Topik / Daily Title : ${model.title}`, 32, { fill: COLORS.title, size: 11, bold: true, color: COLORS.dark });

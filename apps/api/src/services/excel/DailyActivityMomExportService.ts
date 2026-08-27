@@ -158,22 +158,14 @@ export class DailyActivityMomExportService {
     const yearStr = activity.activity_date ? String(new Date(activity.activity_date).getFullYear()) : '2026';
     const docIdStr = activity.id ? String(activity.id).padStart(3, '0') : '001';
 
-    // Row 1: Company Banner & Document Control (A1:C1 and D1)
-    worksheet.mergeCells(`A${currentRow}:C${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 3, {
+    // Row 1: Company Banner (A1:D1)
+    worksheet.mergeCells(`A${currentRow}:D${currentRow}`);
+    applyMergedRowStyles(worksheet, currentRow, 4, {
       font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FFFFFFFF' } },
       fill: BANNER_FILL,
-      alignment: { vertical: 'middle', horizontal: 'left', indent: 1 }
+      alignment: { vertical: 'middle', horizontal: 'center' }
     });
     worksheet.getCell(`A${currentRow}`).value = 'PT JAWA SATU POWER — EXTERNAL AFFAIRS & CSR';
-
-    const cellD1 = worksheet.getCell(`D${currentRow}`);
-    applyCellStyle(cellD1, {
-      font: { name: 'Times New Roman', size: 9, bold: true, color: { argb: 'FFFFFFFF' } },
-      fill: BANNER_FILL,
-      alignment: { vertical: 'middle', horizontal: 'right', indent: 1 }
-    });
-    cellD1.value = `DOC ID: JSP-EA-MOM-${yearStr}-${docIdStr}`;
     worksheet.getRow(currentRow).height = 24;
     currentRow++;
 
