@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 import { apiClient } from '../../lib/apiClient';
+import { getImportErrorMessage } from './importErrorMessage';
 
 interface ImportSummary {
   dailyActivities: number;
@@ -87,14 +88,11 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
 
       setPreviewData(response.data.data);
       setStep('preview');
-    } catch (err: any) {
-      console.error('Import preview error:', err);
-      const errorMsg = err.response?.data?.error || err.response?.data?.message;
-      setErrorMessage(
-        typeof errorMsg === 'string'
-          ? errorMsg
-          : 'Gagal memproses file Excel. Pastikan format template sesuai.'
-      );
+    } catch (err: unknown) {
+      setErrorMessage(getImportErrorMessage(
+        err,
+        'Gagal memproses file Excel. Pastikan format template sesuai.',
+      ));
       setStep('upload');
     }
   };
@@ -118,9 +116,8 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
       const total = response.data.data?.totalImported ?? response.data.count ?? 0;
       setImportedCount(total);
       setStep('success');
-    } catch (err: any) {
-      console.error(err);
-      setErrorMessage(err.response?.data?.error || 'Gagal melakukan impor data.');
+    } catch (err: unknown) {
+      setErrorMessage(getImportErrorMessage(err, 'Gagal melakukan impor data.'));
     } finally {
       setIsConfirming(false);
     }
@@ -188,7 +185,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
 
         {/* Error Alert */}
         {errorMessage && (
-          <div className="p-4 bg-clay/10 border border-clay/20 rounded-xl flex items-start gap-3 text-clay text-xs">
+          <div role="alert" className="p-4 bg-clay/10 border border-clay/20 rounded-xl flex items-start gap-3 text-clay text-xs">
             <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <strong className="font-semibold block">Terjadi Kesalahan</strong>
@@ -229,7 +226,7 @@ export function ImportWizardModal({ onClose, onSuccess }: ImportWizardModalProps
                     Klik untuk memilih file atau seret file ke sini
                   </p>
                   <p className="text-[11px] text-slate mt-1">
-                    Format file yang didukung: <strong className="font-mono text-ink">.xlsx / .xls</strong> (Maksimal 100MB)
+                    Format file yang didukung: <strong className="font-mono text-ink">.xlsx / .xls</strong> (Maksimal 5MB)
                   </p>
                 </div>
               </label>

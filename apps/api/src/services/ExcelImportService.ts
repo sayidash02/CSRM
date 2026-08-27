@@ -614,11 +614,6 @@ export class ExcelImportService {
       csr: rawCsr,
       grievances: rawGrievance
     });
-    if (fs.existsSync(fileId)) {
-      try {
-        fs.unlinkSync(fileId);
-      } catch (_) {}
-    }
 
     return {
       success: true,

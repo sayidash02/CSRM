@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { UploadCloud, CheckCircle, AlertTriangle } from "lucide-react";
 import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { apiClient } from "../../lib/apiClient";
+import { getImportErrorMessage } from "../import/importErrorMessage";
 
 interface ParsedRow {
   tempId: string;
@@ -31,8 +32,8 @@ export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; 
         headers: { "Content-Type": "multipart/form-data" }
       });
       setParsedData(res.data.data);
-    } catch (e: any) {
-      setErrorMsg(e.response?.data?.message || e.response?.data?.error || "Gagal membaca file Excel");
+    } catch (error: unknown) {
+      setErrorMsg(getImportErrorMessage(error, "Gagal membaca file Excel"));
     } finally {
       setLoading(false);
     }
@@ -45,8 +46,8 @@ export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; 
     try {
       await apiClient.post("/daily-activities/import/commit", { rows: parsedData.validRows });
       onSuccess();
-    } catch (e: any) {
-      setErrorMsg(e.response?.data?.message || e.response?.data?.error || "Gagal menyimpan data");
+    } catch (error: unknown) {
+      setErrorMsg(getImportErrorMessage(error, "Gagal menyimpan data"));
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; 
     <Modal title="Import Excel Daily Activities" onClose={onClose}>
       <div className="p-6 h-[60vh] flex flex-col">
         {errorMsg && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
+          <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-md">
             {errorMsg}
           </div>
         )}
@@ -82,7 +83,7 @@ export function ImportExcelModal({ onClose, onSuccess }: { onClose: () => void; 
             >
               {file ? file.name : "Pilih File Excel"}
             </button>
-            <p className="text-xs text-muted-foreground mb-4">Format .xlsx atau .xls (Maks 100MB)</p>
+            <p className="text-xs text-muted-foreground mb-4">Format .xlsx atau .xls (Maks 5MB)</p>
             {file && (
               <button 
                 type="button"

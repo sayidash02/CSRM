@@ -1,8 +1,20 @@
-import fs from 'node:fs/promises';
 import { Request, Response } from 'express';
 import { ExcelImportService } from '../services/ExcelImportService';
 import { catchAsync } from '../lib/catchAsync';
 import { importFileStore } from '../services/ImportFileStore';
+import { errorFields, logger } from '../lib/logger';
+
+function cleanupImportFile(filePath: string, requestId: string, phase: 'preview' | 'confirm'): void {
+  try {
+    importFileStore.removeFile(filePath);
+  } catch (error) {
+    logger.error('import_temp_cleanup_failed', {
+      requestId,
+      phase,
+      ...errorFields(error),
+    });
+  }
+}
 
 export const previewImport = catchAsync(async (req: Request, res: Response): Promise<void> => {
   if (!req.file) {
@@ -14,12 +26,25 @@ export const previewImport = catchAsync(async (req: Request, res: Response): Pro
     const result = await ExcelImportService.preview(req.file.path);
     const fileId = importFileStore.register(req.file.path);
 
+    logger.info('import_preview_completed', {
+      requestId: req.requestId,
+      uploadSizeBytes: req.file.size,
+      rowCount: Object.values(result.summary).reduce((total, count) => total + count, 0),
+      conflictCount: result.conflicts.length,
+      canImport: result.canImport,
+    });
+
     res.status(200).json({
       success: true,
       data: { ...result, fileId, fileToken: fileId },
     });
   } catch (error) {
-    await fs.rm(req.file.path, { force: true }).catch(() => undefined);
+    logger.error('import_preview_failed', {
+      requestId: req.requestId,
+      uploadSizeBytes: req.file.size,
+      ...errorFields(error),
+    });
+    cleanupImportFile(req.file.path, req.requestId, 'preview');
     throw error;
   }
 });
@@ -41,8 +66,12 @@ export const confirmImport = catchAsync(async (req: Request, res: Response): Pro
   let result: { success: boolean; count: number };
   try {
     result = await ExcelImportService.confirm(importPath);
+    logger.info('import_confirm_completed', {
+      requestId: req.requestId,
+      importedRowCount: result.count,
+    });
   } finally {
-    importFileStore.removeFile(importPath);
+    cleanupImportFile(importPath, req.requestId, 'confirm');
   }
 
   res.status(200).json({

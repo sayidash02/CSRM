@@ -2,8 +2,10 @@ import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { previewImport, confirmImport } from '../controllers/ImportController';
 import { IMPORT_UPLOAD_DIR } from '../services/ImportFileStore';
+import { AppError, sendPublicError } from '../lib/errorHandler';
 
 const uploadDir = IMPORT_UPLOAD_DIR;
+const MAX_IMPORT_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const upload = multer({
   dest: uploadDir,
@@ -15,26 +17,30 @@ const upload = multer({
       'application/octet-stream',
     ].includes(file.mimetype);
     if (!allowedExtension || !allowedMime) {
-      callback(new Error('Only .xlsx/.xls workbook files are allowed'));
+      callback(new AppError('FILE_UPLOAD_ERROR', 400, 'Hanya file Excel .xlsx/.xls yang diizinkan'));
       return;
     }
     callback(null, true);
   },
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB limit to support full-year sheets with embedded media
+    fileSize: MAX_IMPORT_FILE_SIZE_BYTES,
   }
 });
 
 const router = Router();
 
 router.post('/preview', (req: Request, res: Response, next: NextFunction) => {
-  upload.single('file')(req, res, (err: any) => {
+  upload.single('file')(req, res, (err: unknown) => {
     if (err) {
-      if (err instanceof multer.MulterError) {
-        res.status(400).json({ error: `File upload error: ${err.message}` });
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        sendPublicError(res, 400, 'FILE_UPLOAD_ERROR', 'Ukuran file Excel melebihi batas 5 MB');
         return;
       }
-      res.status(400).json({ error: err instanceof Error ? err.message : 'Invalid workbook upload' });
+      if (err instanceof AppError) {
+        sendPublicError(res, err.statusCode, err.code, err.message);
+        return;
+      }
+      sendPublicError(res, 400, 'FILE_UPLOAD_ERROR', 'Gagal mengunggah file Excel');
       return;
     }
     next();

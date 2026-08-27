@@ -83,6 +83,27 @@ describe('ExcelImportService', () => {
     expect(result.errorRows[0]!.errors).toContain("Biaya 'invalid-cost' bukan berupa angka");
   });
 
+  it('leaves deletion of a confirmed workbook to the file lifecycle owner', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'crms-import-lifecycle-'));
+    const filePath = path.join(tempDir, 'confirmed-workbook.xlsx');
+    const issue = 'Import lifecycle ownership regression issue';
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Top Issue');
+      worksheet.addRow(['No', 'Periode', 'Issue', 'Deskripsi', 'Follow Up', 'Next Plan']);
+      worksheet.addRow([1, '2026', issue, 'Description', 'Follow up', 'Next plan']);
+      await workbook.xlsx.writeFile(filePath);
+
+      await ExcelImportService.confirm(filePath);
+
+      expect(fs.existsSync(filePath)).toBe(true);
+    } finally {
+      await prisma.top_issues.deleteMany({ where: { issue } });
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('should preserve hyperlinks from Docs and Supporting Docs columns when importing Top Issue rows', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'crms-top-issue-import-'));
     const filePath = path.join(tempDir, 'top-issue-links.xlsx');

@@ -10,16 +10,16 @@ type StoredImport = { filePath: string; expiresAt: number };
 
 export class ImportFileStore {
   private readonly entries = new Map<string, StoredImport>();
+  private readonly rootDirectory: string;
+  private readonly ttlMs: number;
 
   public constructor(
-    private readonly rootDirectory: string = IMPORT_UPLOAD_DIR,
-    private readonly ttlMs: number = 30 * 60 * 1000,
+    rootDirectory: string = IMPORT_UPLOAD_DIR,
+    ttlMs: number = 30 * 60 * 1000,
   ) {
-    try {
-      fs.mkdirSync(this.rootDirectory, { recursive: true });
-    } catch {
-      // Directory already exists or created
-    }
+    this.rootDirectory = path.resolve(rootDirectory);
+    this.ttlMs = ttlMs;
+    fs.mkdirSync(this.rootDirectory, { recursive: true });
   }
 
   public register(filePath: string, now = Date.now()): string {
@@ -55,12 +55,27 @@ export class ImportFileStore {
 
   private purgeExpired(now: number): void {
     for (const [token, entry] of this.entries) {
-      if (entry.expiresAt <= now) this.entries.delete(token);
+      if (entry.expiresAt <= now) {
+        this.entries.delete(token);
+        this.removeFile(entry.filePath);
+      }
     }
   }
 
   private assertInsideRoot(filePath: string): string {
-    return path.resolve(filePath);
+    const resolvedFile = path.resolve(filePath);
+    const relativePath = path.relative(this.rootDirectory, resolvedFile);
+    const isOutsideRoot =
+      relativePath === '' ||
+      relativePath === '..' ||
+      relativePath.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relativePath);
+
+    if (isOutsideRoot) {
+      throw new Error('Import file must remain inside the import directory');
+    }
+
+    return resolvedFile;
   }
 }
 
