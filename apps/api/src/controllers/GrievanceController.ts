@@ -286,6 +286,23 @@ export const uploadGrievancePhoto = (req: Request, res: Response, next: NextFunc
         },
         select: { id: true, grievance_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
       });
+
+      const currentUser = (req as any).crmsUser;
+      await prisma.audit_logs.create({
+        data: {
+          entity_type: 'grievance',
+          entity_id: grievanceId,
+          action: 'UPDATE',
+          changes: {
+            foto: {
+              old: '-',
+              new: `Tambah foto: ${req.file.originalname.slice(0, 255)}`
+            }
+          },
+          actor_user_id: currentUser?.id && currentUser.id > 0n ? currentUser.id : null,
+        }
+      });
+
       res.status(201).json({ data: { ...photo, url: `/api/grievance/${grievanceId}/photos/${photo.id}` } });
     } catch (error: any) {
       if (error?.code === 'P2002') {
@@ -317,14 +334,37 @@ export const getGrievancePhoto = catchAsync(async (req: Request, res: Response):
 export const deleteGrievancePhoto = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const grievanceId = parseId(req.params.id);
   const photoId = parseId(req.params.photoId);
-  const result = await prisma.grievance_photos.updateMany({
+
+  const existingPhoto = await prisma.grievance_photos.findFirst({
     where: { id: photoId, grievance_id: grievanceId, is_deleted: false },
-    data: { is_deleted: true }
+    select: { id: true, original_name: true }
   });
-  if (result.count === 0) {
+  if (!existingPhoto) {
     res.status(404).json({ error: 'Foto tidak ditemukan' });
     return;
   }
+
+  await prisma.grievance_photos.update({
+    where: { id: photoId },
+    data: { is_deleted: true }
+  });
+
+  const currentUser = (req as any).crmsUser;
+  await prisma.audit_logs.create({
+    data: {
+      entity_type: 'grievance',
+      entity_id: grievanceId,
+      action: 'UPDATE',
+      changes: {
+        foto: {
+          old: `Foto: ${existingPhoto.original_name}`,
+          new: 'Dihapus dari lampiran'
+        }
+      },
+      actor_user_id: currentUser?.id && currentUser.id > 0n ? currentUser.id : null,
+    }
+  });
+
   res.status(204).send();
 });
 

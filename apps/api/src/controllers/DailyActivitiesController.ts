@@ -326,6 +326,7 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
     const newPicNames = newPics.map(p => p.name).sort().join(', ');
 
     if (oldPicNames !== newPicNames) {
+      const currentUser = (req as any).crmsUser;
       await prisma.audit_logs.create({
         data: {
           entity_type: 'daily_activities',
@@ -336,7 +337,8 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
               old: oldPicNames,
               new: newPicNames
             }
-          }
+          },
+          actor_user_id: currentUser?.id && currentUser.id > 0n ? currentUser.id : null,
         }
       });
     }
@@ -629,6 +631,23 @@ export const uploadPhoto = (req: Request, res: Response, next: NextFunction) => 
         },
         select: { id: true, activity_id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true }
       });
+
+      const currentUser = (req as any).crmsUser;
+      await prisma.audit_logs.create({
+        data: {
+          entity_type: 'daily_activities',
+          entity_id: activityId,
+          action: 'UPDATE',
+          changes: {
+            foto: {
+              old: '-',
+              new: `Tambah foto: ${req.file.originalname.slice(0, 255)}`
+            }
+          },
+          actor_user_id: currentUser?.id && currentUser.id > 0n ? currentUser.id : null,
+        }
+      });
+
       res.status(201).json({ data: { ...photo, url: `/api/daily-activities/${activityId}/photos/${photo.id}` } });
     } catch (error: any) {
       if (error?.code === 'P2002') {
@@ -684,11 +703,34 @@ export const getPhoto = catchAsync(async (req: Request, res: Response): Promise<
 export const deletePhoto = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const activityId = parseId(req.params.id);
   const photoId = parseId(req.params.photoId);
-  const result = await prisma.daily_activity_photos.updateMany({
+
+  const existingPhoto = await prisma.daily_activity_photos.findFirst({
     where: { id: photoId, activity_id: activityId, is_deleted: false },
+    select: { id: true, original_name: true }
+  });
+  if (!existingPhoto) { res.status(404).json({ error: 'Foto tidak ditemukan' }); return; }
+
+  await prisma.daily_activity_photos.update({
+    where: { id: photoId },
     data: { is_deleted: true }
   });
-  if (result.count === 0) { res.status(404).json({ error: 'Foto tidak ditemukan' }); return; }
+
+  const currentUser = (req as any).crmsUser;
+  await prisma.audit_logs.create({
+    data: {
+      entity_type: 'daily_activities',
+      entity_id: activityId,
+      action: 'UPDATE',
+      changes: {
+        foto: {
+          old: `Foto: ${existingPhoto.original_name}`,
+          new: 'Dihapus dari galeri'
+        }
+      },
+      actor_user_id: currentUser?.id && currentUser.id > 0n ? currentUser.id : null,
+    }
+  });
+
   res.status(204).send();
 });
 

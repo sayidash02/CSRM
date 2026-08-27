@@ -13,5 +13,7 @@ backups/
 .worktrees/
 node_modules-rebuild-backup/
 sample_executive_mom*.xlsx
+*.xlsx
 ~$*
 *.tmp
+apps/api/uploads/
