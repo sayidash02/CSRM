@@ -498,60 +498,6 @@ export class DailyActivityMomExportService {
       docCell.font = { name: 'Times New Roman', size: 10, color: { argb: 'FF64748B' } };
       worksheet.getRow(currentRow).height = 26;
     }
-    currentRow++;
-
-    // 7. Lembar Pengesahan / Formal Sign-Off
-    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 2, {
-      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
-      fill: KEY_FILL,
-      alignment: { vertical: 'middle', horizontal: 'center' }
-    });
-    worksheet.getCell(`A${currentRow}`).value = 'Dibuat Oleh,';
-
-    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 4, {
-      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
-      fill: KEY_FILL,
-      alignment: { vertical: 'middle', horizontal: 'center' }
-    });
-    applyCellStyle(worksheet.getCell(`C${currentRow}`), {
-      font: { name: 'Times New Roman', size: 9.5, bold: true, color: { argb: 'FF334155' } },
-      fill: KEY_FILL,
-      alignment: { vertical: 'middle', horizontal: 'center' }
-    });
-    worksheet.getCell(`C${currentRow}`).value = 'Diketahui / Disetujui Oleh,';
-    worksheet.getRow(currentRow).height = 22;
-    currentRow++;
-
-    // Signature Space Row
-    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 2, {});
-    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 4, {});
-    worksheet.getRow(currentRow).height = 55;
-    currentRow++;
-
-    // Signee Names Row
-    worksheet.mergeCells(`A${currentRow}:B${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 2, {
-      font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF0F172A' } },
-      alignment: { vertical: 'middle', horizontal: 'center' }
-    });
-    const creatorName = picNames !== '-' ? picNames : 'Tim CRS / External Affairs';
-    worksheet.getCell(`A${currentRow}`).value = `( ${creatorName} )`;
-
-    worksheet.mergeCells(`C${currentRow}:D${currentRow}`);
-    applyMergedRowStyles(worksheet, currentRow, 4, {
-      font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF0F172A' } },
-      alignment: { vertical: 'middle', horizontal: 'center' }
-    });
-    applyCellStyle(worksheet.getCell(`C${currentRow}`), {
-      font: { name: 'Times New Roman', size: 10, bold: true, color: { argb: 'FF0F172A' } },
-      alignment: { vertical: 'middle', horizontal: 'center' }
-    });
-    worksheet.getCell(`C${currentRow}`).value = '( External Affairs & CSR Manager )';
-    worksheet.getRow(currentRow).height = 24;
   }
 
   /**

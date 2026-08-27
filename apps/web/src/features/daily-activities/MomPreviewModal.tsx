@@ -164,7 +164,7 @@ export function MomPreviewModal({
         {/* MODAL FOOTER */}
         <div className="px-6 py-2.5 bg-paper border-t border-line flex items-center justify-between text-xs text-slate shrink-0">
           <span className="font-mono text-[11px]">
-            * Dokumen PDF resmi siap cetak & tanda tangan langsung dari browser.
+            * Dokumen PDF resmi siap cetak langsung dari browser.
           </span>
           <button
             onClick={onClose}

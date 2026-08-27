@@ -251,21 +251,6 @@ const renderMomDocxBlocks = (model: MomDocumentModel): Array<Paragraph | Table> 
   }
   blocks.push(docxTable([mergedDocxRow(model.photoSummary, COLORS.white, { size: 20, bold: model.photos.length > 0, color: model.photos.length > 0 ? '1D4ED8' : COLORS.muted }, 420)]));
 
-  blocks.push(docxTable([
-    docxRow([
-      docxCell([docxParagraph('Dibuat Oleh,', { size: 19, bold: true, color: COLORS.label, align: AlignmentType.CENTER })], { width: DOCX_WIDTHS[0] + DOCX_WIDTHS[1], columnSpan: 2, fill: COLORS.key, verticalAlign: VerticalAlignTable.CENTER }),
-      docxCell([docxParagraph('Diketahui / Disetujui Oleh,', { size: 19, bold: true, color: COLORS.label, align: AlignmentType.CENTER })], { width: DOCX_WIDTHS[2] + DOCX_WIDTHS[3], columnSpan: 2, fill: COLORS.key, verticalAlign: VerticalAlignTable.CENTER }),
-    ], 440),
-    docxRow([
-      docxCell([docxParagraph('')], { width: DOCX_WIDTHS[0] + DOCX_WIDTHS[1], columnSpan: 2 }),
-      docxCell([docxParagraph('')], { width: DOCX_WIDTHS[2] + DOCX_WIDTHS[3], columnSpan: 2 }),
-    ], 1100),
-    docxRow([
-      docxCell([docxParagraph(`( ${model.creatorName} )`, { size: 20, bold: true, color: COLORS.dark, align: AlignmentType.CENTER })], { width: DOCX_WIDTHS[0] + DOCX_WIDTHS[1], columnSpan: 2, verticalAlign: VerticalAlignTable.CENTER }),
-      docxCell([docxParagraph(`( ${model.approverName} )`, { size: 20, bold: true, color: COLORS.dark, align: AlignmentType.CENTER })], { width: DOCX_WIDTHS[2] + DOCX_WIDTHS[3], columnSpan: 2, verticalAlign: VerticalAlignTable.CENTER }),
-    ], 440),
-  ]));
-
   return blocks;
 };
 
@@ -513,14 +498,6 @@ class PdfMomRenderer {
       }
     }
     await this.drawMerged(model.photoSummary, 26, { size: 10, bold: model.photos.length > 0, color: model.photos.length > 0 ? '1D4ED8' : COLORS.muted });
-
-    await this.drawMerged('Dibuat Oleh,                                      Diketahui / Disetujui Oleh,', 24, { fill: COLORS.key, size: 9.5, bold: true, color: COLORS.label, align: 'center' });
-    await this.ensure(58);
-    this.drawCells([
-      { text: '', width: PDF_CONTENT_WIDTH / 2 },
-      { text: '', width: PDF_CONTENT_WIDTH / 2 },
-    ], 58);
-    await this.drawMerged(`( ${model.creatorName} )                                      ( ${model.approverName} )`, 24, { size: 10, bold: true, color: COLORS.dark, align: 'center' });
   }
 }
 

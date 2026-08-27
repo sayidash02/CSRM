@@ -71,7 +71,7 @@ describe('MOM golden fixture contract', () => {
     expect(text).toContain(goldenMomExpected.title);
     expect(text).toContain('VI. LAMPIRAN DOKUMEN & DOKUMENTASI FOTO KEGIATAN');
     expect(text).toContain(`Foto dokumentasi tersimpan di CSRM: ${goldenMomExpected.photoCount} file`);
-    expect(text).toContain('Diketahui / Disetujui Oleh,');
+    expect(text).not.toContain('Diketahui / Disetujui Oleh,');
 
     const images = typeof (worksheet as any).getImages === 'function'
       ? (worksheet as any).getImages()
