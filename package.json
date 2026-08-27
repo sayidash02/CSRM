@@ -13,6 +13,8 @@
     "typecheck:api": "pnpm --dir apps/api typecheck",
     "typecheck:web": "pnpm --dir apps/web typecheck",
     "db:seed": "pnpm --dir apps/api seed",
+    "db:migrate": "pnpm --dir apps/api exec prisma migrate deploy",
+    "build": "pnpm build:web",
     "build:web": "pnpm --dir apps/web build",
     "test:unit": "pnpm --dir apps/api test:unit",
     "test:web": "pnpm --dir apps/web test",
