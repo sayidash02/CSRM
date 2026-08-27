@@ -98,4 +98,40 @@ describe('role boundary for account administration', () => {
     expect(demoted.status).toBe(409);
     expect(demoted.body.code).toBe('SELF_ACCOUNT_LOCKOUT');
   });
+
+  it('allows authenticated users to view profile and change their own password', async () => {
+    const user = await prisma.users.findUniqueOrThrow({ where: { username: userName } });
+    const userCookie = `crms_session=${createSession({ id: user.id, username: user.username, role: user.role })}`;
+
+    const profileRes = await request(app)
+      .get('/api/auth/profile')
+      .set('Cookie', userCookie);
+    expect(profileRes.status).toBe(200);
+    expect(profileRes.body.data.username).toBe(userName);
+    expect(profileRes.body.data.role).toBe('USER');
+    expect(profileRes.body.data).toHaveProperty('activity_count');
+
+    // Reject wrong current password
+    const wrongPassRes = await request(app)
+      .put('/api/auth/profile/password')
+      .set('Cookie', userCookie)
+      .send({ currentPassword: 'wrong-password', newPassword: 'new-valid-password-123' });
+    expect(wrongPassRes.status).toBe(400);
+    expect(wrongPassRes.body.error.code).toBe('INVALID_CURRENT_PASSWORD');
+
+    // Success change password
+    const changePassRes = await request(app)
+      .put('/api/auth/profile/password')
+      .set('Cookie', userCookie)
+      .send({ currentPassword: 'role-boundary-user-password', newPassword: 'new-valid-password-123' });
+    expect(changePassRes.status).toBe(200);
+    expect(changePassRes.body.data.success).toBe(true);
+
+    // Verify login with new password
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ username: userName, password: 'new-valid-password-123' });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.data.authenticated).toBe(true);
+  });
 });

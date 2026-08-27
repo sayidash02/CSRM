@@ -14,11 +14,13 @@ import {
   Menu,
   X,
   Search,
+  User,
 } from "lucide-react";
 import { Toaster, toast } from "sonner";
 import { apiClient } from "../lib/apiClient";
 import { AuthGate, useAuth } from "../components/AuthGate";
 import { OmnisearchModal } from "../components/OmnisearchModal";
+import { UserProfileModal } from "../components/UserProfileModal";
 import DailyActivitiesModule from "../features/daily-activities/DailyActivitiesModule";
 import StakeholdersModule from "../features/stakeholders/StakeholdersModule";
 import TopIssuesModule from "../features/top-issues/TopIssuesModule";
@@ -83,6 +85,7 @@ function Sidebar({
   username,
   role,
   onClose,
+  onOpenProfile,
 }: {
   active: Module;
   onNav: (m: Module) => void;
@@ -92,6 +95,7 @@ function Sidebar({
   username: string;
   role: string;
   onClose?: () => void;
+  onOpenProfile?: () => void;
 }) {
   const groups = [...new Set(items.map((i) => i.group))];
   const initials = getInitials(username);
@@ -172,22 +176,34 @@ function Sidebar({
       </nav>
 
       {/* Footer & Actions */}
-      <div className="border-t border-white/[0.06] p-3">
+      <div className="border-t border-white/[0.06] p-3 space-y-2">
         <button
           onClick={onExport}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-3 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-forest-2 shadow-sm"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-forest px-3 py-2.5 text-[13px] font-medium text-white transition-colors hover:bg-forest-2 shadow-sm cursor-pointer"
         >
           <Download size={15} /> Unduh Workbook Excel
         </button>
-        <div className="mt-3 flex items-center gap-2.5 px-1">
-          <div className="grid h-7 w-7 place-items-center rounded-full bg-white/10 font-mono text-[11px] text-white font-semibold">
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-white/[0.07] transition-all text-left group cursor-pointer border border-transparent hover:border-white/10"
+          title="Buka Profil Pengguna"
+        >
+          <div className="grid h-8 w-8 place-items-center rounded-lg bg-forest/30 border border-forest/40 font-mono text-[11px] text-emerald-300 font-semibold group-hover:bg-forest group-hover:text-white transition-colors shrink-0">
             {initials}
           </div>
-          <div className="min-w-0 leading-tight">
-            <div className="truncate text-[12px] text-white font-medium">{username}</div>
-            <div className="font-mono text-[9px] uppercase tracking-wider text-paper/40">{role}</div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <div className="truncate text-[12px] text-white font-medium group-hover:text-emerald-300 transition-colors">
+              {username}
+            </div>
+            <div className="font-mono text-[9px] uppercase tracking-wider text-paper/40 flex items-center gap-1.5 mt-0.5">
+              <span>{role}</span>
+              <span>·</span>
+              <span className="text-forest-2 font-normal lowercase">profil</span>
+            </div>
           </div>
-        </div>
+          <ChevronRight size={13} className="text-paper/30 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0" />
+        </button>
       </div>
     </aside>
   );
@@ -200,6 +216,7 @@ function CsrmWorkspace() {
   const [activeModule, setActiveModule] = useState<Module>("dashboard");
   const [navOpen, setNavOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const visibleNavItems = useMemo(
     () => NAV_ITEMS.filter((item) => !item.adminOnly || user.role === "ADMIN"),
@@ -308,6 +325,7 @@ function CsrmWorkspace() {
           items={visibleNavItems}
           username={user.username}
           role={user.role}
+          onOpenProfile={() => setIsProfileOpen(true)}
         />
       </div>
 
@@ -325,6 +343,10 @@ function CsrmWorkspace() {
               username={user.username}
               role={user.role}
               onClose={() => setNavOpen(false)}
+              onOpenProfile={() => {
+                setNavOpen(false);
+                setIsProfileOpen(true);
+              }}
             />
           </div>
         </div>
@@ -393,8 +415,20 @@ function CsrmWorkspace() {
 
             <button
               type="button"
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center gap-2 rounded-lg border border-line bg-white hover:bg-paper/60 px-2.5 py-1.5 text-[12px] text-ink transition-colors shadow-2xs cursor-pointer group"
+              title="Lihat & Kelola Profil Saya"
+            >
+              <div className="grid h-5 w-5 place-items-center rounded-md bg-forest/20 font-mono text-[10px] text-forest font-bold group-hover:bg-forest group-hover:text-white transition-colors">
+                {getInitials(user.username)}
+              </div>
+              <span className="hidden sm:inline font-medium capitalize max-w-[100px] truncate">{user.username}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => void logout()}
-              className="rounded-lg border border-line bg-white px-3 py-1.5 text-[12px] font-medium text-slate hover:bg-paper/60 hover:text-ink transition-colors shadow-2xs"
+              className="rounded-lg border border-line bg-white px-3 py-1.5 text-[12px] font-medium text-slate hover:bg-paper/60 hover:text-ink transition-colors shadow-2xs cursor-pointer"
             >
               Keluar
             </button>
@@ -435,6 +469,13 @@ function CsrmWorkspace() {
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
         onNavigate={(m) => navigateTo(m)}
+      />
+
+      <UserProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onLogout={logout}
+        showToast={showToast}
       />
 
       <Toaster richColors position="bottom-right" />
