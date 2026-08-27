@@ -365,7 +365,7 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
       if (previous.signature === signature) {
         add(module, row, 'DUPLICATE_IDENTICAL', `Baris identik dengan baris ${previous.row}; akan dilewati`, false, { identity });
       } else {
-        add(module, row, 'IDENTITY_CONFLICT', `Identitas sama dengan baris ${previous.row} tetapi nilai berbeda`, true, { identity });
+        add(module, row, 'IDENTITY_CONFLICT', `Identitas sama dengan baris ${previous.row}; data akan diperbarui`, false, { identity });
       }
     } else {
       seen.set(key, { signature, row });
