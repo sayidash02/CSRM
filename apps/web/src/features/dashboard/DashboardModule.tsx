@@ -188,7 +188,7 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
       <div className="flex-1 flex items-center justify-center p-12">
         <div className="flex flex-col items-center gap-3 text-slate">
           <div className="w-8 h-8 rounded-full border-2 border-forest/30 border-t-forest animate-spin" />
-          <p className="text-[13px] font-medium">Memuat statistik lengkap dashboard CSRM...</p>
+          <p className="text-[13px] font-medium">Memuat statistik lengkap dashboard CRIMEs...</p>
         </div>
       </div>
     );
@@ -343,9 +343,12 @@ export default function DashboardModule({ stats, onNav }: DashboardModuleProps) 
             {/* Title & One-Line Concise Description */}
             <div>
               <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">
-                CSR Management System (CSRM)
+                CRIMEs
               </h1>
-              <p className="text-xs text-paper/75 mt-0.5 leading-normal">
+              <p className="text-xs text-paper/90 font-medium mt-0.5">
+                Corporate Responsibility Information Management System
+              </p>
+              <p className="text-[11px] text-paper/75 mt-0.5 leading-normal">
                 Pusat data operasional dan monitoring 7 modul CSR PT Jawa Satu Power di wilayah PLTGU Jawa-1 Cilamaya (1.760 MW).
               </p>
             </div>

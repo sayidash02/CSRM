@@ -23,7 +23,7 @@ describe('OmnisearchModal', () => {
         onNavigate={vi.fn()}
       />
     );
-    expect(html).toContain('Universal Omnisearch CSRM');
+    expect(html).toContain('Universal Omnisearch CRIMEs');
     expect(html).toContain('Cari di semua 7 modul');
   });
 });

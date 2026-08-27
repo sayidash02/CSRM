@@ -347,7 +347,7 @@ function CsrmWorkspace() {
               <Menu size={18} />
             </button>
             <span className="hidden font-mono text-[10px] uppercase tracking-[0.14em] text-slate font-medium sm:inline">
-              PT Jawa Satu Power · CSRM
+              PT Jawa Satu Power · CRIMEs
             </span>
             <ChevronRight size={13} className="hidden text-slate-2 sm:inline" />
             <h1 className="truncate text-[15px] font-semibold tracking-tight text-ink">

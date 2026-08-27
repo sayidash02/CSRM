@@ -63,7 +63,7 @@ export function AdminUserForm({ currentUser, user, submitting, onClose, onCreate
   };
 
   return (
-    <Modal title={isEdit ? `Kelola Akun ${user.username}` : 'Tambah Akun CSRM'} onClose={onClose}>
+    <Modal title={isEdit ? `Kelola Akun ${user.username}` : 'Tambah Akun CRIMEs'} onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div className="space-y-4">
           <div className="rounded-xl border border-forest/20 bg-forest/5 p-3.5 text-xs text-forest leading-relaxed">
@@ -126,7 +126,7 @@ export function AdminUserForm({ currentUser, user, submitting, onClose, onCreate
                 />
               </label>
               <p className="mt-1 text-[11px] text-slate">
-                Akun nonaktif tidak akan dapat melakukan login ke CSRM.
+                Akun nonaktif tidak akan dapat melakukan login ke CRIMEs.
               </p>
             </div>
           )}

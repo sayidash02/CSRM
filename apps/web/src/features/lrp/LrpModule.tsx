@@ -295,7 +295,7 @@ export default function LrpModule({
       <div className="flex-1 overflow-auto p-4 sm:p-5 flex flex-col">
         <div className="bg-ochre/10 border border-ochre/25 rounded-xl p-3.5 mb-4 flex items-start gap-2.5 shrink-0">
           <AlertTriangle size={15} className="text-ochre shrink-0 mt-0.5" />
-          <p className="text-xs text-ochre leading-relaxed">Data LRP menyimpan nama program dan tahun. Dokumen terkait dikelola manual di luar CSRM.</p>
+          <p className="text-xs text-ochre leading-relaxed">Data LRP menyimpan nama program dan tahun. Dokumen terkait dikelola manual di luar CRIMEs.</p>
         </div>
         <div className="flex-1 min-h-0">
           <DataTable columns={columns} data={filtered} />

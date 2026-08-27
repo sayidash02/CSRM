@@ -103,7 +103,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-slate">
             <Loader2 size={15} className="animate-spin text-forest" />
-            <span>Memeriksa sesi login CSRM...</span>
+            <span>Memeriksa sesi login CRIMEs...</span>
           </div>
         </div>
       </div>
@@ -128,9 +128,12 @@ export function AuthGate({ children }: { children: ReactNode }) {
               PT JAWA SATU POWER
             </div>
             <h1 className="mt-1 text-lg font-bold tracking-tight text-ink">
-              CSR Management System (CSRM)
+              CRIMEs
             </h1>
-            <p className="mt-1 text-xs text-slate leading-relaxed">
+            <div className="font-mono text-[10px] font-semibold tracking-tight text-slate mt-0.5">
+              Corporate Responsibility Information Management System
+            </div>
+            <p className="mt-1.5 text-xs text-slate leading-relaxed">
               Departemen Corporate Social Responsibility · Silakan masuk untuk mengakses sistem.
             </p>
           </div>

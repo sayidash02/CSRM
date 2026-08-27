@@ -1,5 +1,5 @@
 const CONNECTION_ERROR_MESSAGE =
-  'Tidak dapat terhubung ke server CRMS. Periksa koneksi dan pastikan API sedang berjalan.';
+  'Tidak dapat terhubung ke server CRIMEs. Periksa koneksi dan pastikan API sedang berjalan.';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object'

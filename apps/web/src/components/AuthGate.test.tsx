@@ -28,6 +28,6 @@ describe('AuthGate', () => {
       </AuthGate>
     );
 
-    expect(html).toContain('Memeriksa sesi login CSRM');
+    expect(html).toContain('Memeriksa sesi login CRIMEs');
   });
 });

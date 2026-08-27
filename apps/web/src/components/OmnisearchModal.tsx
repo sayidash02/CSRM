@@ -250,7 +250,7 @@ export function OmnisearchModal({ isOpen, onClose, onNavigate }: OmnisearchModal
               <div className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-forest/10 text-forest">
                 <Search size={20} />
               </div>
-              <p className="text-[13px] font-semibold text-ink">Universal Omnisearch CSRM</p>
+              <p className="text-[13px] font-semibold text-ink">Universal Omnisearch CRIMEs</p>
               <p className="mt-1 text-[12px] text-slate-2 max-w-sm mx-auto leading-relaxed">
                 Ketik nama desa (mis. <em>Cilamaya</em>), kelompok nelayan, topik isu, nomor proposal, atau kata kunci apa pun.
               </p>

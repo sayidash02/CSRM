@@ -26,7 +26,7 @@ describe('getImportErrorMessage', () => {
 
   it('explains a network failure without exposing internal details', () => {
     expect(getImportErrorMessage({ code: 'ERR_NETWORK', message: 'Network Error' }, 'fallback'))
-      .toBe('Tidak dapat terhubung ke server CRMS. Periksa koneksi dan pastikan API sedang berjalan.');
+      .toBe('Tidak dapat terhubung ke server CRIMEs. Periksa koneksi dan pastikan API sedang berjalan.');
   });
 
   it('uses the caller fallback for unknown or empty response shapes', () => {
