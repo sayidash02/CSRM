@@ -501,17 +501,41 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
         const signature = validationSignature(
           validationDate(date),
           complainant,
+          rowValue(row, columns, ['alamat', 'address']),
+          rowValue(row, columns, ['phone', 'no hp', 'telepon', 'no telepon']),
           rowValue(row, columns, ['kategori', 'category']),
           significance,
           rowValue(row, columns, ['deskripsi', 'description', 'keluhan', 'rincian']),
+          rowValue(row, columns, ['location', 'lokasi']),
           status || 'Open'
         );
         const existing = registration
           ? grievances.find((item) => item.register_no.trim().toLowerCase() === registration.toLowerCase())
           : grievances.find((item) => validationSignature('grievance-fallback', item.log_date, item.complainant_name, item.address, item.phone, item.category, item.description, item.location) === identity);
         if (existing) {
-          const existingSignature = validationSignature(validationDate(existing.log_date), existing.complainant_name, existing.address, existing.phone, existing.category, existing.significance, existing.description, existing.location, existing.status);
-          add(module, rowNumber, existing.is_deleted ? 'SOFT_DELETED_MATCH' : existingSignature === signature ? 'DUPLICATE_IDENTICAL' : 'IDENTITY_CONFLICT', existing.is_deleted ? 'Nomor registrasi cocok dengan record soft-deleted; import diblokir' : existingSignature === signature ? 'Grievance identik sudah ada; akan dilewati' : 'Nomor registrasi sudah dipakai dengan data berbeda', existing.is_deleted || existingSignature !== signature, { identity, existingId: String(existing.id) });
+          const existingSignature = validationSignature(
+            validationDate(existing.log_date),
+            existing.complainant_name,
+            existing.address,
+            existing.phone,
+            existing.category,
+            existing.significance,
+            existing.description,
+            existing.location,
+            existing.status
+          );
+          add(
+            module,
+            rowNumber,
+            existing.is_deleted ? 'SOFT_DELETED_MATCH' : existingSignature === signature ? 'DUPLICATE_IDENTICAL' : 'IDENTITY_CONFLICT',
+            existing.is_deleted
+              ? 'Nomor registrasi cocok dengan record soft-deleted; import diblokir'
+              : existingSignature === signature
+                ? 'Grievance identik sudah ada; akan dilewati'
+                : 'Nomor registrasi sudah ada; data akan diperbarui',
+            existing.is_deleted,
+            { identity, existingId: String(existing.id) }
+          );
         }
         recordDuplicate(module, rowNumber, identity, signature);
         continue;
@@ -527,7 +551,18 @@ export async function validateWorkbook(workbook: ExcelJS.Workbook): Promise<Work
         const existing = lrps.find((item) => makeLrpIdentity(item.program, item.year) === identity);
         if (existing) {
           const existingSignature = validationSignature(existing.program, existing.year);
-          add(module, rowNumber, existing.is_deleted ? 'SOFT_DELETED_MATCH' : existingSignature === signature ? 'DUPLICATE_IDENTICAL' : 'IDENTITY_CONFLICT', existing.is_deleted ? 'LRP cocok dengan record soft-deleted; import diblokir' : existingSignature === signature ? 'LRP identik sudah ada; akan dilewati' : 'Program dan tahun LRP sudah dipakai dengan data berbeda', existing.is_deleted || existingSignature !== signature, { identity, existingId: String(existing.id) });
+          add(
+            module,
+            rowNumber,
+            existing.is_deleted ? 'SOFT_DELETED_MATCH' : existingSignature === signature ? 'DUPLICATE_IDENTICAL' : 'IDENTITY_CONFLICT',
+            existing.is_deleted
+              ? 'LRP cocok dengan record soft-deleted; import diblokir'
+              : existingSignature === signature
+                ? 'LRP identik sudah ada; akan dilewati'
+                : 'Program dan tahun LRP sudah ada; data akan diperbarui',
+            existing.is_deleted,
+            { identity, existingId: String(existing.id) }
+          );
         }
         recordDuplicate(module, rowNumber, identity, signature);
       }
