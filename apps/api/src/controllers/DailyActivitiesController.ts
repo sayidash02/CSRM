@@ -228,7 +228,7 @@ export const getDailyActivities = catchAsync(async (req: Request, res: Response)
     sub_category: true,
     photos: {
       where: { is_deleted: false },
-      select: { id: true, original_name: true, mime_type: true, size_bytes: true, sort_order: true },
+      select: { id: true, original_name: true, mime_type: true, size_bytes: true, sha256: true, sort_order: true },
       orderBy: { sort_order: 'asc' as const }
     }
   };

@@ -26,12 +26,24 @@ export interface AttachedPhoto {
   original_name?: string;
   mime_type?: string;
   size_bytes?: number;
+  sha256?: string;
   sort_order?: number;
   previewUrl?: string;
   file?: File;
   isPending?: boolean;
   exif?: PhotoExifMetadata;
   isWatermarked?: boolean;
+}
+
+async function computeFileSha256(file: File): Promise<string> {
+  try {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return `${file.name}_${file.size}_${file.lastModified}`;
+  }
 }
 
 interface PhotoGalleryAttachmentInputProps {
@@ -99,9 +111,54 @@ export function PhotoGalleryAttachmentInput({
 
     setUploading(true);
     try {
-      const processedItems: AttachedPhoto[] = [];
+      const currentGallery = [...value, ...pendingPreviews];
+      const seenInBatch = new Set<string>();
+      const skippedDuplicates: string[] = [];
+      const filesToProcess: { file: File; hash: string }[] = [];
 
       for (const originalFile of rawFiles) {
+        const fileHash = await computeFileSha256(originalFile);
+
+        // Check if duplicate within current batch selection
+        if (seenInBatch.has(fileHash)) {
+          skippedDuplicates.push(originalFile.name);
+          continue;
+        }
+        seenInBatch.add(fileHash);
+
+        // Check if duplicate against already attached photos in gallery
+        const isExistingDuplicate = currentGallery.some((p) => {
+          if (p.sha256 && p.sha256 === fileHash) return true;
+          if (p.file && p.file.name === originalFile.name && p.file.size === originalFile.size) return true;
+          if (p.original_name === originalFile.name && p.size_bytes === originalFile.size) return true;
+          return false;
+        });
+
+        if (isExistingDuplicate) {
+          skippedDuplicates.push(originalFile.name);
+          continue;
+        }
+
+        filesToProcess.push({ file: originalFile, hash: fileHash });
+      }
+
+      if (skippedDuplicates.length > 0) {
+        if (skippedDuplicates.length === 1) {
+          showToast?.(`Foto "${skippedDuplicates[0]}" sudah ada di galeri / duplikat dilewati`, "info");
+        } else {
+          showToast?.(`${skippedDuplicates.length} foto duplikat diabaikan (${skippedDuplicates.join(", ")})`, "info");
+        }
+      }
+
+      if (filesToProcess.length === 0) {
+        setUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        return;
+      }
+
+      const processedItems: AttachedPhoto[] = [];
+
+      for (const { file: originalFile, hash: fileHash } of filesToProcess) {
         // 1. Extract EXIF metadata
         const exifMeta = await extractExifFromBlob(originalFile);
 
@@ -147,6 +204,7 @@ export function PhotoGalleryAttachmentInput({
           if (res.data?.data) {
             processedItems.push({
               ...res.data.data,
+              sha256: fileHash,
               exif: exifMeta,
               isWatermarked,
             });
@@ -154,9 +212,10 @@ export function PhotoGalleryAttachmentInput({
         } else {
           // Draft preview for new activity
           processedItems.push({
-            original_name: fileToAttach.name,
+            original_name: originalFile.name,
             mime_type: fileToAttach.type,
-            size_bytes: fileToAttach.size,
+            size_bytes: originalFile.size,
+            sha256: fileHash,
             file: fileToAttach,
             previewUrl: URL.createObjectURL(fileToAttach),
             isPending: true,
