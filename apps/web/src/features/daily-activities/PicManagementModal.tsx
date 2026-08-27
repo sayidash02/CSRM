@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiClient } from '../../lib/apiClient';
-import { Edit2, UserX, Check, X, Plus } from "lucide-react";
+import { Edit2, UserX, Check, X, Plus, RotateCcw, Search, UserCheck } from "lucide-react";
 import { DeleteConfirmModal } from '../../components/ui/DeleteConfirmModal';
 
 const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 px-3 py-2 text-ink outline-none focus:border-forest focus:bg-white transition-all";
@@ -8,9 +8,16 @@ const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 p
 interface PicItem {
   id: string;
   name: string;
+  is_active: boolean;
 }
 
-export function PicManagementModal({ onClose, showToast = () => {} }: { onClose: () => void; showToast?: (msg: string, type?: "success" | "error" | "info") => void }) {
+export function PicManagementModal({
+  onClose,
+  showToast = () => {}
+}: {
+  onClose: () => void;
+  showToast?: (msg: string, type?: "success" | "error" | "info") => void;
+}) {
   const [pics, setPics] = useState<PicItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,11 +25,13 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [picToDelete, setPicToDelete] = useState<PicItem | null>(null);
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const loadPics = async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get('/pics');
+      const res = await apiClient.get('/pics?all=true');
       setPics(res.data.data);
     } catch (e) {
       console.error(e);
@@ -82,15 +91,42 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
     }
   };
 
+  const handleReactivate = async (id: string, name: string) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await apiClient.put(`/pics/${id}`, { is_active: true });
+      showToast(`PIC '${name}' berhasil diaktifkan kembali`, "success");
+      loadPics();
+    } catch (e: any) {
+      console.error(e);
+      showToast(e.response?.data?.error || "Gagal mengaktifkan PIC", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const activePics = pics.filter(p => p.is_active);
+  const inactivePics = pics.filter(p => !p.is_active);
+
+  const displayedPics = (activeTab === 'active' ? activePics : inactivePics).filter(p =>
+    p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+  );
+
   return (
     <div className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center z-[70] p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl border border-line shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col text-ink" onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl border border-line shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col text-ink" onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-line bg-paper/30 shrink-0">
-          <h2 className="text-[15px] font-semibold text-ink">Kelola Master PIC Lapangan</h2>
+          <div>
+            <h2 className="text-[15px] font-semibold text-ink">Kelola Master PIC Lapangan</h2>
+            <p className="text-[11px] text-slate mt-0.5">Daftar penanggung jawab kegiatan operasional CSR</p>
+          </div>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-paper-2 text-slate hover:text-ink transition-colors"><X size={16} /></button>
         </div>
-        <div className="overflow-y-auto flex-1 p-6 space-y-4">
-          {/* Add Form */}
+
+        {/* Add Form */}
+        <div className="p-6 pb-3 shrink-0 space-y-3">
           <div className="flex gap-2">
             <input
               type="text"
@@ -105,21 +141,81 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
             <button
               onClick={handleAdd}
               disabled={!newName.trim() || isSubmitting}
-              className="px-4 py-2 text-xs font-medium text-white bg-forest hover:bg-forest-2 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+              className="px-4 py-2 text-xs font-medium text-white bg-forest hover:bg-forest-2 rounded-lg transition-colors flex items-center gap-1.5 shrink-0 disabled:opacity-50 shadow-2xs"
             >
               <Plus size={13} />
               Tambah
             </button>
           </div>
 
+          {/* Filter & Search Bar */}
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <div className="flex bg-paper/60 p-0.5 rounded-lg border border-line">
+              <button
+                type="button"
+                onClick={() => setActiveTab('active')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                  activeTab === 'active'
+                    ? 'bg-white text-forest font-semibold shadow-2xs'
+                    : 'text-slate hover:text-ink'
+                }`}
+              >
+                <UserCheck size={13} />
+                <span>Aktif</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${activeTab === 'active' ? 'bg-forest/10 text-forest' : 'bg-line/60 text-slate'}`}>
+                  {activePics.length}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('inactive')}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 ${
+                  activeTab === 'inactive'
+                    ? 'bg-white text-clay font-semibold shadow-2xs'
+                    : 'text-slate hover:text-ink'
+                }`}
+              >
+                <UserX size={13} />
+                <span>Nonaktif</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${activeTab === 'inactive' ? 'bg-clay/10 text-clay' : 'bg-line/60 text-slate'}`}>
+                  {inactivePics.length}
+                </span>
+              </button>
+            </div>
+
+            <div className="relative flex-1 max-w-[180px]">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari PIC..."
+                className="w-full text-xs rounded-lg border border-line bg-paper/30 pl-8 pr-2.5 py-1.5 text-ink outline-none focus:border-forest focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* PIC Table / List */}
+        <div className="overflow-y-auto flex-1 px-6 py-2 space-y-2">
           {loading ? (
-            <p className="text-xs text-slate font-mono text-center py-4">Memuat daftar PIC...</p>
+            <p className="text-xs text-slate font-mono text-center py-6">Memuat daftar PIC...</p>
+          ) : displayedPics.length === 0 ? (
+            <div className="text-center py-8 px-4 border border-dashed border-line rounded-xl bg-paper/20">
+              <p className="text-xs text-slate font-medium">
+                {searchQuery
+                  ? `Tidak ada PIC yang cocok dengan pencarian "${searchQuery}".`
+                  : activeTab === 'active'
+                  ? 'Belum ada PIC aktif.'
+                  : 'Tidak ada PIC yang dinonaktifkan.'}
+              </p>
+            </div>
           ) : (
             <table className="w-full text-[13px]">
               <tbody className="divide-y divide-line/60">
-                {pics.map((p) => (
+                {displayedPics.map((p) => (
                   <tr key={p.id} className="group hover:bg-paper/30 transition-colors">
-                    <td className="py-2.5">
+                    <td className="py-2.5 pr-2">
                       {editingId === p.id ? (
                         <input
                           type="text"
@@ -133,10 +229,19 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                           autoFocus
                         />
                       ) : (
-                        <span className="text-ink font-medium">{p.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`font-medium ${p.is_active ? 'text-ink' : 'text-slate line-through'}`}>
+                            {p.name}
+                          </span>
+                          {!p.is_active && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-medium bg-clay/10 text-clay rounded">
+                              Nonaktif
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
-                    <td className="py-2.5 text-right w-24">
+                    <td className="py-2.5 text-right w-36 whitespace-nowrap">
                       {editingId === p.id ? (
                         <div className="flex justify-end gap-1">
                           <button
@@ -156,7 +261,7 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                             <X size={14} />
                           </button>
                         </div>
-                      ) : (
+                      ) : p.is_active ? (
                         <div className="flex justify-end gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
                           <button
                             disabled={isSubmitting}
@@ -175,24 +280,39 @@ export function PicManagementModal({ onClose, showToast = () => {} }: { onClose:
                             <UserX size={14} />
                           </button>
                         </div>
+                      ) : (
+                        <div className="flex justify-end">
+                          <button
+                            disabled={isSubmitting}
+                            onClick={() => handleReactivate(p.id, p.name)}
+                            title="Aktifkan Kembali PIC"
+                            className="px-2.5 py-1 text-xs font-medium text-forest hover:bg-forest/10 border border-forest/30 rounded-md transition-colors flex items-center gap-1 shadow-2xs"
+                          >
+                            <RotateCcw size={12} />
+                            <span>Aktifkan</span>
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
                 ))}
-                {pics.length === 0 && <tr><td colSpan={2} className="text-center py-4 text-slate text-xs">Belum ada PIC terdaftar.</td></tr>}
               </tbody>
             </table>
           )}
         </div>
+
+        {/* Footer */}
         <div className="px-6 py-3.5 border-t border-line flex justify-end bg-paper/30 rounded-b-2xl shrink-0">
           <button onClick={onClose} className="px-4 py-2 text-xs font-medium text-slate border border-line rounded-lg hover:bg-paper-2 hover:text-ink transition-colors">Tutup</button>
         </div>
       </div>
+
+      {/* Confirm Deactivation Modal */}
       {picToDelete && (
         <DeleteConfirmModal
           label={picToDelete.name}
           title="Konfirmasi Nonaktifkan PIC"
-          description={`PIC "${picToDelete.name}" akan dinonaktifkan. Data kegiatan masa lalu tetap aman dan utuh, namun PIC ini tidak akan muncul lagi di formulir input kegiatan baru.`}
+          description={`PIC "${picToDelete.name}" akan dinonaktifkan. Data kegiatan masa lalu tetap aman dan utuh, namun PIC ini tidak akan muncul lagi di formulir input kegiatan baru. Anda dapat mengaktifkannya kembali kapan saja.`}
           confirmButtonText="Nonaktifkan"
           onCancel={() => setPicToDelete(null)}
           onConfirm={() => handleDeactivate(picToDelete.id)}
