@@ -24,7 +24,6 @@ export type ModuleType =
   | 'csr'
   | 'grievance'
   | 'lrp'
-  | 'archive'
   | 'admin-users';
 
 export interface SearchResultItem {

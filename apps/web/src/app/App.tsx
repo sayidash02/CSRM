@@ -9,7 +9,6 @@ import {
   MessageSquareWarning,
   Sprout,
   Download,
-  Archive,
   UserCog,
   ChevronRight,
   Menu,
@@ -28,7 +27,6 @@ import CsrProjectsModule from "../features/csr-projects/CsrProjectsModule";
 import GrievanceModule from "../features/grievance/GrievanceModule";
 import LrpModule from "../features/lrp/LrpModule";
 import DashboardModule, { DashboardStats } from "../features/dashboard/DashboardModule";
-import ArchiveSettings from "../features/archive/ArchiveSettings";
 import AdminUsersModule from "../features/admin/AdminUsersModule";
 
 // ─── Types & Navigation ──────────────────────────────────────────────────────
@@ -42,7 +40,6 @@ type Module =
   | "csr"
   | "grievance"
   | "lrp"
-  | "archive"
   | "admin-users";
 
 interface NavItem {
@@ -63,7 +60,6 @@ const NAV_ITEMS: NavItem[] = [
   { id: "proposals", label: "Proposals", short: "DOCS", icon: <FileText size={15} />, group: "Program" },
   { id: "csr", label: "CSR Projects", short: "CSR", icon: <Leaf size={15} />, group: "Program" },
   { id: "lrp", label: "Livelihood Restoration", short: "LRP", icon: <Sprout size={15} />, group: "Program" },
-  { id: "archive", label: "Pengaturan Arsip", short: "ARCHIVE", icon: <Archive size={15} />, group: "Sistem" },
   { id: "admin-users", label: "Kelola Akun", short: "ADMIN", icon: <UserCog size={15} />, group: "Sistem", adminOnly: true },
 ];
 
@@ -429,7 +425,6 @@ function CsrmWorkspace() {
           {activeModule === "lrp" && (
             <LrpModule activeYear={activeYear} onExport={handleExport} showToast={showToast} />
           )}
-          {activeModule === "archive" && <ArchiveSettings />}
           {activeModule === "admin-users" && user.role === "ADMIN" && (
             <AdminUsersModule currentUsername={user.username} />
           )}
