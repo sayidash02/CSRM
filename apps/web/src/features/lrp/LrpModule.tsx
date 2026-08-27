@@ -6,11 +6,14 @@ import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
+import { SharepointLinksInput, type DocumentLink } from '../../components/ui/SharepointLinksInput';
+import { SharepointLinksBadge } from '../../components/ui/SharepointLinksBadge';
 
 export interface LrpProgram {
   id: string | number;
   program: string;
   year: number;
+  sharepoint_links?: DocumentLink[] | null;
 }
 
 type LrpFormData = Omit<LrpProgram, 'id' | 'year'>;
@@ -78,9 +81,12 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-const emptyLrpDraft = { program: "" };
+export const emptyLrpDraft = {
+  program: "",
+  sharepoint_links: [] as DocumentLink[]
+};
 
-function LrpForm({
+export function LrpForm({
   initial,
   defaultValues,
   onDraftChange,
@@ -97,11 +103,14 @@ function LrpForm({
 }) {
   const [f, setF] = useState(
     initial
-      ? { program: initial.program ?? "" }
+      ? {
+          program: initial.program ?? "",
+          sharepoint_links: initial.sharepoint_links ?? []
+        }
       : { ...emptyLrpDraft, ...defaultValues }
   );
 
-  const set = (k: string, v: string) => {
+  const set = (k: string, v: any) => {
     const next = { ...f, [k]: v };
     setF(next);
     if (!initial && onDraftChange) onDraftChange(next);
@@ -134,6 +143,11 @@ function LrpForm({
             className={inputCls}
           />
         </Field>
+
+        <SharepointLinksInput
+          value={f.sharepoint_links}
+          onChange={(links) => set("sharepoint_links", links)}
+        />
       </div>
       <ModalFooter
         onClose={onClose}
@@ -233,6 +247,11 @@ export default function LrpModule({
     { header: "No", render: (_, i) => <span className="text-xs text-slate-2 font-mono">{i + 1}</span> },
     { header: "Tahun", accessor: "year", sortable: true, render: (p) => <span className="text-xs font-mono text-slate">{p.year}</span> },
     { header: "Nama Program LRP", accessor: "program", sortable: true, render: (p) => <span className="text-[13px] font-medium text-ink">{p.program}</span> },
+    {
+      header: "Tautan",
+      className: "text-center whitespace-nowrap",
+      render: (p) => <SharepointLinksBadge links={p.sharepoint_links} />
+    },
     { header: "Aksi", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

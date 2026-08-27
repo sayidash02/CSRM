@@ -11,6 +11,7 @@ import { DateRangeFilter, DateRange } from "../../components/ui/DateRangeFilter"
 import { AuditHistoryDrawer } from "../../components/ui/AuditHistoryDrawer";
 import { MomPreviewModal } from "./MomPreviewModal";
 import { CategoryManagementModal } from "./CategoryManagementModal";
+import type { DocumentLink } from "../../components/ui/SharepointLinksInput";
 
 function PhotoLightboxModal({ 
   title, 
@@ -126,6 +127,7 @@ export interface DailyActivity {
   photos: Array<{ id: string | number; url: string; original_name?: string; mime_type?: string }>;
   pendingFiles?: File[];
   updated_at?: string;
+  sharepoint_links?: DocumentLink[] | null;
   // Included relations from backend
   pics?: any[];
   pic?: any;

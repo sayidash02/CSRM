@@ -6,6 +6,8 @@ import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { useProposals, useCreateProposal, useEditProposal, useDeleteProposal, useRestoreProposal } from '../../hooks/useProposals';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
+import { SharepointLinksInput, type DocumentLink } from '../../components/ui/SharepointLinksInput';
+import { SharepointLinksBadge } from '../../components/ui/SharepointLinksBadge';
 
 export interface Proposal {
   id: string | number;
@@ -15,6 +17,7 @@ export interface Proposal {
   address: string | null;
   proposal_description: string | null;
   status: string;
+  sharepoint_links?: DocumentLink[] | null;
 }
 
 const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
@@ -95,12 +98,12 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-const emptyProposalDraft = {
+export const emptyProposalDraft = {
   registration_no: "", date_received: "", institution: "", address: "",
-  proposal_description: "", status: ""
+  proposal_description: "", status: "", sharepoint_links: [] as DocumentLink[]
 };
 
-function ProposalForm({ initial, onClose, onSave, showToast, defaultValues, onDraftChange }: {
+export function ProposalForm({ initial, onClose, onSave, showToast, defaultValues, onDraftChange }: {
   initial?: Proposal;
   onClose: () => void;
   onSave: (d: Omit<Proposal, "id">) => void;
@@ -116,12 +119,13 @@ function ProposalForm({ initial, onClose, onSave, showToast, defaultValues, onDr
           institution: initial.institution ?? "",
           address: initial.address ?? "",
           proposal_description: initial.proposal_description ?? "",
-          status: initial.status ?? "Accept"
+          status: initial.status ?? "Accept",
+          sharepoint_links: initial.sharepoint_links ?? []
         }
       : { ...emptyProposalDraft, ...defaultValues }
   );
 
-  const set = (k: string, v: string) => {
+  const set = (k: string, v: any) => {
     const next = { ...f, [k]: v };
     setF(next);
     if (!initial) onDraftChange?.(next);
@@ -150,7 +154,8 @@ function ProposalForm({ initial, onClose, onSave, showToast, defaultValues, onDr
     }
     onSave({
       ...f,
-      registration_no: f.registration_no.trim()
+      registration_no: f.registration_no.trim(),
+      sharepoint_links: f.sharepoint_links
     });
     if (!initial && onDraftChange) onDraftChange({ ...emptyProposalDraft });
     onClose();
@@ -188,6 +193,11 @@ function ProposalForm({ initial, onClose, onSave, showToast, defaultValues, onDr
         <Field label="Deskripsi / Rincian Proposal">
           <textarea rows={3} value={f.proposal_description} onChange={e => set("proposal_description", e.target.value)} placeholder="Rincian permohonan bantuan atau kerja sama" className={`${inputCls} resize-none`} />
         </Field>
+
+        <SharepointLinksInput
+          value={f.sharepoint_links}
+          onChange={(links) => set("sharepoint_links", links)}
+        />
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Proposal"} isEdit={!!initial} />
     </Modal>
@@ -270,6 +280,11 @@ export default function ProposalsModule({ activeYear, onExport, showToast }: { a
         { label: "Decline", value: "Decline" }
       ],
       render: (p) => <StatusBadge status={p.status} /> 
+    },
+    {
+      header: "Tautan",
+      className: "text-center whitespace-nowrap",
+      render: (p) => <SharepointLinksBadge links={p.sharepoint_links} />
     },
     { header: "Aksi", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">

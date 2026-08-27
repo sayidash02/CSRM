@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Edit2, Trash2, RotateCcw, History, FileSpreadsheet, FileText, Image, Eye } from "lucide-react";
 import { DataTable, ColumnDef } from "../../components/ui/DataTable";
 import { Pagination } from "../../components/ui/Pagination";
+import { SharepointLinksBadge } from "../../components/ui/SharepointLinksBadge";
 import type { DailyActivity } from "./DailyActivitiesModule";
 
 interface DailyActivityTableProps {
@@ -71,6 +72,11 @@ export function DailyActivityTable({
           </button>
         );
       }
+    },
+    {
+      header: "Tautan",
+      className: "text-center whitespace-nowrap",
+      render: (a) => <SharepointLinksBadge links={a.sharepoint_links} />
     },
     {
       header: "Notulensi (MOM)",

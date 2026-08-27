@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
+import { normalizeSharepointLinks } from '../lib/linkUtils.ts';
 
 export const createTopIssue = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { period, issue, description, follow_up, next_plan, year } = req.body;
+  const { period, issue, description, follow_up, next_plan, year, sharepoint_links } = req.body;
 
   if (!period || !issue) {
     res.status(400).json({ error: 'Missing required fields: period, issue' });
@@ -29,6 +30,8 @@ export const createTopIssue = catchAsync(async (req: Request, res: Response): Pr
     parsedYear = new Date().getFullYear();
   }
 
+  const normalizedLinks = normalizeSharepointLinks(sharepoint_links);
+
   const result = await prisma.top_issues.create({
     data: {
       period,
@@ -36,7 +39,8 @@ export const createTopIssue = catchAsync(async (req: Request, res: Response): Pr
       issue,
       description,
       follow_up,
-      next_plan
+      next_plan,
+      sharepoint_links: normalizedLinks ? (normalizedLinks as any) : undefined
     }
   });
 
@@ -73,7 +77,7 @@ export const deleteTopIssue = catchAsync(async (req: Request, res: Response): Pr
 
 export const updateTopIssue = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { period, issue, description, follow_up, next_plan, year } = req.body;
+  const { period, issue, description, follow_up, next_plan, year, sharepoint_links } = req.body;
 
   if (!period || !issue) {
     res.status(400).json({ error: 'Missing required fields: period, issue' });
@@ -87,6 +91,10 @@ export const updateTopIssue = catchAsync(async (req: Request, res: Response): Pr
     follow_up,
     next_plan
   };
+
+  if (sharepoint_links !== undefined) {
+    updateData.sharepoint_links = normalizeSharepointLinks(sharepoint_links);
+  }
 
   let parsedYear: number | null = null;
   if (year !== undefined && year !== null && year !== '') {

@@ -6,6 +6,8 @@ import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
+import { SharepointLinksInput, type DocumentLink } from '../../components/ui/SharepointLinksInput';
+import { SharepointLinksBadge } from '../../components/ui/SharepointLinksBadge';
 
 export interface Stakeholder {
   id: string;
@@ -13,6 +15,7 @@ export interface Stakeholder {
   date: string | null;
   venue: string | null;
   concern_issue: string | null;
+  sharepoint_links?: DocumentLink[] | null;
 }
 
 const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 px-3 py-2 text-ink outline-none focus:border-forest focus:bg-white transition-all";
@@ -101,11 +104,15 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-const emptyStakeholderDraft = {
-  stakeholder: "", date: "", venue: "", concern_issue: ""
+export const emptyStakeholderDraft = {
+  stakeholder: "",
+  date: "",
+  venue: "",
+  concern_issue: "",
+  sharepoint_links: [] as DocumentLink[]
 };
 
-function StakeholderForm({ 
+export function StakeholderForm({ 
   initial, 
   onClose, 
   onSave, 
@@ -126,12 +133,13 @@ function StakeholderForm({
           stakeholder: initial.stakeholder ?? "",
           date: formatInputDate(initial.date),
           venue: initial.venue ?? "",
-          concern_issue: initial.concern_issue ?? ""
+          concern_issue: initial.concern_issue ?? "",
+          sharepoint_links: initial.sharepoint_links ?? []
         }
       : { ...emptyStakeholderDraft, ...defaultValues }
   );
   
-  const set = (k: string, v: string) => {
+  const set = (k: string, v: any) => {
     const next = { ...f, [k]: v };
     setF(next);
     if (!initial) onDraftChange?.(next);
@@ -159,7 +167,8 @@ function StakeholderForm({
       ...f,
       date: f.date || null,
       venue: f.venue || null,
-      concern_issue: f.concern_issue || null
+      concern_issue: f.concern_issue || null,
+      sharepoint_links: f.sharepoint_links
     });
     if (!initial) onDraftChange?.({ ...emptyStakeholderDraft });
     onClose();
@@ -209,6 +218,11 @@ function StakeholderForm({
             className={`${inputCls} resize-none`}
           />
         </Field>
+
+        <SharepointLinksInput
+          value={f.sharepoint_links}
+          onChange={(links) => set("sharepoint_links", links)}
+        />
       </div>
       <ModalFooter
         onClose={onClose}
@@ -356,6 +370,11 @@ export default function StakeholdersModule({
       } 
     },
     { header: "Isu & Aspirasi (Concern)", accessor: "concern_issue", sortable: true, render: (s) => <div className="text-sm text-foreground max-w-xs"><div className="line-clamp-2">{s.concern_issue}</div></div> },
+    {
+      header: "Tautan",
+      className: "text-center whitespace-nowrap",
+      render: (s) => <SharepointLinksBadge links={s.sharepoint_links} />
+    },
     { header: "Aksi", render: (s) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

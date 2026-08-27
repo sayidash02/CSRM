@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
+import { normalizeSharepointLinks } from '../lib/linkUtils.ts';
 
 export const createCsrProject = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { 
@@ -13,13 +14,16 @@ export const createCsrProject = catchAsync(async (req: Request, res: Response): 
     objective, 
     status, 
     budget, 
-    implementation_period
+    implementation_period,
+    sharepoint_links
   } = req.body;
 
   if (!project_year || isNaN(Number(project_year)) || !program) {
     res.status(400).json({ error: 'Missing or invalid required fields' });
     return;
   }
+
+  const normalizedLinks = normalizeSharepointLinks(sharepoint_links);
 
   const result = await prisma.csr_projects.create({
     data: {
@@ -32,7 +36,8 @@ export const createCsrProject = catchAsync(async (req: Request, res: Response): 
       objective,
       status: status || 'Planning',
       budget,
-      implementation_period
+      implementation_period,
+      sharepoint_links: normalizedLinks ? (normalizedLinks as any) : undefined
     }
   });
 
@@ -66,7 +71,8 @@ export const updateCsrProject = catchAsync(async (req: Request, res: Response): 
     objective, 
     status, 
     budget, 
-    implementation_period
+    implementation_period,
+    sharepoint_links
   } = req.body;
 
   if (!project_year || !program) {
@@ -74,20 +80,26 @@ export const updateCsrProject = catchAsync(async (req: Request, res: Response): 
     return;
   }
 
+  const updateData: any = {
+    project_year: Number(project_year),
+    program,
+    activity,
+    type_of_activity,
+    location,
+    target_beneficiaries,
+    objective,
+    status,
+    budget,
+    implementation_period
+  };
+
+  if (sharepoint_links !== undefined) {
+    updateData.sharepoint_links = normalizeSharepointLinks(sharepoint_links);
+  }
+
   const result = await prisma.csr_projects.update({
     where: { id: BigInt(id as string) },
-    data: {
-      project_year: Number(project_year),
-      program,
-      activity,
-      type_of_activity,
-      location,
-      target_beneficiaries,
-      objective,
-      status,
-      budget,
-      implementation_period
-    }
+    data: updateData
   });
 
   res.status(200).json({ data: result });

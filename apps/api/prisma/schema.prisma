@@ -68,6 +68,7 @@ model daily_activities {
   created_at          DateTime              @default(now())
   updated_at          DateTime              @updatedAt
   cost                Decimal?              @db.Decimal(15, 2)
+  sharepoint_links    Json?
   category            categories            @relation(fields: [category_id], references: [id])
   sub_category        sub_categories        @relation(fields: [sub_category_id], references: [id])
   daily_activity_pics daily_activity_pics[]
@@ -110,32 +111,34 @@ model daily_activity_photos {
 }
 
 model stakeholder_engagement {
-  id            BigInt    @id @default(autoincrement())
-  stakeholder   String?   @db.VarChar(255)
-  date          DateTime? @db.Date
-  venue         String?   @db.VarChar(255)
-  concern_issue String?   @db.Text
-  is_deleted    Boolean   @default(false)
-  is_archived   Boolean   @default(false)
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
+  id               BigInt    @id @default(autoincrement())
+  stakeholder      String?   @db.VarChar(255)
+  date             DateTime? @db.Date
+  venue            String?   @db.VarChar(255)
+  concern_issue    String?   @db.Text
+  sharepoint_links Json?
+  is_deleted       Boolean   @default(false)
+  is_archived      Boolean   @default(false)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
 
   @@index([is_deleted])
   @@index([is_archived])
 }
 
 model top_issues {
-  id              BigInt   @id @default(autoincrement())
-  period          String   @db.VarChar(50)
-  year            Int      @default(2026)
-  issue           String   @db.VarChar(255)
-  description     String?  @db.Text
-  follow_up       String?  @db.Text
-  next_plan       String?  @db.Text
-  is_deleted      Boolean  @default(false)
-  is_archived     Boolean  @default(false)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  id               BigInt   @id @default(autoincrement())
+  period           String   @db.VarChar(50)
+  year             Int      @default(2026)
+  issue            String   @db.VarChar(255)
+  description      String?  @db.Text
+  follow_up        String?  @db.Text
+  next_plan        String?  @db.Text
+  sharepoint_links Json?
+  is_deleted       Boolean  @default(false)
+  is_archived      Boolean  @default(false)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 
   @@index([is_deleted])
   @@index([is_archived])
@@ -150,6 +153,7 @@ model proposals {
   address              String?  @db.VarChar(255)
   proposal_description String?  @db.Text
   status               String   @db.VarChar(20)
+  sharepoint_links     Json?
   is_deleted           Boolean  @default(false)
   is_archived          Boolean  @default(false)
   created_at           DateTime @default(now())
@@ -172,6 +176,7 @@ model csr_projects {
   status                String   @default("Planning") @db.VarChar(20)
   budget                Decimal? @db.Decimal(15, 2)
   implementation_period String?  @db.VarChar(100)
+  sharepoint_links      Json?
   is_deleted            Boolean  @default(false)
   is_archived           Boolean  @default(false)
   created_at            DateTime @default(now())
@@ -200,6 +205,7 @@ model grievance {
   status           String             @default("Open") @db.VarChar(20)
   completion_date  DateTime?          @db.Date
   remarks          String?            @db.Text
+  sharepoint_links Json?
   is_deleted       Boolean            @default(false)
   is_archived      Boolean            @default(false)
   created_at       DateTime           @default(now())
@@ -232,13 +238,14 @@ model grievance_photos {
 }
 
 model lrp {
-  id           BigInt   @id @default(autoincrement())
-  program      String   @db.VarChar(255)
-  year         Int      @default(2026)
-  is_deleted   Boolean  @default(false)
-  is_archived  Boolean  @default(false)
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+  id               BigInt   @id @default(autoincrement())
+  program          String   @db.VarChar(255)
+  year             Int      @default(2026)
+  sharepoint_links Json?
+  is_deleted       Boolean  @default(false)
+  is_archived      Boolean  @default(false)
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
 
   @@index([is_deleted])
   @@index([is_archived])

@@ -7,6 +7,8 @@ import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 import { PeriodDatePicker } from '../../components/ui/PeriodDatePicker';
+import { SharepointLinksInput, type DocumentLink } from '../../components/ui/SharepointLinksInput';
+import { SharepointLinksBadge } from '../../components/ui/SharepointLinksBadge';
 
 export interface TopIssue {
   id: number | string;
@@ -15,6 +17,7 @@ export interface TopIssue {
   description: string;
   follow_up: string;
   next_plan: string;
+  sharepoint_links?: DocumentLink[] | null;
 }
 
 const inputCls = "w-full text-[13px] rounded-lg border border-line bg-paper/50 px-3 py-2 text-ink outline-none focus:border-forest focus:bg-white transition-all";
@@ -80,15 +83,16 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-const emptyTopIssueDraft = {
+export const emptyTopIssueDraft = {
   period: "",
   issue: "",
   description: "",
   follow_up: "",
-  next_plan: ""
+  next_plan: "",
+  sharepoint_links: [] as DocumentLink[]
 };
 
-function TopIssueForm({
+export function TopIssueForm({
   initial,
   defaultValues,
   onDraftChange,
@@ -110,12 +114,13 @@ function TopIssueForm({
           issue: initial.issue ?? "",
           description: initial.description ?? "",
           follow_up: initial.follow_up ?? "",
-          next_plan: initial.next_plan ?? ""
+          next_plan: initial.next_plan ?? "",
+          sharepoint_links: initial.sharepoint_links ?? []
         }
       : { ...emptyTopIssueDraft, ...defaultValues }
   );
 
-  const set = (k: string, v: string) => {
+  const set = (k: string, v: any) => {
     const next = { ...f, [k]: v };
     setF(next);
     if (!initial) onDraftChange?.(next);
@@ -167,6 +172,10 @@ function TopIssueForm({
         <Field label="Rencana Tindak Lanjut Berikutnya (Next Plan)">
           <textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana langkah preventif atau mitigasi lanjutan" className={`${inputCls} resize-none`} />
         </Field>
+        <SharepointLinksInput
+          value={f.sharepoint_links}
+          onChange={(links) => set("sharepoint_links", links)}
+        />
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Isu"} isEdit={!!initial} />
     </Modal>
@@ -277,6 +286,11 @@ export default function TopIssuesModule({ activeYear, onExport, showToast }: { a
     { header: "Deskripsi Isu", accessor: "description", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.description}</div></div> },
     { header: "Tindak Lanjut (Follow Up)", accessor: "follow_up", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.follow_up}</div></div> },
     { header: "Rencana Lanjutan (Next Plan)", accessor: "next_plan", sortable: true, render: (issue) => <div className="text-xs text-slate leading-relaxed max-w-[220px] whitespace-normal"><div className="line-clamp-3">{issue.next_plan}</div></div> },
+    {
+      header: "Tautan",
+      className: "text-center whitespace-nowrap",
+      render: (issue) => <SharepointLinksBadge links={issue.sharepoint_links} />
+    },
     { header: "Aksi", render: (issue) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

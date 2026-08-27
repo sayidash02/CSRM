@@ -8,6 +8,8 @@ import { Modal, ModalFooter } from "../../components/ui/Modal";
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
 import { PeriodDatePicker } from '../../components/ui/PeriodDatePicker';
+import { SharepointLinksInput, type DocumentLink } from '../../components/ui/SharepointLinksInput';
+import { SharepointLinksBadge } from '../../components/ui/SharepointLinksBadge';
 
 export interface CsrProject {
   id: number | string;
@@ -23,6 +25,7 @@ export interface CsrProject {
   implementation_period: string | null;
   grievance_id?: string | number | null;
   grievance?: any;
+  sharepoint_links?: DocumentLink[] | null;
 }
 
 const formatIDR = (n: number | null) => {
@@ -103,7 +106,7 @@ function TopBar({ title, subtitle, onAdd, addLabel, showSearch, searchValue, onS
   );
 }
 
-const emptyCsrDraft = {
+export const emptyCsrDraft = {
   project_year: String(new Date().getFullYear()),
   program: "",
   activity: "",
@@ -114,10 +117,11 @@ const emptyCsrDraft = {
   status: "Planning",
   budget: "",
   implementation_period: "",
-  grievance_id: ""
+  grievance_id: "",
+  sharepoint_links: [] as DocumentLink[]
 };
 
-function CsrForm({
+export function CsrForm({
   initial,
   onClose,
   onSave,
@@ -145,7 +149,8 @@ function CsrForm({
           status: initial.status ?? "Planning",
           budget: initial.budget ? String(initial.budget) : "",
           implementation_period: initial.implementation_period ?? "",
-          grievance_id: initial.grievance_id ? String(initial.grievance_id) : ""
+          grievance_id: initial.grievance_id ? String(initial.grievance_id) : "",
+          sharepoint_links: initial.sharepoint_links ?? []
         }
       : { ...emptyCsrDraft, ...defaultValues }
   );
@@ -158,7 +163,7 @@ function CsrForm({
     }).catch(() => undefined);
   }, []);
 
-  const set = (k: string, v: string) => {
+  const set = (k: string, v: any) => {
     const next = { ...f, [k]: v };
     setF(next);
     if (!initial && onDraftChange) onDraftChange(next);
@@ -195,7 +200,8 @@ function CsrForm({
       status: f.status,
       budget: f.budget ? parseFloat(f.budget) : null,
       implementation_period: f.implementation_period || null,
-      grievance_id: f.grievance_id ? f.grievance_id : null
+      grievance_id: f.grievance_id ? f.grievance_id : null,
+      sharepoint_links: f.sharepoint_links
     });
     if (!initial && onDraftChange) onDraftChange({ ...emptyCsrDraft });
     onClose();
@@ -258,6 +264,11 @@ function CsrForm({
             ))}
           </select>
         </Field>
+
+        <SharepointLinksInput
+          value={f.sharepoint_links}
+          onChange={(links) => set("sharepoint_links", links)}
+        />
       </div>
       <ModalFooter onClose={onClose} onSave={handleSave} onClear={!initial ? handleClear : undefined} saveLabel={initial ? "Simpan Perubahan" : "Simpan Program"} isEdit={!!initial} />
     </Modal>
@@ -366,6 +377,11 @@ export default function CsrProjectsModule({ activeYear, onExport, showToast }: {
     },
     { header: "Anggaran", accessor: "budget", sortable: true, render: (p) => <div className="text-[13px] font-semibold font-mono text-ink whitespace-nowrap text-right">{formatIDR(p.budget)}</div> },
     { header: "Periode", accessor: "implementation_period", sortable: true, render: (p) => <div className="text-xs font-mono text-slate whitespace-nowrap">{p.implementation_period || "—"}</div> },
+    {
+      header: "Tautan",
+      className: "text-center whitespace-nowrap",
+      render: (p) => <SharepointLinksBadge links={p.sharepoint_links} />
+    },
     { header: "Aksi", render: (p) => showDeleted ? (
       <div className="flex items-center justify-end">
         <button 

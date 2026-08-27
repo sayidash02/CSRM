@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 import { generateRegistrationNumber } from '../services/RegistrationNumberService';
+import { normalizeSharepointLinks } from '../lib/linkUtils.ts';
 
 const PROPOSAL_STATUSES = new Set(['Accept', 'Decline']);
 
@@ -18,7 +19,8 @@ export const createProposal = catchAsync(async (req: Request, res: Response): Pr
     institution,
     address,
     proposal_description,
-    status
+    status,
+    sharepoint_links
   } = req.body;
 
   const receivedDate = parseRequiredDate(date_received);
@@ -38,6 +40,8 @@ export const createProposal = catchAsync(async (req: Request, res: Response): Pr
     return;
   }
 
+  const normalizedLinks = normalizeSharepointLinks(sharepoint_links);
+
   const result = await prisma.proposals.create({
     data: {
       registration_no: finalRegistrationNo,
@@ -45,7 +49,8 @@ export const createProposal = catchAsync(async (req: Request, res: Response): Pr
       institution,
       address,
       proposal_description,
-      status
+      status,
+      sharepoint_links: normalizedLinks ? (normalizedLinks as any) : undefined
     }
   });
 
@@ -78,7 +83,8 @@ export const updateProposal = catchAsync(async (req: Request, res: Response): Pr
     institution,
     address,
     proposal_description,
-    status
+    status,
+    sharepoint_links
   } = req.body;
 
   const receivedDate = parseRequiredDate(date_received);
@@ -99,16 +105,22 @@ export const updateProposal = catchAsync(async (req: Request, res: Response): Pr
     }
   }
 
+  const updateData: any = {
+    ...(typeof registration_no === 'string' && registration_no.trim() ? { registration_no: registration_no.trim() } : {}),
+    date_received: receivedDate,
+    institution,
+    address,
+    proposal_description,
+    status
+  };
+
+  if (sharepoint_links !== undefined) {
+    updateData.sharepoint_links = normalizeSharepointLinks(sharepoint_links);
+  }
+
   const result = await prisma.proposals.update({
     where: { id: targetId },
-    data: {
-      ...(typeof registration_no === 'string' && registration_no.trim() ? { registration_no: registration_no.trim() } : {}),
-      date_received: receivedDate,
-      institution,
-      address,
-      proposal_description,
-      status
-    }
+    data: updateData
   });
 
   res.status(200).json({ data: result });

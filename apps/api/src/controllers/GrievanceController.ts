@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
 import { generateRegistrationNumber } from '../services/RegistrationNumberService';
+import { normalizeSharepointLinks } from '../lib/linkUtils.ts';
 
 const SIGNIFICANCE_VALUES = new Set(['Low', 'Medium', 'High', 'Critical']);
 const GRIEVANCE_STATUSES = new Set(['Open', 'On Progress', 'Resolved', 'Closed']);
@@ -61,7 +62,8 @@ export const createGrievance = catchAsync(async (req: Request, res: Response): P
     feedback, 
     status, 
     completion_date, 
-    remarks
+    remarks,
+    sharepoint_links
   } = req.body;
 
   const logDate = parseRequiredDate(log_date);
@@ -81,6 +83,8 @@ export const createGrievance = catchAsync(async (req: Request, res: Response): P
     return;
   }
 
+  const normalizedLinks = normalizeSharepointLinks(sharepoint_links);
+
   const result = await prisma.grievance.create({
     data: {
       register_no: finalRegisterNo,
@@ -97,7 +101,8 @@ export const createGrievance = catchAsync(async (req: Request, res: Response): P
       feedback,
       status: status || 'Open',
       completion_date: completion_date ? new Date(completion_date) : null,
-      remarks
+      remarks,
+      sharepoint_links: normalizedLinks ? (normalizedLinks as any) : undefined
     }
   });
 
@@ -152,7 +157,8 @@ export const updateGrievance = catchAsync(async (req: Request, res: Response): P
     feedback, 
     status, 
     completion_date, 
-    remarks
+    remarks,
+    sharepoint_links
   } = req.body;
 
   const logDate = parseRequiredDate(log_date);
@@ -173,25 +179,31 @@ export const updateGrievance = catchAsync(async (req: Request, res: Response): P
     }
   }
 
+  const updateData: any = {
+    ...(typeof register_no === 'string' && register_no.trim() ? { register_no: register_no.trim() } : {}),
+    log_date: logDate,
+    complainant_name,
+    address,
+    phone,
+    category,
+    significance,
+    description,
+    location,
+    investigation,
+    resolution,
+    feedback,
+    status: status || 'Open',
+    completion_date: completion_date ? new Date(completion_date) : null,
+    remarks
+  };
+
+  if (sharepoint_links !== undefined) {
+    updateData.sharepoint_links = normalizeSharepointLinks(sharepoint_links);
+  }
+
   const result = await prisma.grievance.update({
     where: { id: targetId },
-    data: {
-      ...(typeof register_no === 'string' && register_no.trim() ? { register_no: register_no.trim() } : {}),
-      log_date: logDate,
-      complainant_name,
-      address,
-      phone,
-      category,
-      significance,
-      description,
-      location,
-      investigation,
-      resolution,
-      feedback,
-      status: status || 'Open',
-      completion_date: completion_date ? new Date(completion_date) : null,
-      remarks
-    }
+    data: updateData
   });
 
   res.status(200).json({ data: result });

@@ -5,6 +5,7 @@ import { Modal } from "../../components/ui/Modal";
 import { PicManagementModal } from "./PicManagementModal";
 import { CategoryManagementModal } from "./CategoryManagementModal";
 import { PhotoGalleryAttachmentInput } from "./PhotoGalleryAttachmentInput";
+import { SharepointLinksInput, type DocumentLink } from "../../components/ui/SharepointLinksInput";
 import type { DailyActivity } from "./DailyActivitiesModule";
 
 const inputCls = "w-full px-3 py-2 text-sm bg-input-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring";
@@ -22,7 +23,8 @@ function Field({ label, required, hint, children }: { label: string; required?: 
 export const emptyDailyDraft = {
   activity_date: "", activity: "", stakeholder_id: "", institution_group: "", address: "",
   focus: "", location: "", cost: "", pic_ids: [] as (string | number)[], category_id: "",
-  sub_category_id: "", keterangan: "", hasil: "", kesimpulan: "", next_plan: "", description_result: "", photos: [], pendingFiles: [] as File[]
+  sub_category_id: "", keterangan: "", hasil: "", kesimpulan: "", next_plan: "", description_result: "",
+  sharepoint_links: [] as DocumentLink[], photos: [], pendingFiles: [] as File[]
 };
 
 export function DailyActivityForm({
@@ -57,6 +59,7 @@ export function DailyActivityForm({
           kesimpulan: initial.kesimpulan ?? "",
           next_plan: initial.next_plan ?? "",
           description_result: initial.description_result ?? "",
+          sharepoint_links: initial.sharepoint_links ?? [],
           photos: initial.photos ?? [],
           pendingFiles: [],
         }
@@ -102,6 +105,7 @@ export function DailyActivityForm({
       kesimpulan: f.kesimpulan || null,
       next_plan: f.next_plan || null,
       description_result: legacyDescription || null,
+      sharepoint_links: f.sharepoint_links,
       photos: f.photos,
       pendingFiles: f.pendingFiles,
     } as any);
@@ -151,30 +155,27 @@ export function DailyActivityForm({
                     const isSelected = f.pic_ids.map(String).includes(String(p.id));
                     return (
                       <button
-                        key={p.id}
                         type="button"
+                        key={p.id}
                         onClick={() => {
-                          let newIds = [...f.pic_ids.map(String)];
-                          if (isSelected) {
-                            newIds = newIds.filter(id => id !== String(p.id));
-                          } else {
-                            newIds.push(String(p.id));
-                          }
-                          set("pic_ids", newIds);
+                          const strId = String(p.id);
+                          const next = isSelected ? f.pic_ids.map(String).filter(id => id !== strId) : [...f.pic_ids.map(String), strId];
+                          set("pic_ids", next);
                         }}
-                        className={`px-3 py-1 text-xs font-medium rounded-full border transition-all active:scale-95 ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
                           isSelected
-                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                            : 'bg-background text-muted-foreground border-border hover:bg-muted hover:text-foreground'
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80"
                         }`}
                       >
                         {p.name}
+                        {isSelected && <span className="text-xs">✓</span>}
                       </button>
                     );
                   })}
                 </div>
               </div>
-              <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0 cursor-pointer" title="Atur Daftar PIC"><Settings size={14} /></button>
+              <button type="button" onClick={() => setShowPicManager(true)} className="p-2 border border-border rounded-md hover:bg-muted text-muted-foreground shrink-0 cursor-pointer" title="Kelola PIC"><Settings size={14} /></button>
             </div>
           </Field>
         </div>
@@ -199,6 +200,13 @@ export function DailyActivityForm({
         <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Kesimpulan Pertemuan"><textarea rows={2} value={f.kesimpulan} onChange={e => set("kesimpulan", e.target.value)} placeholder="Kesimpulan akhir dari pertemuan" className={`${inputCls} resize-none`} /></Field>
           <Field label="Rencana Tindak Lanjut (Next Plan)"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut / action items" className={`${inputCls} resize-none`} /></Field>
+        </div>
+
+        <div className="col-span-3">
+          <SharepointLinksInput
+            value={f.sharepoint_links}
+            onChange={(links) => setF({ ...f, sharepoint_links: links })}
+          />
         </div>
 
         <div className="col-span-3">

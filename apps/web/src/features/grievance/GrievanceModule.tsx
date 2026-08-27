@@ -6,6 +6,8 @@ import { DataTable, ColumnDef } from '../../components/ui/DataTable';
 import { Modal, ModalFooter } from '../../components/ui/Modal';
 import { RestoreConfirmModal } from '../../components/ui/RestoreConfirmModal';
 import { AuditHistoryDrawer } from '../../components/ui/AuditHistoryDrawer';
+import { SharepointLinksInput, type DocumentLink } from '../../components/ui/SharepointLinksInput';
+import { SharepointLinksBadge } from '../../components/ui/SharepointLinksBadge';
 
 export interface GrievancePhoto {
   id: number | string;
@@ -34,6 +36,7 @@ export interface Grievance {
   completion_date: string | null;
   remarks: string | null;
   photos?: GrievancePhoto[];
+  sharepoint_links?: DocumentLink[] | null;
 }
 
 const formatDate = (d: string | Date) => new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
@@ -214,14 +217,14 @@ function SignificanceBadge({ level }: { level: string }) {
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono ${map[level] ?? ""}`}>{level}</span>;
 }
 
-const emptyGrievanceDraft = {
+export const emptyGrievanceDraft = {
   register_no: "", log_date: "", complainant_name: "", address: "", phone: "",
   category: "", significance: "Low", description: "", location: "",
   investigation: "", resolution: "", feedback: "", status: "Open",
-  completion_date: "", remarks: ""
+  completion_date: "", remarks: "", sharepoint_links: [] as DocumentLink[]
 };
 
-function GrievanceForm({
+export function GrievanceForm({
   initial,
   onClose,
   onSave,
@@ -255,7 +258,8 @@ function GrievanceForm({
           feedback: initial.feedback ?? "",
           status: initial.status ?? "Open",
           completion_date: initial.completion_date ? initial.completion_date.split("T")[0] : "",
-          remarks: initial.remarks ?? ""
+          remarks: initial.remarks ?? "",
+          sharepoint_links: initial.sharepoint_links ?? []
         }
       : { ...emptyGrievanceDraft, ...defaultValues }
   );
@@ -265,7 +269,7 @@ function GrievanceForm({
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const set = (k: string, v: string) => {
+  const set = (k: string, v: any) => {
     const next = { ...f, [k]: v };
     setF(next);
     if (!initial && onDraftChange) onDraftChange(next);
@@ -376,7 +380,8 @@ function GrievanceForm({
         feedback: f.feedback || null,
         status: f.status,
         completion_date: f.completion_date || null,
-        remarks: f.remarks || null
+        remarks: f.remarks || null,
+        sharepoint_links: f.sharepoint_links
       },
       pendingFiles.map(p => p.file)
     );
@@ -464,6 +469,11 @@ function GrievanceForm({
             <input type="text" value={f.remarks} onChange={e => set("remarks", e.target.value)} placeholder="Catatan internal tim CSR" className={inputCls} />
           </Field>
         </div>
+
+        <SharepointLinksInput
+          value={f.sharepoint_links}
+          onChange={(links) => set("sharepoint_links", links)}
+        />
 
         {/* FOTO DOKUMENTASI & LAMPIRAN */}
         <div className="pt-2 border-t border-line">
@@ -688,6 +698,11 @@ export default function GrievanceModule({ activeYear, onExport, showToast }: { a
           </button>
         );
       }
+    },
+    {
+      header: "Tautan",
+      className: "text-center whitespace-nowrap",
+      render: (g) => <SharepointLinksBadge links={g.sharepoint_links} />
     },
     { header: "Aksi", render: (g) => showDeleted ? (
       <div className="flex items-center justify-end">

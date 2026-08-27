@@ -83,8 +83,10 @@ const normalizeDailyActivityText = (body: Record<string, unknown>) => {
   return { keterangan, hasil, description_result, hasStructuredText };
 };
 
+import { normalizeSharepointLinks } from '../lib/linkUtils.ts';
+
 export const createDailyActivity = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { activity_date, activity, institution_group, address, focus, location, cost, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan } = req.body;
+  const { activity_date, activity, institution_group, address, focus, location, cost, pic_ids, pic_id, category_id, sub_category_id, kesimpulan, next_plan, sharepoint_links } = req.body;
   const dailyText = normalizeDailyActivityText(req.body);
 
   const rawPicIds = pic_ids || (pic_id ? [pic_id] : []);
@@ -104,6 +106,8 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
     return;
   }
 
+  const normalizedLinks = normalizeSharepointLinks(sharepoint_links);
+
   const result = await prisma.daily_activities.create({
     data: {
       activity_date: new Date(activity_date),
@@ -113,6 +117,7 @@ export const createDailyActivity = catchAsync(async (req: Request, res: Response
       focus,
       location,
       cost: cost !== undefined && cost !== null ? Number(cost) : null,
+      sharepoint_links: normalizedLinks ? (normalizedLinks as any) : undefined,
       keterangan: dailyText.keterangan,
       hasil: dailyText.hasil,
       kesimpulan: normalizeText(kesimpulan),
@@ -357,6 +362,7 @@ export const updateDailyActivity = catchAsync(async (req: Request, res: Response
   const extraFields: Record<string, unknown> = {};
   if (hasOwn(req.body, 'kesimpulan')) extraFields.kesimpulan = normalizeText(kesimpulan);
   if (hasOwn(req.body, 'next_plan')) extraFields.next_plan = normalizeText(next_plan);
+  if (hasOwn(req.body, 'sharepoint_links')) extraFields.sharepoint_links = normalizeSharepointLinks(req.body.sharepoint_links);
 
   const result = await prisma.daily_activities.update({
     where: { id: BigInt(id as string) },

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { catchAsync } from '../lib/catchAsync';
+import { normalizeSharepointLinks } from '../lib/linkUtils.ts';
 
 function readYear(value: unknown): number | null {
   if (typeof value === 'number' && Number.isInteger(value)) return value >= 1900 && value <= 2100 ? value : null;
@@ -10,7 +11,7 @@ function readYear(value: unknown): number | null {
 }
 
 export const createLrp = catchAsync(async (req: Request, res: Response): Promise<void> => {
-  const { program, year } = req.body;
+  const { program, year, sharepoint_links } = req.body;
 
   if (!program) {
     res.status(400).json({ error: 'Missing required fields' });
@@ -23,10 +24,13 @@ export const createLrp = catchAsync(async (req: Request, res: Response): Promise
     return;
   }
 
+  const normalizedLinks = normalizeSharepointLinks(sharepoint_links);
+
   const result = await prisma.lrp.create({
     data: {
       program,
-      year: parsedYear
+      year: parsedYear,
+      sharepoint_links: normalizedLinks ? (normalizedLinks as any) : undefined
     }
   });
 
@@ -54,7 +58,7 @@ export const getLrps = catchAsync(async (req: Request, res: Response): Promise<v
 
 export const updateLrp = catchAsync(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { program, year } = req.body;
+  const { program, year, sharepoint_links } = req.body;
 
   if (!program) {
     res.status(400).json({ error: 'Missing required fields' });
@@ -70,6 +74,10 @@ export const updateLrp = catchAsync(async (req: Request, res: Response): Promise
       return;
     }
     updateData.year = parsedYear;
+  }
+
+  if (sharepoint_links !== undefined) {
+    updateData.sharepoint_links = normalizeSharepointLinks(sharepoint_links);
   }
 
   const result = await prisma.lrp.update({
