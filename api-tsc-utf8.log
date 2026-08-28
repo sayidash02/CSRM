@@ -1,6 +1,0 @@
-﻿src/controllers/SyncController.ts(7,26): error TS2554: Expected 5 arguments, but got 0.
-src/services/SyncService.ts(51,22): error TS2352: Conversion of type 'Buffer' to type 'Buffer<ArrayBufferLike>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
-  Type 'Buffer' is missing the following properties from type 'Buffer<ArrayBufferLike>': subarray, write, toJSON, equals, and 93 more.
-src/services/SyncService.ts(83,5): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
-  Type 'undefined' is not assignable to type 'string'.
-tests/sync.test.ts(47,12): error TS2532: Object is possibly 'undefined'.

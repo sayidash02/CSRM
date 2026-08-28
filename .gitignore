@@ -16,4 +16,13 @@ sample_executive_mom*.xlsx
 *.xlsx
 ~$*
 *.tmp
+*.log
+*.patch
 apps/api/uploads/
+
+# AI and local tooling artifacts
+.agents/
+.gemini/
+.claude/
+.idea/
+.vscode/

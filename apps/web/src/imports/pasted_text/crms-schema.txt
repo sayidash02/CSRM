@@ -1,1 +1,0 @@
-Canonical schema is maintained at the repository root in `schema.sql`.
