@@ -115,16 +115,16 @@ export function DailyActivityForm({
 
   return (
     <Modal title={initial ? "Edit Kegiatan & Notulensi (MOM)" : "Tambah Kegiatan Baru"} onClose={onClose}>
-      <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 max-h-[75vh] overflow-y-auto">
+      <div className="px-4 sm:px-6 py-3.5 sm:py-4 grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4 max-h-[75vh] overflow-y-auto">
         <Field label="Tanggal Kegiatan" required><input type="date" value={f.activity_date ? String(f.activity_date).split('T')[0] : ""} onChange={e => set("activity_date", e.target.value)} className={inputCls} /></Field>
-        <div className="col-span-2"><Field label="Nama Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Judul / Deskripsi kegiatan" className={inputCls} /></Field></div>
+        <div className="col-span-1 md:col-span-2"><Field label="Nama Kegiatan" required><input type="text" value={f.activity} onChange={e => set("activity", e.target.value)} placeholder="Judul / Deskripsi kegiatan" className={inputCls} /></Field></div>
 
         <Field label="Lokasi (Desa / Wilayah)"><input type="text" value={f.location} onChange={e => set("location", e.target.value)} placeholder="Contoh: Cilamaya Girang" className={inputCls} /></Field>
         <Field label="Tempat / Venue Pertemuan"><input type="text" value={f.address} onChange={e => set("address", e.target.value)} placeholder="Contoh: Balai Desa / Rumah Warga" className={inputCls} /></Field>
         <Field label="Fokus / Topik Kegiatan"><input type="text" value={f.focus} onChange={e => set("focus", e.target.value)} placeholder="Topik / Fokus kegiatan" className={inputCls} /></Field>
         <Field label="Biaya (Rp)"><CurrencyInput value={f.cost} onChange={val => set("cost", val)} className={`${inputCls} font-mono`} /></Field>
 
-        <div className="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
           <Field label="Kategori" required>
             <div className="flex gap-2">
               <select value={f.category_id} onChange={e => { const next = { ...f, category_id: e.target.value, sub_category_id: "" }; setF(next); if (!initial) onDraftChange?.(next as any); }} className={inputCls}>
@@ -145,7 +145,7 @@ export function DailyActivityForm({
           </Field>
         </div>
 
-        <div className="col-span-3">
+        <div className="col-span-1 md:col-span-3">
           <Field label="PIC (Tim Internal CSR)" required>
             <div className="flex gap-2 items-start">
               <div className="flex-1">
@@ -180,7 +180,7 @@ export function DailyActivityForm({
           </Field>
         </div>
 
-        <div className="col-span-3">
+        <div className="col-span-1 md:col-span-3">
           <Field label="Peserta Eksternal / Instansi Terkait (Attendees)" hint="Daftar peserta eksternal (dapat berupa teks baris baru atau penomoran 1., 2.)">
             <textarea
               rows={2}
@@ -192,24 +192,24 @@ export function DailyActivityForm({
           </Field>
         </div>
 
-        <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
           <Field label="Keterangan & Latar Belakang"><textarea rows={3} value={f.keterangan} onChange={e => set("keterangan", e.target.value)} placeholder="Latar belakang / agenda pertemuan" className={`${inputCls} resize-none`} /></Field>
           <Field label="Hasil Pertemuan & Pembahasan"><textarea rows={3} value={f.hasil} onChange={e => set("hasil", e.target.value)} placeholder="Poin-poin pembahasan / hasil yang dicapai" className={`${inputCls} resize-none`} /></Field>
         </div>
 
-        <div className="col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="col-span-1 md:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
           <Field label="Kesimpulan Pertemuan"><textarea rows={2} value={f.kesimpulan} onChange={e => set("kesimpulan", e.target.value)} placeholder="Kesimpulan akhir dari pertemuan" className={`${inputCls} resize-none`} /></Field>
           <Field label="Rencana Tindak Lanjut (Next Plan)"><textarea rows={2} value={f.next_plan} onChange={e => set("next_plan", e.target.value)} placeholder="Rencana tindak lanjut / action items" className={`${inputCls} resize-none`} /></Field>
         </div>
 
-        <div className="col-span-3">
+        <div className="col-span-1 md:col-span-3">
           <SharepointLinksInput
             value={f.sharepoint_links}
             onChange={(links) => setF({ ...f, sharepoint_links: links })}
           />
         </div>
 
-        <div className="col-span-3">
+        <div className="col-span-1 md:col-span-3">
           <PhotoGalleryAttachmentInput
             value={f.photos || []}
             onChange={(photos) => setF({ ...f, photos })}
@@ -228,7 +228,7 @@ export function DailyActivityForm({
           />
         </div>
       </div>
-      <div className="flex items-center justify-between px-6 py-3 border-t border-border bg-gray-50/50">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-t border-border bg-gray-50/50 flex-wrap gap-2">
         <div className="flex items-center gap-2">
           {initial && onViewMom && (
             <button

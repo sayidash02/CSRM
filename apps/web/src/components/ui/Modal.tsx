@@ -24,7 +24,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-ink/40 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-4"
       onMouseDown={() => { mouseDownOnBackdrop.current = true; }}
       onMouseUp={() => {
         if (mouseDownOnBackdrop.current) onClose();
@@ -40,8 +40,8 @@ export function Modal({
         } max-h-[92vh] flex flex-col overflow-hidden text-ink`}
         onMouseDown={(e) => { e.stopPropagation(); mouseDownOnBackdrop.current = false; }}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-line bg-paper/30 shrink-0">
-          <h2 className="text-[15px] font-semibold text-ink tracking-tight">{title}</h2>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-line bg-paper/30 shrink-0">
+          <h2 className="text-[14px] sm:text-[15px] font-semibold text-ink tracking-tight">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Tutup modal"
@@ -50,7 +50,7 @@ export function Modal({
             <X size={16} />
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 p-6">{children}</div>
+        <div className="overflow-y-auto flex-1 p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );
@@ -74,7 +74,7 @@ export function ModalFooter({
   saveType?: "button" | "submit";
 }) {
   return (
-    <div className="px-6 py-4 border-t border-line flex gap-2.5 justify-end bg-paper/40 shrink-0">
+    <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-line flex gap-2 sm:gap-2.5 justify-end bg-paper/40 shrink-0 flex-wrap">
       {onClear && (
         <button
           onClick={onClear}
