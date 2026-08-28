@@ -32,4 +32,28 @@ export default defineConfig({
   },
 
   assetsInclude: ['**/*.svg', '**/*.csv'],
+
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
+            }
+            if (id.includes('recharts') || id.includes('d3-')) {
+              return 'vendor-charts';
+            }
+            if (id.includes('@tanstack') || id.includes('axios') || id.includes('sonner') || id.includes('date-fns')) {
+              return 'vendor-utils';
+            }
+          }
+        },
+      },
+    },
+  },
 })
