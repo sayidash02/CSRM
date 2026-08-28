@@ -15,7 +15,7 @@ function jsonSafe(value: any): any {
 
 export const generateDiff = (oldData: any, newData: any): any => {
   const diff: Record<string, { old: any; new: any }> = {};
-  const ignoredFields = ['id', 'created_at', 'updated_at', 'is_deleted'];
+  const ignoredFields = ['id', 'created_at', 'updated_at', 'is_deleted', 'photo_data'];
 
   if (!oldData || !newData) return null;
 

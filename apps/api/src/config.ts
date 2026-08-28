@@ -35,6 +35,7 @@ export function assertProductionConfig(env: NodeJS.ProcessEnv = process.env): vo
 
   const errors: string[] = [];
   if (!env.DATABASE_URL) errors.push('DATABASE_URL');
+  if (!env.CRMS_ALLOWED_ORIGINS) errors.push('CRMS_ALLOWED_ORIGINS');
 
   if (errors.length > 0) {
     throw new Error(`Missing required production configuration: ${errors.join(', ')}`);

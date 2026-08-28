@@ -109,23 +109,25 @@ export const deleteCategory = catchAsync(async (req: Request, res: Response): Pr
   }
 
   const inUseCount = await prisma.daily_activities.count({
-    where: { category_id: targetId, is_deleted: false }
+    where: { category_id: targetId }
   });
 
   if (inUseCount > 0) {
     res.status(400).json({
-      error: `Kategori '${category.name}' tidak dapat dihapus karena sedang digunakan oleh ${inUseCount} kegiatan aktif.`
+      error: `Kategori '${category.name}' tidak dapat dihapus karena tercatat pada ${inUseCount} riwayat kegiatan.`
     });
     return;
   }
 
-  // Delete associated sub_categories first then the category
-  await prisma.sub_categories.deleteMany({
-    where: { category_id: targetId }
-  });
+  await prisma.$transaction(async (tx) => {
+    // Delete associated sub_categories first then the category
+    await tx.sub_categories.deleteMany({
+      where: { category_id: targetId }
+    });
 
-  await prisma.categories.delete({
-    where: { id: targetId }
+    await tx.categories.delete({
+      where: { id: targetId }
+    });
   });
 
   res.status(200).json({ message: `Kategori '${category.name}' berhasil dihapus` });
@@ -249,12 +251,12 @@ export const deleteSubCategory = catchAsync(async (req: Request, res: Response):
   }
 
   const inUseCount = await prisma.daily_activities.count({
-    where: { sub_category_id: targetId, is_deleted: false }
+    where: { sub_category_id: targetId }
   });
 
   if (inUseCount > 0) {
     res.status(400).json({
-      error: `Sub-kategori '${subCategory.name}' tidak dapat dihapus karena sedang digunakan oleh ${inUseCount} kegiatan aktif.`
+      error: `Sub-kategori '${subCategory.name}' tidak dapat dihapus karena tercatat pada ${inUseCount} riwayat kegiatan.`
     });
     return;
   }

@@ -327,6 +327,9 @@ export function GrievanceForm({
 
   const handleDeleteExistingPhoto = async (photoId: string | number) => {
     if (!initial?.id) return;
+    if (!window.confirm('Apakah Anda yakin ingin menghapus foto dokumentasi ini dari server?')) {
+      return;
+    }
     try {
       await apiClient.delete(`/grievance/${initial.id}/photos/${photoId}`);
       setExistingPhotos(prev => prev.filter(p => p.id !== photoId));

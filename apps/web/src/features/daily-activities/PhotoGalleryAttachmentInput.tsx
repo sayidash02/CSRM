@@ -328,6 +328,10 @@ export function PhotoGalleryAttachmentInput({
       onPendingFilesChange?.(updated.map((p) => p.file!).filter(Boolean));
       if (photo.previewUrl) URL.revokeObjectURL(photo.previewUrl);
     } else if (photo.id && activityId) {
+      const photoName = photo.original_name ? `"${photo.original_name}"` : "foto ini";
+      if (!window.confirm(`Apakah Anda yakin ingin menghapus ${photoName} dari server? Tindakan ini akan langsung menghapus foto dari database.`)) {
+        return;
+      }
       try {
         await apiClient.delete(`/daily-activities/${activityId}/photos/${photo.id}`);
         onChange(value.filter((p) => p.id !== photo.id));

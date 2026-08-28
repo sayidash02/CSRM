@@ -6,7 +6,7 @@ const basePrisma = new PrismaClient();
 
 const AUDITED_CREATE_MODELS = new Set([
   'daily_activities',
-  'stakeholders',
+  'stakeholder_engagement',
   'csr_projects',
   'proposals',
   'grievance',
@@ -48,7 +48,15 @@ const prisma = basePrisma.$extends({
       },
 
       async update({ model, operation, args, query }) {
-        if (model === 'audit_logs' || model === 'export_logs' || model === 'users') return query(args);
+        if (
+          model === 'audit_logs' ||
+          model === 'export_logs' ||
+          model === 'users' ||
+          model === 'daily_activity_photos' ||
+          model === 'grievance_photos'
+        ) {
+          return query(args);
+        }
 
         return basePrisma.$transaction(async (tx) => {
           const txModel = (tx as any)[model];

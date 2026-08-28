@@ -18,7 +18,11 @@ function sanitize(value: unknown, key = '', depth = 0): unknown {
   if (typeof value === 'string') return safeString(value);
   if (value instanceof Error) {
     const code = (value as Error & { code?: unknown }).code;
-    return { name: value.name, ...(typeof code === 'string' ? { code } : {}) };
+    return {
+      name: value.name,
+      message: safeString(value.message),
+      ...(typeof code === 'string' ? { code } : {}),
+    };
   }
   if (depth >= MAX_DEPTH) return '[TRUNCATED]';
   if (Array.isArray(value)) return value.slice(0, 20).map((item) => sanitize(item, key, depth + 1));
@@ -59,7 +63,12 @@ export const logger = {
 export function errorFields(error: unknown): LogFields {
   if (error instanceof Error) {
     const code = (error as Error & { code?: unknown }).code;
-    return { errorName: error.name, ...(typeof code === 'string' ? { errorCode: code } : {}) };
+    return {
+      errorName: error.name,
+      errorMessage: safeString(error.message),
+      ...(typeof code === 'string' ? { errorCode: code } : {}),
+      ...(error.stack ? { stack: safeString(error.stack) } : {}),
+    };
   }
-  return { errorName: 'UnknownError' };
+  return { errorName: 'UnknownError', errorMessage: safeString(String(error)) };
 }
